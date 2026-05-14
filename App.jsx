@@ -1189,7 +1189,7 @@ export default function App(){
               <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
             </div>
             <div style={{flex:1}}/>
-            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:17,flexShrink:0}}>&#x2315;</button>
+            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:22,flexShrink:0}}>&#x2315;</button>
             <button onClick={()=>setUplFeed(true)} style={{width:34,height:34,borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:22,lineHeight:1,flexShrink:0}}>+</button>
             <div style={{position:"relative",flexShrink:0}}>
               <button onClick={()=>setMobileMenu(v=>!v)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T1,fontSize:18}}>&#x22EF;</button>
