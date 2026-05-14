@@ -1129,6 +1129,18 @@ export default function App(){
   const [newP,setNewP]=useState(false); const [newF,setNewF]=useState(false);
   const [uplFeed,setUplFeed]=useState(false);
   const [saveIt,setSaveIt]=useState(null);
+  const [isMobile,setIsMobile]=useState(()=>window.innerWidth<=640);
+  const [mobileMenu,setMobileMenu]=useState(false);
+  const [searchExp,setSearchExp]=useState(false);
+  const searchRef=useRef(null);
+  useEffect(()=>{
+    const onResize=()=>setIsMobile(window.innerWidth<=640);
+    window.addEventListener("resize",onResize);
+    return()=>window.removeEventListener("resize",onResize);
+  },[]);
+  useEffect(()=>{
+    if(searchExp&&searchRef.current)searchRef.current.focus();
+  },[searchExp]);
 
   if(view==="project"&&proj){
     return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")}/>);
@@ -1149,32 +1161,64 @@ export default function App(){
   return (
     <div style={{minHeight:"100vh",background:PG,fontFamily:FF}}>
       <nav style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100}}>
-        <div style={{width:28,height:28,borderRadius:6,background:BK,display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:15,fontWeight:800,flexShrink:0,marginRight:4}}>W</div>
-        <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3}}>
-          {["Explore","Projects"].map(v=>(
-            <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF}}>{v}</button>
-          ))}
-        </div>
-        <div style={{flex:1,maxWidth:520,margin:"0 auto",position:"relative"}}>
-          <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-          <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>setSf(true)} onBlur={()=>setSf(false)} placeholder="Search" style={{width:"100%",boxSizing:"border-box",background:sf?"#FFF":"#F5F5F5",border:`1px solid ${sf?BM:"transparent"}`,borderRadius:22,padding:"7px 16px 7px 36px",color:T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
-          {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
-          <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32}/></button>
-          <button style={{background:"none",border:`1px solid ${BD}`,borderRadius:8,width:32,height:32,cursor:"pointer",color:T2,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x2699;</button>
-        </div>
+        {!isMobile&&(<>
+          <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,marginRight:4}}>
+            <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+            <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
+          </div>
+          <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3}}>
+            {["Explore","Projects"].map(v=>(
+              <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF}}>{v}</button>
+            ))}
+          </div>
+          <div style={{flex:1,maxWidth:520,margin:"0 auto",position:"relative"}}>
+            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>setSf(true)} onBlur={()=>setSf(false)} placeholder="Search" style={{width:"100%",boxSizing:"border-box",background:sf?"#FFF":"#F5F5F5",border:`1px solid ${sf?BM:"transparent"}`,borderRadius:22,padding:"7px 16px 7px 36px",color:T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+            {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
+            <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32}/></button>
+            <button style={{background:"none",border:`1px solid ${BD}`,borderRadius:8,width:32,height:32,cursor:"pointer",color:T2,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x2699;</button>
+          </div>
+        </>)}
+        {isMobile&&(<>
+          {!searchExp&&(<>
+            <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
+              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+              <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
+            </div>
+            <div style={{flex:1}}/>
+            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:22,flexShrink:0}}>&#x2315;</button>
+            <button onClick={()=>setUplFeed(true)} style={{width:34,height:34,borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:22,lineHeight:1,flexShrink:0}}>+</button>
+            <div style={{position:"relative",flexShrink:0}}>
+              <button onClick={()=>setMobileMenu(v=>!v)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T1,fontSize:18}}>&#x22EF;</button>
+              {mobileMenu&&(<div onClick={()=>setMobileMenu(false)} style={{position:"fixed",inset:0,zIndex:199}}/>)}
+              {mobileMenu&&(
+                <div style={{position:"absolute",top:42,right:0,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,boxShadow:"0 4px 20px rgba(0,0,0,.1)",minWidth:160,zIndex:200,overflow:"hidden"}}>
+                  {["Explore","Projects"].map(v=>(
+                    <button key={v} onClick={()=>{setView(v.toLowerCase());setMobileMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",background:view===v.toLowerCase()?"#F5F5F5":"transparent",border:"none",padding:"12px 16px",fontSize:15,fontFamily:FF,color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,cursor:"pointer"}}>{v}</button>
+                  ))}
+                  <div style={{height:1,background:BD,margin:"4px 0"}}/>
+                  <button onClick={()=>{setView("profile");setMobileMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"12px 16px",fontSize:15,fontFamily:FF,color:T2,cursor:"pointer"}}>Profile</button>
+                </div>
+              )}
+            </div>
+          </>)}
+          {searchExp&&(<>
+            <div style={{flex:1,position:"relative"}}>
+              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BM}`,borderRadius:22,padding:"7px 16px 7px 36px",color:T1,fontSize:14,outline:"none",fontFamily:FF}}/>
+            </div>
+            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T1,fontSize:16,flexShrink:0}}>&#x2715;</button>
+          </>)}
+        </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
       </main>
-      <div style={{position:"fixed",right:14,bottom:80,display:"flex",flexDirection:"column",gap:8,zIndex:50}}>
-        <button style={{width:38,height:38,borderRadius:10,background:"#FFF",border:`1px solid ${BD}`,cursor:"pointer",color:T2,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>&#x1F4AC;</button>
-        <button style={{width:38,height:38,borderRadius:10,background:"#FFF",border:`1px solid ${BD}`,cursor:"pointer",color:T2,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>&#x2630;</button>
-      </div>
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create}/>)}
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
       {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed}/>)}
