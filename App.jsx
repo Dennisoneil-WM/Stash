@@ -1163,8 +1163,8 @@ export default function App(){
       <nav style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100}}>
         {!isMobile&&(<>
           <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,marginRight:4}}>
-            <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F521fd8ebbb1a4879892705105a99f743?format=webp&width=800&height=1200" alt="Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
-            <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>Stash</span>
+            <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+            <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
           </div>
           <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3}}>
             {["Explore","Projects"].map(v=>(
@@ -1185,8 +1185,8 @@ export default function App(){
         {isMobile&&(<>
           {!searchExp&&(<>
             <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
-              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F521fd8ebbb1a4879892705105a99f743?format=webp&width=800&height=1200" alt="Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
-              <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>Stash</span>
+              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+              <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
             </div>
             <div style={{flex:1}}/>
             <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:17,flexShrink:0}}>&#x2315;</button>
