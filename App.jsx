@@ -1213,10 +1213,6 @@ export default function App(){
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
       </main>
-      <div style={{position:"fixed",right:14,bottom:80,display:"flex",flexDirection:"column",gap:8,zIndex:50}}>
-        <button style={{width:38,height:38,borderRadius:10,background:"#FFF",border:`1px solid ${BD}`,cursor:"pointer",color:T2,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>&#x1F4AC;</button>
-        <button style={{width:38,height:38,borderRadius:10,background:"#FFF",border:`1px solid ${BD}`,cursor:"pointer",color:T2,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>&#x2630;</button>
-      </div>
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create}/>)}
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
       {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed}/>)}
