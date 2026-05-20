@@ -902,6 +902,15 @@ function ExploreCard({item,onSave,onOpen}){
   const isMock=item.type==="mockup"&&item.mock;
   const isMobile=item.isMobile===true;
 
+  // Timeout to detect iframe load failure (X-Frame-Options blocking)
+  const ifRef=useRef();
+  useEffect(()=>{
+    if(isMobileWebsite&&ifRef.current&&!ifErr){
+      const t=setTimeout(()=>setIfErr(true),3000);
+      return ()=>clearTimeout(t);
+    }
+  },[isMobileWebsite,ifErr]);
+
   // For mobile website viewport, render scaled iframe inside phone shell
   const isMobileWebsite=item.type==="website"&&item.src&&isMobile;
   const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&isMobile;
@@ -949,10 +958,11 @@ function ExploreCard({item,onSave,onOpen}){
                 transformOrigin:"top left",
                 pointerEvents:"none",
               }}>
-                <iframe src={item.src} title={item.name}
+                <iframe ref={ifRef} src={item.src} title={item.name}
                   style={{width:390,height:844,border:"none",display:"block"}}
                   sandbox="allow-scripts allow-same-origin"
-                  onError={()=>setIfErr(true)}/>
+                  onError={()=>setIfErr(true)}
+                  onLoad={()=>setIfErr(false)}/>
               </div>
             </div>
           )}
