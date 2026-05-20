@@ -898,6 +898,7 @@ function PhoneShell({children,bg="#000"}){
 
 function ExploreCard({item,onSave,onOpen}){
   const [hov,setHov]=useState(false);
+  const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
   const isMobile=item.isMobile===true;
 
@@ -932,19 +933,29 @@ function ExploreCard({item,onSave,onOpen}){
       )}
       {isMobileWebsite && (
         <PhoneShell bg="#FFF">
-          <div style={{position:"relative",height:445,overflow:"hidden"}}>
-            <div style={{
-              position:"absolute",top:0,left:0,
-              width:390,height:844,
-              transform:"scale("+220/390+")",
-              transformOrigin:"top left",
-              pointerEvents:"none",
-            }}>
-              <iframe src={item.src} title={item.name}
-                style={{width:390,height:844,border:"none",display:"block"}}
-                sandbox="allow-scripts allow-same-origin"/>
+          {ifErr ? (
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:445,padding:20,textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:12,color:T3}}>&#x26A0;</div>
+              <p style={{margin:"0 0 8px",fontSize:13,fontWeight:600,color:T1}}>Cannot embed this site</p>
+              <p style={{margin:"0 0 14px",fontSize:12,color:T2}}>This website blocks iframe embedding</p>
+              <a href={item.src} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:"#0066CC",textDecoration:"none",fontWeight:500,cursor:"pointer"}} onClick={e=>e.stopPropagation()}>Open in new tab &#x2192;</a>
             </div>
-          </div>
+          ) : (
+            <div style={{position:"relative",height:445,overflow:"hidden"}}>
+              <div style={{
+                position:"absolute",top:0,left:0,
+                width:390,height:844,
+                transform:"scale("+220/390+")",
+                transformOrigin:"top left",
+                pointerEvents:"none",
+              }}>
+                <iframe src={item.src} title={item.name}
+                  style={{width:390,height:844,border:"none",display:"block"}}
+                  sandbox="allow-scripts allow-same-origin"
+                  onError={()=>setIfErr(true)}/>
+              </div>
+            </div>
+          )}
         </PhoneShell>
       )}
       {!isMock&&!isMobileMedia&&!isMobileWebsite && (
