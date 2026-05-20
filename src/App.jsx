@@ -861,7 +861,7 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
 function PhoneShell({children,bg="#000"}){
-  // iPhone 17: 393×852pt logical → 2.168:1 ratio. Screen width 204px → minHeight 442px.
+  // iPhone 17: 393×852pt logical → 2.168:1 ratio. Screen width 220px → minHeight 477px.
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
                  background:"#E8E8E8",padding:"18px 22px 24px"}}>
@@ -881,7 +881,7 @@ function PhoneShell({children,bg="#000"}){
             borderRadius:38,overflow:"hidden",
             background:bg,
             position:"relative",
-            minHeight:442,
+            minHeight:477,
           }}>
             {children}
           </div>
@@ -932,11 +932,11 @@ function ExploreCard({item,onSave,onOpen}){
       )}
       {isMobileWebsite && (
         <PhoneShell bg="#FFF">
-          <div style={{position:"relative",height:420,overflow:"hidden"}}>
+          <div style={{position:"relative",height:445,overflow:"hidden"}}>
             <div style={{
               position:"absolute",top:0,left:0,
               width:390,height:844,
-              transform:"scale("+204/390+")",
+              transform:"scale("+220/390+")",
               transformOrigin:"top left",
               pointerEvents:"none",
             }}>
@@ -969,7 +969,7 @@ function Explore({feed,projects,onSave}){
   const [lb,setLb]=useState(null);
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{columns:"5 200px",gap:16}}>
+      <div style={{columns:"4 270px",gap:16}}>
         {feed.map(item=>(
           <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb}/>
         ))}
