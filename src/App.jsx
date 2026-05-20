@@ -17,7 +17,7 @@ const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
 const FF="'Geist','DM Sans',-apple-system,sans-serif";
 const GR=["linear-gradient(135deg,#0d1117,#1a472a)","linear-gradient(135deg,#1a0030,#6b21a8)","linear-gradient(135deg,#1c1c1c,#f97316)","linear-gradient(160deg,#0f172a,#1e40af)","linear-gradient(135deg,#0a0a0a,#dc2626)","linear-gradient(135deg,#111827,#059669)","linear-gradient(135deg,#1c1917,#d97706)","linear-gradient(160deg,#0f0f23,#7c3aed)","linear-gradient(135deg,#0c1a0c,#16a34a)","linear-gradient(135deg,#1e1b4b,#a78bfa)"];
-const USERS=[{id:1,name:"Dennis Hwang",title:"Senior Product Designer",initials:"DH"},{id:2,name:"Maria Chen",title:"Lead UX Designer",initials:"MC"},{id:3,name:"Jake Torres",title:"Principal Designer",initials:"JT"}];
+const USERS=[{id:1,name:"Dennis O'Neil",title:"Senior Product Designer",initials:"DO"},{id:2,name:"Maria Chen",title:"Lead UX Designer",initials:"MC"},{id:3,name:"Jake Torres",title:"Principal Designer",initials:"JT"}];
 const ME=USERS[0];
 const VPS={"Desktop (1512x900)":{w:1512,h:900},"Laptop (1280x800)":{w:1280,h:800},"Mobile (390x844)":{w:390,h:844},"Tablet (768x1024)":{w:768,h:1024}};
 const FOLDERS=[{id:1,name:"Product Design",count:8},{id:2,name:"Brand & Marketing",count:5},{id:3,name:"Research",count:3},{id:4,name:"Documentation",count:6},{id:5,name:"Archive",count:15}];
@@ -861,35 +861,35 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
 function PhoneShell({children,bg="#000"}){
-  // Pure CSS/HTML phone frame - no SVG, no foreignObject
+  // iPhone 17: 393×852pt logical → 2.168:1 ratio. Screen width 204px → minHeight 442px.
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:"#E8E8E8",padding:"18px 24px 24px"}}>
+                 background:"#E8E8E8",padding:"18px 22px 24px"}}>
       <div style={{position:"relative",width:220}}>
-        {/* Phone body */}
         <div style={{
-          background:"#1A1A1A",borderRadius:36,padding:"10px 8px",
-          boxShadow:"0 0 0 1px #0A0A0A, inset 0 0 0 1px #2A2A2A",
+          background:"#1C1C1E",borderRadius:48,padding:"12px 8px",
+          boxShadow:"0 0 0 1.5px #0A0A0A, inset 0 0 0 1px #333",
           position:"relative",
         }}>
-          {/* Dynamic Island */}
+          {/* Dynamic Island — iPhone 17 pill */}
           <div style={{
-            position:"absolute",top:14,left:"50%",transform:"translateX(-50%)",
-            width:80,height:22,background:"#0A0A0A",borderRadius:11,zIndex:10,
+            position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",
+            width:72,height:20,background:"#000",borderRadius:10,zIndex:10,
           }}/>
-          {/* Screen */}
+          {/* Screen — minHeight enforces iPhone 17 proportions */}
           <div style={{
-            borderRadius:28,overflow:"hidden",
+            borderRadius:38,overflow:"hidden",
             background:bg,
             position:"relative",
+            minHeight:442,
           }}>
             {children}
           </div>
           {/* Side buttons */}
-          <div style={{position:"absolute",left:-4,top:"22%",width:4,height:28,background:"#2C2C2C",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-4,top:"35%",width:4,height:44,background:"#2C2C2C",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-4,top:"50%",width:4,height:44,background:"#2C2C2C",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",right:-4,top:"30%",width:4,height:60,background:"#2C2C2C",borderRadius:"0 2px 2px 0"}}/>
+          <div style={{position:"absolute",left:-4,top:"18%",width:4,height:26,background:"#333",borderRadius:"2px 0 0 2px"}}/>
+          <div style={{position:"absolute",left:-4,top:"28%",width:4,height:48,background:"#333",borderRadius:"2px 0 0 2px"}}/>
+          <div style={{position:"absolute",left:-4,top:"42%",width:4,height:48,background:"#333",borderRadius:"2px 0 0 2px"}}/>
+          <div style={{position:"absolute",right:-4,top:"28%",width:4,height:68,background:"#333",borderRadius:"0 2px 2px 0"}}/>
         </div>
       </div>
     </div>
@@ -979,39 +979,43 @@ function Explore({feed,projects,onSave}){
   );
 }
 
+function ProjCard({project,onOpen}){
+  const [hov,setHov]=useState(false);
+  const mock=DMOCKS[(project.id-1)%DMOCKS.length];
+  const pad=mock.device==="iphone"?"20px 28px 20px":mock.device==="ipad"?"14px 12px":"10px 8px";
+  const bg=mock.device==="iphone"?"#F0F0F0":mock.device==="ipad"?"#EAEAEA":"#E6E6E6";
+  return (
+    <div style={{breakInside:"avoid",marginBottom:16,borderRadius:12,overflow:"hidden",position:"relative",cursor:"pointer",background:"#EBEBEB"}}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onOpen(project)}>
+      <div style={{padding:pad,background:bg}}>
+        <MockSVG mock={mock}/>
+      </div>
+      {hov&&(
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:14}}>
+          <p style={{margin:"0 0 2px",fontWeight:700,fontSize:14,color:"#FFF",fontFamily:FF}}>{project.name}</p>
+          <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,.7)",fontFamily:FF}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Projects({projects,onOpen}){
   return (
-    <div style={{padding:"28px 0"}}>
-      <h2 style={{fontSize:22,fontWeight:700,color:T1,margin:"0 0 16px",fontFamily:FF}}>Folders</h2>
-      <div style={{display:"flex",gap:12,flexWrap:"nowrap",overflowX:"auto",marginBottom:40,paddingBottom:4}}>
+    <div style={{padding:"16px 0"}}>
+      <div style={{display:"flex",gap:12,flexWrap:"nowrap",overflowX:"auto",marginBottom:24,paddingBottom:4}}>
         {FOLDERS.map(f=>(
-          <div key={f.id} style={{background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"18px 22px",minWidth:160,flexShrink:0,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:20,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.background="#F0F0F0";e.currentTarget.style.borderColor=BM;}} onMouseLeave={e=>{e.currentTarget.style.background="#FFF";e.currentTarget.style.borderColor=BD;}}>
+          <div key={f.id} style={{background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"14px 20px",minWidth:140,flexShrink:0,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.background="#F0F0F0";e.currentTarget.style.borderColor=BM;}} onMouseLeave={e=>{e.currentTarget.style.background="#FFF";e.currentTarget.style.borderColor=BD;}}>
             <div>
-              <p style={{margin:"0 0 4px",fontWeight:700,fontSize:15,color:T1,fontFamily:FF}}>{f.name}</p>
-              <p style={{margin:0,fontSize:12,color:T3,fontFamily:FF}}>{f.count} projects</p>
+              <p style={{margin:"0 0 2px",fontWeight:600,fontSize:13,color:T1,fontFamily:FF}}>{f.name}</p>
+              <p style={{margin:0,fontSize:11,color:T3,fontFamily:FF}}>{f.count} projects</p>
             </div>
-            <span style={{color:T3,fontSize:18}}>&#x2192;</span>
+            <span style={{color:T3,fontSize:16}}>&#x2192;</span>
           </div>
         ))}
       </div>
-      <h2 style={{fontSize:22,fontWeight:700,color:T1,margin:"0 0 16px",fontFamily:FF}}>Projects</h2>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16}}>
-        {projects.map(p=>(
-          <div key={p.id} onClick={()=>onOpen(p)} style={{background:"#FFF",border:`1px solid ${BD}`,borderRadius:14,padding:"18px 20px 20px",cursor:"pointer",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=BM;e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor=BD;e.currentTarget.style.transform="none";}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-              <div>
-                <p style={{margin:"0 0 4px",fontWeight:700,fontSize:15,color:T1,fontFamily:FF}}>{p.name}</p>
-                <p style={{margin:0,fontSize:12,color:T3,fontFamily:FF}}>{p.artifactCount} artifact{p.artifactCount!==1?"s":""}</p>
-              </div>
-              <span style={{color:T3,fontSize:18}}>&#x2192;</span>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,height:90}}>
-              {[0,1,2,3].map(i=>(
-                <div key={i} style={{borderRadius:8,background:p.thumbs[i]||"#F0F0F0",border:`1px solid ${BD}`,overflow:"hidden"}}/>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div style={{columns:"5 200px",gap:16}}>
+        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen}/>))}
       </div>
     </div>
   );
@@ -1105,16 +1109,8 @@ function Profile({user,feed}){
         <p style={{margin:"0 0 16px",fontSize:14,color:T2,fontFamily:FF}}>{user.title}</p>
         <button style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"6px 16px",fontSize:13,color:T2,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,fontFamily:FF}}>&#x1F4AC; Slack</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16}}>
-        {uf.map(item=>(
-          <div key={item.id} style={{borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,background:"#FFF"}}>
-            <Thumb art={item} h={180}/>
-            <div style={{padding:"12px 14px"}}>
-              <p style={{margin:"0 0 4px",fontWeight:600,fontSize:14,color:T1,fontFamily:FF}}>{item.name}</p>
-              {item.desc&&(<p style={{margin:0,fontSize:12,color:T2,fontFamily:FF}}>{item.desc}</p>)}
-            </div>
-          </div>
-        ))}
+      <div style={{columns:"5 200px",gap:16}}>
+        {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}}/>))}
       </div>
     </div>
   );
