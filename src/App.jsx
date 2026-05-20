@@ -901,6 +901,8 @@ function ExploreCard({item,onSave,onOpen}){
   const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
   const isMobile=item.isMobile===true;
+  const isMobileWebsite=item.type==="website"&&item.src&&isMobile;
+  const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&isMobile;
 
   // Timeout to detect iframe load failure (X-Frame-Options blocking)
   const ifRef=useRef();
@@ -910,10 +912,6 @@ function ExploreCard({item,onSave,onOpen}){
       return ()=>clearTimeout(t);
     }
   },[isMobileWebsite,ifErr]);
-
-  // For mobile website viewport, render scaled iframe inside phone shell
-  const isMobileWebsite=item.type==="website"&&item.src&&isMobile;
-  const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&isMobile;
 
   return (
     <div
