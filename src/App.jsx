@@ -236,14 +236,84 @@ function UplProg({files,onDone}){
   );
 }
 
-function NewArtMdl({onClose,onAdd}){
+function TagInput({tags,setTags}){
+  const [tg,setTg]=useState("");
+  const add=()=>{const v=tg.trim().toLowerCase();if(v&&!tags.includes(v)){setTags([...tags,v]);}setTg("");};
+  return (
+    <div>
+      {tags.length>0&&(
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+          {tags.map(t=>(
+            <div key={t} style={{display:"flex",alignItems:"center",gap:5,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:6,padding:"3px 10px",fontSize:12,color:T1,fontFamily:FF}}>
+              #{t}
+              <button onClick={()=>setTags(tags.filter(x=>x!==t))} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:13,padding:0,lineHeight:1,marginLeft:2}}>&#x2715;</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{display:"flex",gap:8}}>
+        <input value={tg} onChange={e=>setTg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add();}}} placeholder="e.g. mobile, checkout, v2" style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF,transition:"border .15s"}} onFocus={e=>e.target.style.borderColor=BM} onBlur={e=>e.target.style.borderColor=BD}/>
+        <button onClick={add} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 14px",color:T1,cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
+      </div>
+    </div>
+  );
+}
+
+function ProjectPicker({projects,selected,onSelect,onNewProject}){
+  const [mode,setMode]=useState("none"); // "none"|"existing"|"new"
+  const [newName,setNewName]=useState("");
+  return (
+    <div>
+      {mode==="none"&&(
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setMode("existing")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>Link to existing project</button>
+          <button onClick={()=>setMode("new")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>+ Create new project</button>
+        </div>
+      )}
+      {mode==="existing"&&(
+        <div style={{border:`1px solid ${BD}`,borderRadius:10,overflow:"hidden",maxHeight:180,overflowY:"auto"}}>
+          {projects.map(p=>(
+            <button key={p.id} onClick={()=>{onSelect(p);setMode("selected");}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:selected?.id===p.id?"#F5F5F5":"#FFF",border:"none",borderBottom:`1px solid ${BD}`,padding:"10px 14px",cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+              <div style={{display:"flex",gap:3,flexShrink:0}}>
+                {(p.thumbs||[]).slice(0,2).map((t,i)=>(<div key={i} style={{width:20,height:20,borderRadius:4,background:t}}/>))}
+              </div>
+              <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{p.name}</span>
+              {selected?.id===p.id&&<span style={{color:T3,fontSize:16}}>&#x2713;</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {mode==="new"&&(
+        <div style={{display:"flex",gap:8}}>
+          <input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newName.trim()){onNewProject(newName.trim());setMode("none");setNewName("");}}} placeholder="New project name..." autoFocus style={{flex:1,background:"#F5F5F5",border:`1px solid ${BM}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
+          <button onClick={()=>{if(newName.trim()){onNewProject(newName.trim());setMode("none");setNewName("");}}} style={{background:BK,border:"none",borderRadius:8,padding:"8px 14px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Create</button>
+          <button onClick={()=>{setMode("none");setNewName("");}} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 14px",color:T2,cursor:"pointer",fontSize:13,fontFamily:FF}}>Cancel</button>
+        </div>
+      )}
+      {mode==="selected"&&selected&&(
+        <div style={{display:"flex",alignItems:"center",gap:10,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px"}}>
+          <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{selected.name}</span>
+          <button onClick={()=>{onSelect(null);setMode("existing");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:13,fontFamily:FF}}>Change</button>
+          <button onClick={()=>{onSelect(null);setMode("none");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:16,padding:0}}>&#x2715;</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NewArtMdl({onClose,onAdd,projects=[],onCreateProject}){
   const [tab,setTab]=useState("file");
   const [drag,setDrag]=useState(false);
   const [q,setQ]=useState([]);
   const [upl,setUpl]=useState(false);
-  const [fu,setFu]=useState(""); const [fn,setFn]=useState(""); const [fd,setFd]=useState("");
-  const [su,setSu]=useState(""); const [sn,setSn]=useState(""); const [sd,setSd]=useState("");
+  // per-source fields
+  const [fu,setFu]=useState(""); const [fn,setFn]=useState("");
+  const [su,setSu]=useState(""); const [sn,setSn]=useState("");
   const [vp,setVp]=useState("Desktop (1512x900)");
+  // shared fields
+  const [desc,setDesc]=useState("");
+  const [tags,setTags]=useState([]);
+  const [linkedProj,setLinkedProj]=useState(null);
   const ref=useRef();
 
   const proc=useCallback(async raw=>{
@@ -252,25 +322,20 @@ function NewArtMdl({onClose,onAdd}){
       if(isImg(f)||isVid(f)||isPdf(f)){
         try{f._prev=await toURL(f);}catch(e){}
         if(isImg(f)&&f._prev){
-          await new Promise(res=>{
-            const img=new Image();
-            img.onload=()=>{f._iw=img.naturalWidth;f._ih=img.naturalHeight;res();};
-            img.onerror=res;
-            img.src=f._prev;
-          });
+          await new Promise(res=>{const img=new Image();img.onload=()=>{f._iw=img.naturalWidth;f._ih=img.naturalHeight;res();};img.onerror=res;img.src=f._prev;});
         }
         if(isVid(f)&&f._prev){
-          await new Promise(res=>{
-            const v=document.createElement("video");
-            v.onloadedmetadata=()=>{f._iw=v.videoWidth;f._ih=v.videoHeight;res();};
-            v.onerror=res;
-            v.src=f._prev;
-          });
+          await new Promise(res=>{const v=document.createElement("video");v.onloadedmetadata=()=>{f._iw=v.videoWidth;f._ih=v.videoHeight;res();};v.onerror=res;v.src=f._prev;});
         }
       }
     }
     setQ(list);setUpl(true);
   },[]);
+
+  const submit=useCallback(arts=>{
+    onAdd(arts.map(a=>({...a,desc,tags,linkedProjectId:linkedProj?.id||null})));
+    onClose();
+  },[desc,tags,linkedProj,onAdd,onClose]);
 
   const done=useCallback(async()=>{
     const arts=[];
@@ -283,19 +348,31 @@ function NewArtMdl({onClose,onAdd}){
       const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
       arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
     }
-    onAdd(arts);onClose();
-  },[q,onAdd,onClose]);
+    submit(arts);
+  },[q,submit]);
 
   if(upl) return (<UplProg files={q} onDone={done}/>);
 
-  const tabs=[{id:"file",icon:"^",label:"File"},{id:"figma",icon:"*",label:"Figma"},{id:"website",icon:"+",label:"Website"}];
+  const tabs=[{id:"file",label:"File"},{id:"figma",label:"Figma"},{id:"website",label:"Website"}];
+
+  const sharedFields=(
+    <div style={{display:"flex",flexDirection:"column",gap:16,marginTop:16,paddingTop:16,borderTop:`1px solid ${BD}`}}>
+      <Fld label="Description (optional)"><TIn ph="What is this artifact?" val={desc} set={setDesc} multi/></Fld>
+      <Fld label="Tags (optional)"><TagInput tags={tags} setTags={setTags}/></Fld>
+      {projects.length>0&&(
+        <Fld label="Link to Project (optional)">
+          <ProjectPicker projects={projects} selected={linkedProj} onSelect={setLinkedProj} onNewProject={nm=>{if(onCreateProject){onCreateProject({name:nm,folder:1,tags:[],desc:"",pages:[{id:"p1",label:"1",name:"Page 1"}],thumbs:[],artifacts:{p1:[]},rows:["R1"]},p=>setLinkedProj(p));}}}/>
+        </Fld>
+      )}
+    </div>
+  );
 
   return (
-    <Mdl title="New Artifact" onClose={onClose} w={520}>
+    <Mdl title="New Artifact" onClose={onClose} w={560}>
       <div style={{display:"flex",gap:8,marginBottom:24,background:"#F5F5F5",borderRadius:12,padding:4}}>
         {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:tab===t.id?"#FFF":"transparent",border:tab===t.id?`1px solid ${BD}`:"1px solid transparent",borderRadius:9,padding:"9px 0",cursor:"pointer",color:tab===t.id?T1:T2,fontWeight:600,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontFamily:FF}}>
-            <span>{t.icon}</span>{t.label}
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:tab===t.id?"#FFF":"transparent",border:tab===t.id?`1px solid ${BD}`:"1px solid transparent",borderRadius:9,padding:"9px 0",cursor:"pointer",color:tab===t.id?T1:T2,fontWeight:600,fontSize:14,fontFamily:FF}}>
+            {t.label}
           </button>
         ))}
       </div>
@@ -307,31 +384,32 @@ function NewArtMdl({onClose,onAdd}){
             onDragLeave={()=>setDrag(false)}
             onDrop={e=>{e.preventDefault();setDrag(false);if(e.dataTransfer.files.length)proc(e.dataTransfer.files);}}
             onClick={()=>ref.current.click()}
-            style={{border:`1.5px dashed ${drag?BK:BM}`,borderRadius:14,padding:"44px 24px",textAlign:"center",marginBottom:20,background:drag?"#F5F5F5":"#FAFAFA",cursor:"pointer",transition:"all .15s"}}>
+            style={{border:`1.5px dashed ${drag?BK:BM}`,borderRadius:14,padding:"36px 24px",textAlign:"center",background:drag?"#F5F5F5":"#FAFAFA",cursor:"pointer",transition:"all .15s"}}>
             <input ref={ref} type="file" multiple accept="image/*,video/*,.pdf,.gif" style={{display:"none"}} onChange={e=>{if(e.target.files.length)proc(e.target.files);}}/>
-            <div style={{fontSize:28,marginBottom:12,color:T3}}>&#x2191;</div>
-            <p style={{color:T1,fontWeight:600,margin:"0 0 6px",fontSize:15}}>{drag?"Drop files here":"Drag and drop files here"}</p>
-            <p style={{color:T1,fontSize:14,margin:"0 0 10px",textDecoration:"underline"}}>or browse files</p>
+            <div style={{fontSize:28,marginBottom:10,color:T3}}>&#x2191;</div>
+            <p style={{color:T1,fontWeight:600,margin:"0 0 4px",fontSize:15}}>{drag?"Drop files here":"Drag and drop files here"}</p>
+            <p style={{color:T1,fontSize:14,margin:"0 0 8px",textDecoration:"underline"}}>or browse files</p>
             <p style={{color:T3,fontSize:12,margin:0}}>Images, videos, GIFs, and PDFs supported</p>
           </div>
-          <BBtn fw disabled>Add Artifact</BBtn>
+          {sharedFields}
+          <div style={{marginTop:20}}><BBtn fw disabled>Add Artifact</BBtn></div>
         </>
       )}
 
       {tab==="figma" && (
-        <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="Figma URL"><TIn af ph="https://www.figma.com/design/..." val={fu} set={v=>{setFu(v);if(!fn)setFn(v.split("/").filter(Boolean).pop()||"");}} /></Fld>
           <Fld label="Name"><TIn ph="Frame or file name" val={fn} set={setFn}/></Fld>
-          <Fld label="Description (optional)"><TIn ph="Add a description..." val={fd} set={setFd} multi/></Fld>
           <div style={{background:"#FFFBEB",border:"1px solid #F0D060",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#7A6000",fontFamily:FF,lineHeight:1.5}}>
-            Paste any Figma file, frame, or prototype link. The file must be set to "Anyone with the link can view" in Figma share settings.
+            The file must be set to "Anyone with the link can view" in Figma share settings.
           </div>
-          <BBtn fw disabled={!fu.trim()} onClick={()=>{onAdd([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null}]);onClose();}}>Add Figma Artifact</BBtn>
+          {sharedFields}
+          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null}])}>Add Figma Artifact</BBtn>
         </div>
       )}
 
       {tab==="website" && (
-        <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="URL">
             <div style={{position:"relative"}}>
               <TIn af ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
@@ -340,8 +418,8 @@ function NewArtMdl({onClose,onAdd}){
           </Fld>
           <Fld label="Viewport"><TSel val={vp} set={setVp} opts={Object.keys(VPS)}/></Fld>
           <Fld label="Name"><TIn ph="weedmaps.com" val={sn} set={setSn}/></Fld>
-          <Fld label="Description (optional)"><TIn ph="Add a description..." val={sd} set={setSd} multi/></Fld>
-          <BBtn fw disabled={!su.trim()} onClick={()=>{onAdd([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile")}]);onClose();}}>Add Website Artifact</BBtn>
+          {sharedFields}
+          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile")}])}>Add Website Artifact</BBtn>
         </div>
       )}
     </Mdl>
@@ -1153,7 +1231,7 @@ function ProjDetail({project,projects,onBack}){
           )}
         </div>
       </div>
-      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts}/>)}
+      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects}/>)}
       {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
       {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1223,12 +1301,14 @@ export default function App(){
     try{
       const saved=await createProject(p);
       setProjects(prev=>[saved,...prev]);
-      open(saved);
+      if(p._navigate!==false) open(saved);
+      return saved;
     }catch(e){
       console.error("createProject failed",e);
       const n={...p,id:Date.now(),thumbs:[],artifacts:{}};
       setProjects(prev=>[n,...prev]);
-      open(n);
+      if(p._navigate!==false) open(n);
+      return n;
     }
   };
   const addToFeed=async arts=>{
@@ -1342,7 +1422,7 @@ export default function App(){
       </main>
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create}/>)}
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
-      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed}/>)}
+      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})}/>)}
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
     </div>
   );
