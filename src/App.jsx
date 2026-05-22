@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, uploadFile } from "./supabase.js";
+import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, uploadFile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -422,6 +422,50 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject}){
           <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile")}])}>Add Website Artifact</BBtn>
         </div>
       )}
+    </Mdl>
+  );
+}
+
+function EditArtMdl({art,onClose,onSave}){
+  const [name,setName]=useState(art.name||"");
+  const [desc,setDesc]=useState(art.desc||"");
+  const [tags,setTags]=useState(art.tags||[]);
+  const [saving,setSaving]=useState(false);
+
+  const save=async()=>{
+    setSaving(true);
+    await onSave({...art,name,desc,tags});
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <Mdl title="Edit Artifact" onClose={onClose} w={520}>
+      <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+        <Fld label="Name"><TIn af val={name} set={setName} ph="Artifact name"/></Fld>
+        <Fld label="Description (optional)"><TIn val={desc} set={setDesc} ph="Describe this artifact..." multi/></Fld>
+        <Fld label="Tags (optional)"><TagInput tags={tags} setTags={setTags}/></Fld>
+        {art.src&&(art.type==="image"||art.type==="gif")&&(
+          <div style={{borderRadius:10,overflow:"hidden",border:`1px solid ${BD}`,maxHeight:200}}>
+            <img src={art.src} alt={art.name} style={{width:"100%",objectFit:"cover",display:"block",maxHeight:200}}/>
+          </div>
+        )}
+        {art.type==="website"&&art.src&&(
+          <div style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T2,fontFamily:FF,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{color:T3}}>&#x1F517;</span>
+            <a href={art.src} target="_blank" rel="noopener noreferrer" style={{color:"#0066CC",textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.src}</a>
+          </div>
+        )}
+        {art.type==="figma"&&(
+          <div style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T2,fontFamily:FF}}>
+            Figma embed
+          </div>
+        )}
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <GBtn sm onClick={onClose}>Cancel</GBtn>
+        <BBtn disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save Changes"}</BBtn>
+      </div>
     </Mdl>
   );
 }
@@ -995,7 +1039,7 @@ function PhoneShell({children,bg="#000"}){
   );
 }
 
-function ExploreCard({item,onSave,onOpen}){
+function ExploreCard({item,onSave,onOpen,onEdit}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
@@ -1070,7 +1114,15 @@ function ExploreCard({item,onSave,onOpen}){
       )}
       {hov&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.1)",
-                     display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10}}>
+                     display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10,gap:6}}>
+          {onEdit&&item.type!=="mockup"&&(
+            <button
+              onClick={e=>{e.stopPropagation();onEdit(item);}}
+              style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
+                      padding:"6px 12px",color:T1,fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:FF}}
+            >Edit</button>
+          )}
           <button
             onClick={e=>{e.stopPropagation();onSave(item);}}
             style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
@@ -1083,13 +1135,13 @@ function ExploreCard({item,onSave,onOpen}){
   );
 }
 
-function Explore({feed,projects,onSave}){
+function Explore({feed,projects,onSave,onEdit}){
   const [lb,setLb]=useState(null);
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{columns:"4 270px",gap:16}}>
         {feed.map(item=>(
-          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb}/>
+          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit}/>
         ))}
       </div>
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1325,6 +1377,16 @@ export default function App(){
     setFeed(prev=>[...saved,...prev]);
   };
 
+  const [editItem,setEditItem]=useState(null);
+  const saveEdit=async updated=>{
+    const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
+    if(isUuid){
+      try{const r=await updateFeedItem(updated.id,updated);setFeed(prev=>prev.map(f=>f.id===r.id?r:f));return;}
+      catch(e){console.error(e);}
+    }
+    setFeed(prev=>prev.map(f=>f.id===updated.id?{...f,...updated}:f));
+  };
+
   const allTags=Array.from(new Set(projects.flatMap(p=>p.tags||[])));
   const matchingTags=srch.toLowerCase().trim()?allTags.filter(t=>t.includes(srch.toLowerCase())):allTags;
   const filtProj=projects.filter(p=>{
@@ -1416,7 +1478,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
       </main>
@@ -1424,6 +1486,7 @@ export default function App(){
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
       {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})}/>)}
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
+      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit}/>)}
     </div>
   );
 }

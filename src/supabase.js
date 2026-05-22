@@ -133,9 +133,26 @@ export async function insertFeedItem(art) {
       viewport: art.viewport || null,
       is_mobile: art.isMobile || false,
       mock: art.mock || null,
+      description: art.desc || "",
+      tags: art.tags || [],
       user_name: art.user?.name || "Dennis O'Neil",
       user_initials: art.user?.initials || "DO",
     })
+    .select()
+    .single();
+  if (error) throw error;
+  return dbToFeedItem(data);
+}
+
+export async function updateFeedItem(id, updates) {
+  const { data, error } = await supabase
+    .from("feed_items")
+    .update({
+      name: updates.name,
+      description: updates.desc || "",
+      tags: updates.tags || [],
+    })
+    .eq("id", id)
     .select()
     .single();
   if (error) throw error;
@@ -152,6 +169,8 @@ function dbToFeedItem(r) {
     viewport: r.viewport,
     isMobile: r.is_mobile,
     mock: r.mock,
+    desc: r.description,
+    tags: r.tags || [],
     user: { name: r.user_name, initials: r.user_initials },
   };
 }
