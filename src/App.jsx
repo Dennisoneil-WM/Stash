@@ -12,6 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
+import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, uploadFile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -280,7 +281,7 @@ function NewArtMdl({onClose,onAdd}){
       else if(isVid(f)) t="video";
       else if(isPdf(f)) t="pdf";
       const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
-      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
+      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
     }
     onAdd(arts);onClose();
   },[q,onAdd,onClose]);
@@ -1062,17 +1063,39 @@ function Projects({projects,onOpen}){
 
 function ProjDetail({project,projects,onBack}){
   const [ap,setAp]=useState(project.pages[0].id);
-  const [arts,setArts]=useState(project.artifacts);
+  const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
   const [showNew,setShowNew]=useState(false);
   const [pub,setPub]=useState(null);
   const [save,setSave]=useState(null);
   const [lb,setLb]=useState(null);
+  const [artsLoaded,setArtsLoaded]=useState(false);
+
+  // Load artifacts from Supabase if the project has a UUID id
+  useEffect(()=>{
+    const isUuid=typeof project.id==="string"&&project.id.includes("-");
+    if(!isUuid){setArtsLoaded(true);return;}
+    fetchArtifactsForProject(project.id)
+      .then(byPage=>{setArts(byPage);setArtsLoaded(true);})
+      .catch(()=>setArtsLoaded(true));
+  },[project.id]);
 
   const pa=arts[ap]||[];
 
-  const addArts=list=>{
-    setArts(prev=>({...prev,[ap]:[...(prev[ap]||[]),...list]}));
+  const addArts=async list=>{
+    const isUuid=typeof project.id==="string"&&project.id.includes("-");
+    const saved=[];
+    for(const art of list){
+      if(isUuid){
+        try{
+          let src=art.src;
+          if(art._file){try{src=await uploadFile(art._file);}catch(e){console.error(e);}}
+          const r=await insertArtifact(project.id,ap,{...art,src});
+          saved.push(r);
+        }catch(e){saved.push(art);}
+      }else{saved.push(art);}
+    }
+    setArts(prev=>({...prev,[ap]:[...(prev[ap]||[]),...saved]}));
   };
 
   const addPage=()=>{
@@ -1158,8 +1181,9 @@ function Profile({user,feed}){
 export default function App(){
   const [view,setView]=useState("explore");
   const [proj,setProj]=useState(null);
-  const [projects,setProjects]=useState(SPROJ);
+  const [projects,setProjects]=useState([]);
   const [feed,setFeed]=useState(SFEED);
+  const [loading,setLoading]=useState(true);
   const [srch,setSrch]=useState(""); const [sf,setSf]=useState(false);
   const [newP,setNewP]=useState(false); const [newF,setNewF]=useState(false);
   const [uplFeed,setUplFeed]=useState(false);
@@ -1169,6 +1193,18 @@ export default function App(){
   const [searchExp,setSearchExp]=useState(false);
   const [showTags,setShowTags]=useState(false);
   const searchRef=useRef(null);
+
+  useEffect(()=>{
+    Promise.all([fetchProjects(),fetchFeed()])
+      .then(([projs,feedItems])=>{
+        setProjects(projs.length?projs:SPROJ);
+        const realItems=feedItems.filter(f=>f.type!=="mockup");
+        setFeed(realItems.length?[...realItems,...SFEED]:SFEED);
+      })
+      .catch(()=>{setProjects(SPROJ);setFeed(SFEED);})
+      .finally(()=>setLoading(false));
+  },[]);
+
   useEffect(()=>{
     const onResize=()=>setIsMobile(window.innerWidth<=640);
     window.addEventListener("resize",onResize);
@@ -1183,14 +1219,30 @@ export default function App(){
   }
 
   const open=p=>{setProj(p);setView("project");};
-  const create=p=>{
-    const n={...p,id:Date.now(),thumbs:[]};
-    setProjects(prev=>[...prev,n]);
-    open(n);
+  const create=async p=>{
+    try{
+      const saved=await createProject(p);
+      setProjects(prev=>[saved,...prev]);
+      open(saved);
+    }catch(e){
+      console.error("createProject failed",e);
+      const n={...p,id:Date.now(),thumbs:[],artifacts:{}};
+      setProjects(prev=>[n,...prev]);
+      open(n);
+    }
   };
-  const addToFeed=arts=>{
-    const items=arts.map(a=>({...a,user:ME,id:"upl"+uid()}));
-    setFeed(prev=>[...items,...prev]);
+  const addToFeed=async arts=>{
+    const saved=[];
+    for(const art of arts){
+      let src=art.src;
+      if(art._file){
+        try{src=await uploadFile(art._file);}catch(e){console.error(e);}
+      }
+      const item={...art,src,user:ME};
+      try{const r=await insertFeedItem(item);saved.push(r);}
+      catch(e){saved.push({...item,id:"upl"+uid()});}
+    }
+    setFeed(prev=>[...saved,...prev]);
   };
 
   const allTags=Array.from(new Set(projects.flatMap(p=>p.tags||[])));
@@ -1200,6 +1252,16 @@ export default function App(){
     const matchTag=!srch||(p.tags||[]).some(t=>t.includes(srch.toLowerCase()));
     return matchName||matchTag;
   });
+
+  if(loading) return (
+    <div style={{minHeight:"100vh",background:PG,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{width:36,height:36,border:`3px solid ${BD}`,borderTopColor:BK,borderRadius:"50%",animation:"spin 0.7s linear infinite",margin:"0 auto 16px"}}/>
+        <p style={{color:T3,fontSize:14,margin:0}}>Loading Stash...</p>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
   return (
     <div style={{minHeight:"100vh",background:PG,fontFamily:FF}}>
