@@ -97,10 +97,10 @@ function TSel({val,set,opts}){
 function Fld({label,children}){
   return (<div>{label&&(<label style={{fontSize:13,color:T2,display:"block",marginBottom:8,fontWeight:500}}>{label}</label>)}{children}</div>);
 }
-function Mdl({title,onClose,children,w=520}){
+function Mdl({title,onClose,children,w=520,isMobile=false}){
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#FFF",borderRadius:20,width:"100%",maxWidth:w,padding:"28px 28px 24px",boxShadow:"0 20px 60px rgba(0,0,0,.18)",maxHeight:"92vh",overflowY:"auto"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:isMobile?0:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:"#FFF",borderRadius:isMobile?0:20,width:"100%",maxWidth:isMobile?"100%":w,height:isMobile?"100vh":"auto",padding:isMobile?"16px 16px 24px":"28px 28px 24px",boxShadow:isMobile?"none":"0 20px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"100vh":"92vh",overflowY:"auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
           <span style={{fontSize:18,fontWeight:700,color:T1,fontFamily:FF}}>{title}</span>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:22,lineHeight:1,padding:4}}>&#x2715;</button>
@@ -400,7 +400,7 @@ function ProjectPicker({projects,selected,onSelect,onNewProject}){
   );
 }
 
-function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
+function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=false}){
   const [tab,setTab]=useState("file");
   const [drag,setDrag]=useState(false);
   const [q,setQ]=useState([]);
@@ -459,13 +459,13 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
     if(cropMode!==null){
       const art=preview[cropMode.artIndex];
       return (
-        <Mdl title="Crop Image" onClose={()=>setCropMode(null)} w={640}>
+        <Mdl title="Crop Image" onClose={()=>setCropMode(null)} w={640} isMobile={isMobile}>
           <CropTool src={art.src} onCancel={()=>setCropMode(null)} onCrop={(c)=>{art.crop=c;setCropMode(null);setPreview([...preview]);}}/>
         </Mdl>
       );
     }
     return (
-      <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560}>
+      <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560} isMobile={isMobile}>
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           {preview.map((art,i)=>(
             <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
@@ -529,7 +529,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   );
 
   return (
-    <Mdl title="New Artifact" onClose={onClose} w={560}>
+    <Mdl title="New Artifact" onClose={onClose} w={560} isMobile={isMobile}>
       <div style={{display:"flex",gap:8,marginBottom:24,background:"#F5F5F5",borderRadius:12,padding:4}}>
         {tabs.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:tab===t.id?"#FFF":"transparent",border:tab===t.id?`1px solid ${BD}`:"1px solid transparent",borderRadius:9,padding:"9px 0",cursor:"pointer",color:tab===t.id?T1:T2,fontWeight:600,fontSize:14,fontFamily:FF}}>
@@ -559,7 +559,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
 
       {tab==="figma" && (
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
-          <Fld label="Figma URL"><TIn af ph="https://www.figma.com/design/..." val={fu} set={v=>{setFu(v);if(!fn)setFn(v.split("/").filter(Boolean).pop()||"");}} /></Fld>
+          <Fld label="Figma URL"><TIn ph="https://www.figma.com/design/..." val={fu} set={v=>{setFu(v);if(!fn)setFn(v.split("/").filter(Boolean).pop()||"");}} /></Fld>
           <Fld label="Name"><TIn ph="Frame or file name" val={fn} set={setFn}/></Fld>
           <div style={{background:"#FFFBEB",border:"1px solid #F0D060",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#7A6000",fontFamily:FF,lineHeight:1.5}}>
             The file must be set to "Anyone with the link can view" in Figma share settings.
@@ -573,7 +573,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="URL">
             <div style={{position:"relative"}}>
-              <TIn af ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
+              <TIn ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
               <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"#F0F0F0",borderRadius:6,padding:"3px 8px",fontSize:11,fontWeight:700,color:T2}}>Quick</span>
             </div>
           </Fld>
@@ -587,7 +587,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   );
 }
 
-function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
+function EditArtMdl({art,onClose,onSave,onDelete,projects=[],isMobile=false}){
   const [name,setName]=useState(art.name||"");
   const [desc,setDesc]=useState(art.desc||"");
   const [tags,setTags]=useState(art.tags||[]);
@@ -608,16 +608,16 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
 
   if(cropMode){
     return (
-      <Mdl title="Crop Image" onClose={()=>setCropMode(false)} w={640}>
+      <Mdl title="Crop Image" onClose={()=>setCropMode(false)} w={640} isMobile={isMobile}>
         <CropTool src={art.src} onCancel={()=>setCropMode(false)} onCrop={(c)=>{setCrop(c);setCropMode(false);}}/>
       </Mdl>
     );
   }
 
   return (
-    <Mdl title="Edit Artifact" onClose={onClose} w={560}>
+    <Mdl title="Edit Artifact" onClose={onClose} w={560} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
-        <Fld label="Name"><TIn af val={name} set={setName} ph="Artifact name"/></Fld>
+        <Fld label="Name"><TIn val={name} set={setName} ph="Artifact name"/></Fld>
         <Fld label="Description (optional)"><TIn val={desc} set={setDesc} ph="Describe this artifact..." multi/></Fld>
         <Fld label="Tags (optional)"><TagInput tags={tags} setTags={setTags}/></Fld>
         {(art.type==="image"||art.type==="video"||art.type==="gif")&&(
@@ -678,7 +678,7 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
   );
 }
 
-function NewProjMdl({onClose,onCreate}){
+function NewProjMdl({onClose,onCreate,isMobile=false}){
   const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [fl,setFl]=useState(1); const [tg,setTg]=useState(""); const [tags,setTags]=useState([]);
   const addTag=()=>{
     if(tg.trim()&&!tags.includes(tg.trim().toLowerCase())){
@@ -687,9 +687,9 @@ function NewProjMdl({onClose,onCreate}){
     }
   };
   return (
-    <Mdl title="New Project" onClose={onClose} w={480}>
+    <Mdl title="New Project" onClose={onClose} w={480} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
-        <Fld label="Project Name"><TIn af ph="e.g. Search Redesign" val={nm} set={setNm}/></Fld>
+        <Fld label="Project Name"><TIn ph="e.g. Search Redesign" val={nm} set={setNm}/></Fld>
         <Fld label="Description (optional)"><TIn ph="What is this project about?" val={ds} set={setDs} multi/></Fld>
         <Fld label="Folder"><TSel val={fl} set={v=>setFl(Number(v))} opts={FOLDERS.map(f=>({v:f.id,l:f.name}))}/></Fld>
         <Fld label="Tags (optional)">
@@ -715,14 +715,14 @@ function NewProjMdl({onClose,onCreate}){
   );
 }
 
-function NewFolderMdl({onClose,projects}){
+function NewFolderMdl({onClose,projects,isMobile=false}){
   const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [srch,setSrch]=useState("");
   const fp=projects.filter(p=>p.name.toLowerCase().includes(srch.toLowerCase()));
   return (
-    <Mdl title="New Folder" onClose={onClose} w={600}>
+    <Mdl title="New Folder" onClose={onClose} w={600} isMobile={isMobile}>
       <div style={{display:"flex",gap:20,marginBottom:24}}>
         <div style={{flex:1,display:"flex",flexDirection:"column",gap:16}}>
-          <Fld label="Folder Name"><TIn af ph="e.g. Q3 Initiatives" val={nm} set={setNm}/></Fld>
+          <Fld label="Folder Name"><TIn ph="e.g. Q3 Initiatives" val={nm} set={setNm}/></Fld>
           <Fld label="Description"><TIn ph="What goes in this folder?" val={ds} set={setDs} multi/></Fld>
         </div>
         <div style={{flex:1}}>
@@ -749,11 +749,11 @@ function NewFolderMdl({onClose,projects}){
   );
 }
 
-function PubMdl({art,onClose}){
+function PubMdl({art,onClose,isMobile=false}){
   const [nm,setNm]=useState(art?art.name:""); const [ds,setDs]=useState(""); const [done,setDone]=useState(false);
   if(done){
     return (
-      <Mdl title="" onClose={onClose} w={400}>
+      <Mdl title="" onClose={onClose} w={400} isMobile={isMobile}>
         <div style={{textAlign:"center",padding:"16px 0 8px"}}>
           <div style={{fontSize:48,marginBottom:16}}>&#x1F389;</div>
           <p style={{color:T1,fontWeight:700,fontSize:18,margin:"0 0 8px",fontFamily:FF}}>Published to Feed</p>
@@ -764,7 +764,7 @@ function PubMdl({art,onClose}){
     );
   }
   return (
-    <Mdl title="Publish to Feed" onClose={onClose} w={480}>
+    <Mdl title="Publish to Feed" onClose={onClose} w={480} isMobile={isMobile}>
       {art&&(<div style={{width:72,height:72,borderRadius:12,background:art.thumb||GR[0],margin:"0 auto 20px",border:`1px solid ${BD}`,overflow:"hidden"}}>{art.src&&(art.type==="image"||art.type==="gif")&&(<img src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}</div>)}
       <p style={{color:T2,fontSize:13,textAlign:"center",margin:"-4px 0 22px",fontFamily:FF}}>Publishing will share this artifact to the team feed where other members can see it.</p>
       <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:24}}>
@@ -776,11 +776,11 @@ function PubMdl({art,onClose}){
   );
 }
 
-function SaveMdl({art,projects,onClose}){
+function SaveMdl({art,projects,onClose,isMobile=false}){
   const [pj,setPj]=useState(projects[0]?projects[0].id:1); const [pg,setPg]=useState("p1");
   const proj=projects.find(x=>x.id===pj)||projects[0];
   return (
-    <Mdl title="Save to Project" onClose={onClose} w={420}>
+    <Mdl title="Save to Project" onClose={onClose} w={420} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
         <Fld label="Project"><TSel val={pj} set={v=>{setPj(Number(v));setPg("p1");}} opts={projects.map(p=>({v:p.id,l:p.name}))}/></Fld>
         <Fld label="Page"><TSel val={pg} set={setPg} opts={(proj?proj.pages:[]).map(p=>({v:p.id,l:p.name}))}/></Fld>
@@ -1539,7 +1539,7 @@ function ProjDetail({project,projects,onBack}){
         </div>
       </div>
       {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode}/>)}
-      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
+      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)} isMobile={isMobile}/>)}
       {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
     </div>
@@ -1784,11 +1784,11 @@ export default function App(){
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
       </main>
-      {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create}/>)}
-      {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
-      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})}/>)}
-      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
-      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} projects={projects}/>)}
+      {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create} isMobile={isMobile}/>)}
+      {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects} isMobile={isMobile}/>)}
+      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})} isMobile={isMobile}/>)}
+      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} isMobile={isMobile}/>)}
+      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} projects={projects} isMobile={isMobile}/>)}
       {isMobile&&!searchExp&&(
         <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:32,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
       )}
