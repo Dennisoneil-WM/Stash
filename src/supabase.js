@@ -135,6 +135,9 @@ export async function insertFeedItem(art) {
       mock: art.mock || null,
       description: art.desc || "",
       tags: art.tags || [],
+      device_shell: art.deviceShell || "auto",
+      mobile_bg: art.mobileBg || null,
+      crop: art.crop || null,
       user_name: art.user?.name || "Dennis O'Neil",
       user_initials: art.user?.initials || "DO",
     })
@@ -151,12 +154,23 @@ export async function updateFeedItem(id, updates) {
       name: updates.name,
       description: updates.desc || "",
       tags: updates.tags || [],
+      device_shell: updates.deviceShell || "auto",
+      mobile_bg: updates.mobileBg || null,
+      crop: updates.crop || null,
     })
     .eq("id", id)
     .select()
     .single();
   if (error) throw error;
   return dbToFeedItem(data);
+}
+
+export async function deleteFeedItem(id) {
+  const { error } = await supabase
+    .from("feed_items")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
 }
 
 function dbToFeedItem(r) {
@@ -171,6 +185,9 @@ function dbToFeedItem(r) {
     mock: r.mock,
     desc: r.description,
     tags: r.tags || [],
+    deviceShell: r.device_shell || "auto",
+    mobileBg: r.mobile_bg || "#000",
+    crop: r.crop || null,
     user: { name: r.user_name, initials: r.user_initials },
   };
 }

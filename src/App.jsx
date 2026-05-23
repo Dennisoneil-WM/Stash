@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, uploadFile } from "./supabase.js";
+import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -1692,7 +1692,16 @@ export default function App(){
       return newFeed;
     });
   };
-  const deleteArt=artId=>{
+  const deleteArt=async artId=>{
+    const isUuid=typeof artId==="string"&&artId.includes("-");
+    if(isUuid){
+      try{
+        await deleteFeedItem(artId);
+        console.log("Deleted artifact from Supabase:",artId);
+      }catch(e){
+        console.error("Failed to delete from Supabase:",e);
+      }
+    }
     setFeed(prev=>prev.filter(f=>f.id!==artId));
   };
 
