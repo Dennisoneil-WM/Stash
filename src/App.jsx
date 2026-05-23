@@ -586,7 +586,9 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
 
   const save=async()=>{
     setSaving(true);
-    await onSave({...art,name,desc,tags,deviceShell,crop});
+    const updated={...art,name,desc,tags,deviceShell,crop};
+    console.log("Saving artifact:",{id:updated.id,deviceShell:updated.deviceShell,name:updated.name});
+    await onSave(updated);
     setSaving(false);
     onClose();
   };
@@ -1247,6 +1249,14 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   const ds=item.deviceShell||"auto";
   const showMobile=(ds==="mobile")||(ds==="auto"&&item.isMobile===true);
   const showNoDevice=ds==="none";
+
+  useEffect(()=>{
+    if(item.type==="image"||item.type==="video"||item.type==="gif"){
+      if(ds==="none"||ds==="mobile"||ds==="desktop"){
+        console.log("ExploreCard render:",{id:item.id,type:item.type,deviceShell:item.deviceShell,ds,showMobile,showNoDevice,isMobile:item.isMobile});
+      }
+    }
+  },[item.id,item.deviceShell,ds,showMobile,showNoDevice,item.type]);
   const isMobileWebsite=item.type==="website"&&item.src&&showMobile;
   const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&showMobile&&!showNoDevice;
 
@@ -1636,10 +1646,23 @@ export default function App(){
         setFeed(prev=>prev.map(f=>f.id===r.id?r:f));
         return;
       }catch(e){
-        console.error(e);
+        console.error("Supabase update failed, using local state",e);
       }
     }
-    setFeed(prev=>prev.map(f=>f.id===updated.id?{...f,...updated}:f));
+    setFeed(prev=>{
+      let found=false;
+      const newFeed=prev.map(f=>{
+        if(String(f.id)===String(updated.id)){
+          found=true;
+          return {...f,...updated};
+        }
+        return f;
+      });
+      if(!found){
+        console.warn("Artifact not found in feed with id",updated.id,"feed ids:",prev.map(f=>f.id));
+      }
+      return newFeed;
+    });
   };
   const deleteArt=artId=>{
     setFeed(prev=>prev.filter(f=>f.id!==artId));
