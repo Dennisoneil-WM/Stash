@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, uploadFile } from "./supabase.js";
+import { supabase, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -97,10 +97,10 @@ function TSel({val,set,opts}){
 function Fld({label,children}){
   return (<div>{label&&(<label style={{fontSize:13,color:T2,display:"block",marginBottom:8,fontWeight:500}}>{label}</label>)}{children}</div>);
 }
-function Mdl({title,onClose,children,w=520}){
+function Mdl({title,onClose,children,w=520,isMobile=false}){
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#FFF",borderRadius:20,width:"100%",maxWidth:w,padding:"28px 28px 24px",boxShadow:"0 20px 60px rgba(0,0,0,.18)",maxHeight:"92vh",overflowY:"auto"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:isMobile?0:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:"#FFF",borderRadius:isMobile?0:20,width:"100%",maxWidth:isMobile?"100%":w,height:isMobile?"100vh":"auto",padding:isMobile?"16px 16px 24px":"28px 28px 24px",boxShadow:isMobile?"none":"0 20px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"100vh":"92vh",overflowY:"auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
           <span style={{fontSize:18,fontWeight:700,color:T1,fontFamily:FF}}>{title}</span>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:22,lineHeight:1,padding:4}}>&#x2715;</button>
@@ -113,10 +113,22 @@ function Mdl({title,onClose,children,w=520}){
 
 function Thumb({art,h=220,onClick,darkMode}){
   const [fl,setFl]=useState(false);
+  const ds=art.deviceShell||"auto";
+  const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile);
+
   if((art.type==="image"||art.type==="gif")&&art.src){
-    if(art.isMobile) return (
+    if(ds==="none"){
+      const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
+      const croppedHeight=art.crop?h/(((art.crop.r-art.crop.l)/(art.crop.b-art.crop.t))):h;
+      return (
+        <div onClick={onClick} style={{height:croppedHeight,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",...(cropClip?{clipPath:cropClip}:{})}}>
+          <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"cover",display:"block"}}/>
+        </div>
+      );
+    }
+    if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell darkMode={darkMode}>
+        <PhoneShell bg={art.mobileBg||"#000"} darkMode={darkMode}>
           <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
         </PhoneShell>
       </div>
@@ -124,17 +136,28 @@ function Thumb({art,h=220,onClick,darkMode}){
     return (<div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer"}}><img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/></div>);
   }
   if(art.type==="video"&&art.src){
-    if(art.isMobile) return (
+    if(ds==="none"||ds==="desktop"){
+      const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
+      return (
+        <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative",...(cropClip?{clipPath:cropClip}:{})}}>
+          <video src={art.src} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"cover"}} muted loop playsInline autoPlay/>
+          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+            <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
+          </div>
+        </div>
+      );
+    }
+    if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#000" darkMode={darkMode}>
+        <PhoneShell bg={art.mobileBg||"#000"} darkMode={darkMode}>
           <video src={art.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
         </PhoneShell>
       </div>
     );
     return (
       <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative"}}>
-        <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline/>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline autoPlay/>
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
           <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
         </div>
       </div>
@@ -152,9 +175,9 @@ function Thumb({art,h=220,onClick,darkMode}){
     );
   }
   if(art.type==="website"&&art.src){
-    if(art.isMobile) return (
+    if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#FFF" darkMode={darkMode}>
+        <PhoneShell bg={art.mobileBg||"#FFF"} darkMode={darkMode}>
           <div style={{position:"relative",height:420,overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,width:390,height:844,transform:"scale("+(204/390)+")",transformOrigin:"top left",pointerEvents:"none"}}>
               <iframe src={art.src} title={art.name} style={{width:390,height:844,border:"none",display:"block"}} sandbox="allow-scripts allow-same-origin"/>
@@ -188,12 +211,45 @@ function LBox({art,onClose}){
     window.addEventListener("keydown",fn);
     return ()=>window.removeEventListener("keydown",fn);
   },[onClose]);
+  const ds=art.deviceShell||"auto";
+  const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile);
+  const showNoDevice=ds==="none";
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
-      <div onClick={e=>e.stopPropagation()} style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,overflow:"hidden",background:"#111"}}>
-        {(art.type==="image"||art.type==="gif")&&art.src&&(<img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block"}}/>)}
-        {art.type==="video"&&art.src&&(<video src={art.src} controls autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",display:"block"}}/>)}
+      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"90vw",height:"90vh"}}>
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showMobile&&(
+          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <PhoneShell bg={art.mobileBg||"#000"} noBackground={true}>
+              {(art.type==="image"||art.type==="gif") && (
+                <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              )}
+              {art.type==="video" && (
+                <video src={art.src} controls autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              )}
+            </PhoneShell>
+          </div>
+        )}
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&(
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",maxWidth:"90vw",maxHeight:"90vh",aspectRatio:art.crop?`${(art.crop.r-art.crop.l)/(art.crop.b-art.crop.t)}`:"16/9"}}>
+            {(art.type==="image"||art.type==="gif") && (
+              <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+            )}
+            {art.type==="video" && (
+              <video src={art.src} controls autoPlay style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+            )}
+          </div>
+        )}
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&!showMobile&&!showNoDevice&&(
+          <div style={{maxWidth:"90vw",maxHeight:"90vh",overflow:"hidden"}}>
+            {(art.type==="image"||art.type==="gif") && (
+              <img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block"}}/>
+            )}
+            {art.type==="video" && (
+              <video src={art.src} controls autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",display:"block"}}/>
+            )}
+          </div>
+        )}
         {(art.type==="pdf"||art.type==="figma"||art.type==="website")&&art.src&&(<iframe src={art.src} title={art.name} allowFullScreen style={{width:"80vw",height:"85vh",border:"none",display:"block"}}/>)}
         {!art.src&&(<div style={{width:560,height:340,background:art.thumb||GR[0],display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,.4)",fontSize:13,fontFamily:FF}}>Seed data placeholder - upload a real file</span></div>)}
       </div>
@@ -232,6 +288,87 @@ function UplProg({files,onDone}){
           <div style={{height:"100%",background:BK,borderRadius:8,width:Math.round(pct)+"%",transition:"width .08s"}}/>
         </div>
         <p style={{margin:0,fontSize:12,color:T3,fontFamily:FF}}>{Math.round(pct)}%</p>
+      </div>
+    </div>
+  );
+}
+
+function CropTool({src,onCrop,onCancel}){
+  const [crop,setCrop]=useState({l:0,t:0,r:100,b:100});
+  const [dragging,setDragging]=useState(null);
+  const imgRef=useRef();
+  const containerRef=useRef();
+  const dragRef=useRef(null);
+
+  const updateCrop=(clientX,clientY)=>{
+    if(!dragRef.current||!containerRef.current) return;
+    const rect=containerRef.current.getBoundingClientRect();
+    const x=Math.max(0,Math.min(clientX-rect.left,rect.width));
+    const y=Math.max(0,Math.min(clientY-rect.top,rect.height));
+    const pctX=(x/rect.width)*100;
+    const pctY=(y/rect.height)*100;
+
+    setCrop(c=>{
+      const minW=10,minH=10;
+      switch(dragRef.current){
+        case "nw":return {l:Math.min(pctX,c.r-minW),t:Math.min(pctY,c.b-minH),r:c.r,b:c.b};
+        case "ne":return {l:c.l,t:Math.min(pctY,c.b-minH),r:Math.max(pctX,c.l+minW),b:c.b};
+        case "sw":return {l:Math.min(pctX,c.r-minW),t:c.t,r:c.r,b:Math.max(pctY,c.t+minH)};
+        case "se":return {l:c.l,t:c.t,r:Math.max(pctX,c.l+minW),b:Math.max(pctY,c.t+minH)};
+        default:return c;
+      }
+    });
+  };
+
+  const handleMouseDown=(handle)=>(e)=>{
+    e.preventDefault();
+    dragRef.current=handle;
+    setDragging(handle);
+  };
+
+  const handleTouchStart=(handle)=>(e)=>{
+    e.preventDefault();
+    dragRef.current=handle;
+    setDragging(handle);
+  };
+
+  useEffect(()=>{
+    const handleMouseMove=(e)=>updateCrop(e.clientX,e.clientY);
+    const handleTouchMove=(e)=>{if(e.touches.length>0) updateCrop(e.touches[0].clientX,e.touches[0].clientY);};
+    const handleEnd=()=>{dragRef.current=null;setDragging(null);};
+
+    if(dragging){
+      window.addEventListener("mousemove",handleMouseMove);
+      window.addEventListener("touchmove",handleTouchMove);
+      window.addEventListener("mouseup",handleEnd);
+      window.addEventListener("touchend",handleEnd);
+      return ()=>{
+        window.removeEventListener("mousemove",handleMouseMove);
+        window.removeEventListener("touchmove",handleTouchMove);
+        window.removeEventListener("mouseup",handleEnd);
+        window.removeEventListener("touchend",handleEnd);
+      };
+    }
+  },[dragging]);
+
+  const isVideo=src&&(src.includes(".mp4")||src.includes(".mov")||src.includes(".webm")||src.includes(".avi"));
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div ref={containerRef} style={{position:"relative",borderRadius:12,overflow:"hidden",border:`2px solid ${BD}`,background:"#000",maxWidth:"100%",aspectRatio:"16/9"}}>
+        {isVideo?(
+          <video ref={imgRef} src={src} style={{display:"block",width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline/>
+        ):(
+          <img ref={imgRef} src={src} alt="crop" style={{display:"block",width:"100%",height:"100%",objectFit:"cover"}}/>
+        )}
+        <div style={{position:"absolute",left:crop.l+"%",top:crop.t+"%",right:(100-crop.r)+"%",bottom:(100-crop.b)+"%",border:`2px solid ${BK}`,boxShadow:"inset 0 0 0 4000px rgba(0,0,0,.4)"}}>
+          {["nw","ne","sw","se"].map(h=>(
+            <div key={h} onMouseDown={handleMouseDown(h)} onTouchStart={handleTouchStart(h)} style={{position:"absolute",...(h.includes("n")?{top:"-8px"}:{bottom:"-8px"}),...(h.includes("w")?{left:"-8px"}:{right:"-8px"}),width:24,height:24,background:"#FFF",border:`2px solid ${BK}`,borderRadius:"50%",cursor:`${h}-resize`,zIndex:10,touchAction:"none"}}/>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <GBtn sm onClick={onCancel}>Cancel</GBtn>
+        <BBtn sm onClick={()=>onCrop({l:crop.l,t:crop.t,r:crop.r,b:crop.b})}>Apply Crop</BBtn>
       </div>
     </div>
   );
@@ -302,12 +439,13 @@ function ProjectPicker({projects,selected,onSelect,onNewProject}){
   );
 }
 
-function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
+function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=false}){
   const [tab,setTab]=useState("file");
   const [drag,setDrag]=useState(false);
   const [q,setQ]=useState([]);
   const [upl,setUpl]=useState(false);
   const [preview,setPreview]=useState(null); // {art, index} for editing metadata
+  const [cropMode,setCropMode]=useState(null); // {artIndex} when cropping
   // per-source fields
   const [fu,setFu]=useState(""); const [fn,setFn]=useState("");
   const [su,setSu]=useState(""); const [sn,setSn]=useState("");
@@ -347,22 +485,75 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
       else if(isImg(f)) t="image";
       else if(isVid(f)) t="video";
       else if(isPdf(f)) t="pdf";
-      const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
-      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
+      const fileIsMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
+      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile:fileIsMobile,deviceShell:"auto",crop:null,mobileBg:"#000"});
     }
     setUpl(false);
     setPreview(arts);
   },[q]);
 
+  // Render upload progress
   if(upl) return (<UplProg files={q} onDone={done}/>);
 
+  // Render crop tool
+  if(preview&&cropMode!==null){
+    const art=preview[cropMode.artIndex];
+    return (
+      <Mdl title="Crop Image" onClose={()=>setCropMode(null)} w={640} isMobile={isMobile}>
+        <CropTool src={art.src} onCancel={()=>setCropMode(null)} onCrop={(c)=>{art.crop=c;setCropMode(null);setPreview([...preview]);}}/>
+      </Mdl>
+    );
+  }
+
+  // Render preview/metadata
   if(preview){
     return (
-      <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560}>
+      <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560} isMobile={isMobile}>
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           {preview.map((art,i)=>(
             <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
-              <Thumb art={art} h={200} darkMode={darkMode}/>
+              {art.type==="video"?(
+                <div style={{height:200,borderRadius:12,overflow:"hidden",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+                  {art.src||art._prev?(
+                    <video src={art.src||art._prev} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay controls={false}/>
+                  ):(
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,color:"#666"}}>
+                      <span style={{fontSize:32}}>🎬</span>
+                      <span style={{fontSize:12}}>Loading video...</span>
+                    </div>
+                  )}
+                </div>
+              ):(
+                <Thumb art={art} h={200} darkMode={darkMode}/>
+              )}
+              {(art.type==="image"||art.type==="video"||art.type==="gif")&&(
+                <Fld label="Device Shell">
+                  <div style={{display:"flex",gap:8}}>
+                    {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
+                      <button key={o.v} onClick={()=>{art.deviceShell=o.v;setPreview([...preview]);}} style={{flex:1,background:art.deviceShell===o.v?BK:"#FFF",border:`1px solid ${art.deviceShell===o.v?"transparent":BD}`,color:art.deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                </Fld>
+              )}
+              {(art.deviceShell==="mobile"||art.deviceShell==="auto")&&(art.type==="image"||art.type==="video"||art.type==="gif")&&(
+                <Fld label="Mobile Background">
+                  <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                    {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
+                      <button key={o.v} onClick={()=>{art.mobileBg=o.v;setPreview([...preview]);}} style={{flex:1,minWidth:70,display:"flex",flexDirection:"column",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:FF}}>
+                        <div style={{width:"100%",height:50,background:o.v,borderRadius:8,border:`2px solid ${(art.mobileBg||"#000")===o.v?BK:BD}`,boxSizing:"border-box"}}/>
+                        <span style={{fontSize:11,fontWeight:500,color:T2}}>{o.l}</span>
+                      </button>
+                    ))}
+                  </div>
+                </Fld>
+              )}
+              {art.deviceShell==="none"&&(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&(
+                <button onClick={()=>setCropMode({artIndex:i})} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
+                  {art.crop?"Adjust Crop":"Add Crop Tool"}
+                </button>
+              )}
               <Fld label="Name"><TIn value={art.name} set={v=>{art.name=v;setPreview([...preview]);}} ph="Artifact name"/></Fld>
               <Fld label="Description (optional)"><TIn value={art.desc||""} set={v=>{art.desc=v;setPreview([...preview]);}} ph="Add a description..." multi/></Fld>
               <Fld label="Tags (optional)">
@@ -394,7 +585,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   );
 
   return (
-    <Mdl title="New Artifact" onClose={onClose} w={560}>
+    <Mdl title="New Artifact" onClose={onClose} w={560} isMobile={isMobile}>
       <div style={{display:"flex",gap:8,marginBottom:24,background:"#F5F5F5",borderRadius:12,padding:4}}>
         {tabs.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:tab===t.id?"#FFF":"transparent",border:tab===t.id?`1px solid ${BD}`:"1px solid transparent",borderRadius:9,padding:"9px 0",cursor:"pointer",color:tab===t.id?T1:T2,fontWeight:600,fontSize:14,fontFamily:FF}}>
@@ -424,13 +615,13 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
 
       {tab==="figma" && (
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
-          <Fld label="Figma URL"><TIn af ph="https://www.figma.com/design/..." val={fu} set={v=>{setFu(v);if(!fn)setFn(v.split("/").filter(Boolean).pop()||"");}} /></Fld>
+          <Fld label="Figma URL"><TIn ph="https://www.figma.com/design/..." val={fu} set={v=>{setFu(v);if(!fn)setFn(v.split("/").filter(Boolean).pop()||"");}} /></Fld>
           <Fld label="Name"><TIn ph="Frame or file name" val={fn} set={setFn}/></Fld>
           <div style={{background:"#FFFBEB",border:"1px solid #F0D060",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#7A6000",fontFamily:FF,lineHeight:1.5}}>
             The file must be set to "Anyone with the link can view" in Figma share settings.
           </div>
           {sharedFields}
-          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null}])}>Add Figma Artifact</BBtn>
+          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null,deviceShell:"auto",crop:null,mobileBg:"#000"}])}>Add Figma Artifact</BBtn>
         </div>
       )}
 
@@ -438,39 +629,81 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="URL">
             <div style={{position:"relative"}}>
-              <TIn af ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
+              <TIn ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
               <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"#F0F0F0",borderRadius:6,padding:"3px 8px",fontSize:11,fontWeight:700,color:T2}}>Quick</span>
             </div>
           </Fld>
           <Fld label="Viewport"><TSel val={vp} set={setVp} opts={Object.keys(VPS)}/></Fld>
           <Fld label="Name"><TIn ph="weedmaps.com" val={sn} set={setSn}/></Fld>
           {sharedFields}
-          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile")}])}>Add Website Artifact</BBtn>
+          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile"),deviceShell:"auto",crop:null,mobileBg:"#FFF"}])}>Add Website Artifact</BBtn>
         </div>
       )}
     </Mdl>
   );
 }
 
-function EditArtMdl({art,onClose,onSave}){
+function EditArtMdl({art,onClose,onSave,onDelete,projects=[],isMobile=false}){
   const [name,setName]=useState(art.name||"");
   const [desc,setDesc]=useState(art.desc||"");
   const [tags,setTags]=useState(art.tags||[]);
+  const [deviceShell,setDeviceShell]=useState(art.deviceShell||"auto");
+  const [mobileBg,setMobileBg]=useState(art.mobileBg||"#000");
+  const [cropMode,setCropMode]=useState(false);
+  const [crop,setCrop]=useState(art.crop||null);
   const [saving,setSaving]=useState(false);
 
   const save=async()=>{
     setSaving(true);
-    await onSave({...art,name,desc,tags});
+    const updated={...art,name,desc,tags,deviceShell,crop,mobileBg};
+    console.log("Saving artifact:",{id:updated.id,deviceShell:updated.deviceShell,name:updated.name});
+    await onSave(updated);
     setSaving(false);
     onClose();
   };
 
+  if(cropMode){
+    return (
+      <Mdl title="Crop Image" onClose={()=>setCropMode(false)} w={640} isMobile={isMobile}>
+        <CropTool src={art.src} onCancel={()=>setCropMode(false)} onCrop={(c)=>{setCrop(c);setCropMode(false);}}/>
+      </Mdl>
+    );
+  }
+
   return (
-    <Mdl title="Edit Artifact" onClose={onClose} w={520}>
+    <Mdl title="Edit Artifact" onClose={onClose} w={560} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
-        <Fld label="Name"><TIn af val={name} set={setName} ph="Artifact name"/></Fld>
+        <Fld label="Name"><TIn val={name} set={setName} ph="Artifact name"/></Fld>
         <Fld label="Description (optional)"><TIn val={desc} set={setDesc} ph="Describe this artifact..." multi/></Fld>
         <Fld label="Tags (optional)"><TagInput tags={tags} setTags={setTags}/></Fld>
+        {(art.type==="image"||art.type==="video"||art.type==="gif")&&(
+          <Fld label="Device Shell">
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
+                <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:deviceShell===o.v?BK:"#FFF",border:`1px solid ${deviceShell===o.v?"transparent":BD}`,color:deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          </Fld>
+        )}
+        {(art.type==="image"||art.type==="video"||art.type==="gif")&&(deviceShell==="mobile"||deviceShell==="auto")&&(
+          <Fld label="Mobile Background">
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
+                <button key={o.v} onClick={()=>setMobileBg(o.v)} style={{flex:1,minWidth:70,display:"flex",flexDirection:"column",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:FF}}>
+                  <div style={{width:"100%",height:50,background:o.v,borderRadius:8,border:`2px solid ${mobileBg===o.v?BK:BD}`,boxSizing:"border-box"}}/>
+                  <span style={{fontSize:11,fontWeight:500,color:T2}}>{o.l}</span>
+                </button>
+              ))}
+            </div>
+          </Fld>
+        )}
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&(deviceShell==="none"||deviceShell==="desktop")&&art.src&&(
+          <button onClick={()=>setCropMode(true)} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
+            {crop?"Adjust Crop":"Add Crop Tool"}
+          </button>
+        )}
         {art.src&&(art.type==="image"||art.type==="gif")&&(
           <div style={{borderRadius:10,overflow:"hidden",border:`1px solid ${BD}`,maxHeight:200}}>
             <img src={art.src} alt={art.name} style={{width:"100%",objectFit:"cover",display:"block",maxHeight:200}}/>
@@ -488,15 +721,20 @@ function EditArtMdl({art,onClose,onSave}){
           </div>
         )}
       </div>
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-        <GBtn sm onClick={onClose}>Cancel</GBtn>
-        <BBtn disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save Changes"}</BBtn>
+      <div style={{display:"flex",gap:10,justifyContent:"space-between"}}>
+        {onDelete&&(
+          <button onClick={()=>{if(confirm("Delete this artifact?")){onDelete(art.id);onClose();}}} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:8,padding:"8px 14px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete</button>
+        )}
+        <div style={{display:"flex",gap:10}}>
+          <GBtn sm onClick={onClose}>Cancel</GBtn>
+          <BBtn sm disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save"}</BBtn>
+        </div>
       </div>
     </Mdl>
   );
 }
 
-function NewProjMdl({onClose,onCreate}){
+function NewProjMdl({onClose,onCreate,isMobile=false}){
   const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [fl,setFl]=useState(1); const [tg,setTg]=useState(""); const [tags,setTags]=useState([]);
   const addTag=()=>{
     if(tg.trim()&&!tags.includes(tg.trim().toLowerCase())){
@@ -505,9 +743,9 @@ function NewProjMdl({onClose,onCreate}){
     }
   };
   return (
-    <Mdl title="New Project" onClose={onClose} w={480}>
+    <Mdl title="New Project" onClose={onClose} w={480} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
-        <Fld label="Project Name"><TIn af ph="e.g. Search Redesign" val={nm} set={setNm}/></Fld>
+        <Fld label="Project Name"><TIn ph="e.g. Search Redesign" val={nm} set={setNm}/></Fld>
         <Fld label="Description (optional)"><TIn ph="What is this project about?" val={ds} set={setDs} multi/></Fld>
         <Fld label="Folder"><TSel val={fl} set={v=>setFl(Number(v))} opts={FOLDERS.map(f=>({v:f.id,l:f.name}))}/></Fld>
         <Fld label="Tags (optional)">
@@ -533,14 +771,14 @@ function NewProjMdl({onClose,onCreate}){
   );
 }
 
-function NewFolderMdl({onClose,projects}){
+function NewFolderMdl({onClose,projects,isMobile=false}){
   const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [srch,setSrch]=useState("");
   const fp=projects.filter(p=>p.name.toLowerCase().includes(srch.toLowerCase()));
   return (
-    <Mdl title="New Folder" onClose={onClose} w={600}>
+    <Mdl title="New Folder" onClose={onClose} w={600} isMobile={isMobile}>
       <div style={{display:"flex",gap:20,marginBottom:24}}>
         <div style={{flex:1,display:"flex",flexDirection:"column",gap:16}}>
-          <Fld label="Folder Name"><TIn af ph="e.g. Q3 Initiatives" val={nm} set={setNm}/></Fld>
+          <Fld label="Folder Name"><TIn ph="e.g. Q3 Initiatives" val={nm} set={setNm}/></Fld>
           <Fld label="Description"><TIn ph="What goes in this folder?" val={ds} set={setDs} multi/></Fld>
         </div>
         <div style={{flex:1}}>
@@ -567,11 +805,11 @@ function NewFolderMdl({onClose,projects}){
   );
 }
 
-function PubMdl({art,onClose}){
+function PubMdl({art,onClose,isMobile=false}){
   const [nm,setNm]=useState(art?art.name:""); const [ds,setDs]=useState(""); const [done,setDone]=useState(false);
   if(done){
     return (
-      <Mdl title="" onClose={onClose} w={400}>
+      <Mdl title="" onClose={onClose} w={400} isMobile={isMobile}>
         <div style={{textAlign:"center",padding:"16px 0 8px"}}>
           <div style={{fontSize:48,marginBottom:16}}>&#x1F389;</div>
           <p style={{color:T1,fontWeight:700,fontSize:18,margin:"0 0 8px",fontFamily:FF}}>Published to Feed</p>
@@ -582,7 +820,7 @@ function PubMdl({art,onClose}){
     );
   }
   return (
-    <Mdl title="Publish to Feed" onClose={onClose} w={480}>
+    <Mdl title="Publish to Feed" onClose={onClose} w={480} isMobile={isMobile}>
       {art&&(<div style={{width:72,height:72,borderRadius:12,background:art.thumb||GR[0],margin:"0 auto 20px",border:`1px solid ${BD}`,overflow:"hidden"}}>{art.src&&(art.type==="image"||art.type==="gif")&&(<img src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}</div>)}
       <p style={{color:T2,fontSize:13,textAlign:"center",margin:"-4px 0 22px",fontFamily:FF}}>Publishing will share this artifact to the team feed where other members can see it.</p>
       <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:24}}>
@@ -594,11 +832,11 @@ function PubMdl({art,onClose}){
   );
 }
 
-function SaveMdl({art,projects,onClose}){
+function SaveMdl({art,projects,onClose,isMobile=false}){
   const [pj,setPj]=useState(projects[0]?projects[0].id:1); const [pg,setPg]=useState("p1");
   const proj=projects.find(x=>x.id===pj)||projects[0];
   return (
-    <Mdl title="Save to Project" onClose={onClose} w={420}>
+    <Mdl title="Save to Project" onClose={onClose} w={420} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
         <Fld label="Project"><TSel val={pj} set={v=>{setPj(Number(v));setPg("p1");}} opts={projects.map(p=>({v:p.id,l:p.name}))}/></Fld>
         <Fld label="Page"><TSel val={pg} set={setPg} opts={(proj?proj.pages:[]).map(p=>({v:p.id,l:p.name}))}/></Fld>
@@ -1029,13 +1267,13 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
-function PhoneShell({children,bg="#000",darkMode}){
+function PhoneShell({children,bg="#000",darkMode,noBackground=false}){
   // iPhone Air: ultra-thin uniform aluminum frame, no Dynamic Island overlay (it's in the video)
   const frameGrad="linear-gradient(175deg,#F0F0F2 0%,#D8D8DA 15%,#B8B8BC 35%,#C8C8CC 55%,#D4D4D8 75%,#E8E8EA 100%)";
   const edgeGrad="linear-gradient(175deg,#E0E0E2 0%,#C0C0C4 40%,#D0D0D4 100%)";
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:darkMode?"#1A1A1A":"#BFC9D4",padding:"24px 18px 28px",transition:"background 0.3s"}}>
+                 background:noBackground?"transparent":darkMode?"#1A1A1A":"#BFC9D4",padding:noBackground?"0":"24px 18px 28px",transition:"background 0.3s"}}>
       <div style={{position:"relative",width:307}}>
         {/* Aluminum frame — single band, uniform 3px all around */}
         <div style={{
@@ -1085,13 +1323,15 @@ function PhoneShell({children,bg="#000",darkMode}){
   );
 }
 
-function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
+function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
-  const isMobile=item.isMobile===true;
-  const isMobileWebsite=item.type==="website"&&item.src&&isMobile;
-  const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&isMobile;
+  const ds=item.deviceShell||"auto";
+  const showMobile=(ds==="mobile")||(ds==="auto"&&item.isMobile===true);
+  const showNoDevice=ds==="none";
+  const isMobileWebsite=item.type==="website"&&item.src&&showMobile;
+  const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&showMobile&&!showNoDevice;
 
   // Timeout to detect iframe load failure (X-Frame-Options blocking)
   const ifRef=useRef();
@@ -1116,7 +1356,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
         </div>
       )}
       {isMobileMedia && (
-        <PhoneShell darkMode={darkMode}>
+        <PhoneShell bg={item.mobileBg||"#000"} darkMode={darkMode}>
           {(item.type==="image"||item.type==="gif") && (
             <img src={item.src} alt={item.name}
               style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
@@ -1128,7 +1368,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
         </PhoneShell>
       )}
       {isMobileWebsite && (
-        <PhoneShell bg="#FFF" darkMode={darkMode}>
+        <PhoneShell bg={item.mobileBg||"#FFF"} darkMode={darkMode}>
           {ifErr ? (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:445,padding:20,textAlign:"center"}}>
               <div style={{fontSize:32,marginBottom:12,color:T3}}>&#x26A0;</div>
@@ -1155,7 +1395,24 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
           )}
         </PhoneShell>
       )}
-      {!isMock&&!isMobileMedia&&!isMobileWebsite && (
+      {showNoDevice && (item.type==="image"||item.type==="gif"||item.type==="video")&&item.src && (
+        <>
+          {(item.type==="image"||item.type==="gif") && (
+            <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
+              <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",display:"block"}}/>
+            </div>
+          )}
+          {item.type==="video" && (
+            <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#000",position:"relative",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
+              <video src={item.src} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",display:"block"}} muted loop playsInline autoPlay/>
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      {!isMock&&!isMobileMedia&&!isMobileWebsite&&!showNoDevice && (
         <Thumb art={item} h={320} darkMode={darkMode}/>
       )}
       {hov&&(
@@ -1181,13 +1438,14 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   );
 }
 
-function Explore({feed,projects,onSave,onEdit,darkMode}){
+function Explore({feed,projects,onSave,onEdit,onDelete,darkMode}){
   const [lb,setLb]=useState(null);
+  const realItems=feed.filter(item=>item.type!=="mockup");
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{columns:"4 270px",gap:16}}>
-        {feed.map(item=>(
-          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} darkMode={darkMode}/>
+        {realItems.map(item=>(
+          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
         ))}
       </div>
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1195,7 +1453,7 @@ function Explore({feed,projects,onSave,onEdit,darkMode}){
   );
 }
 
-function ProjCard({project,onOpen}){
+function ProjCard({project,onOpen,onDelete}){
   const [hov,setHov]=useState(false);
   const mock=DMOCKS[(project.id-1)%DMOCKS.length];
   const pad=mock.device==="iphone"?"20px 28px 20px":mock.device==="ipad"?"14px 12px":"10px 8px";
@@ -1207,16 +1465,21 @@ function ProjCard({project,onOpen}){
         <MockSVG mock={mock}/>
       </div>
       {hov&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:14}}>
-          <p style={{margin:"0 0 2px",fontWeight:700,fontSize:14,color:"#FFF",fontFamily:FF}}>{project.name}</p>
-          <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,.7)",fontFamily:FF}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</p>
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:14}}>
+          <div style={{display:"flex",justifyContent:"flex-end"}}>
+            <button onClick={e=>{e.stopPropagation();onDelete(project.id);}} style={{background:"rgba(255,0,0,.8)",border:"none",color:"#FFF",width:32,height:32,borderRadius:"50%",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700}}>×</button>
+          </div>
+          <div>
+            <p style={{margin:"0 0 2px",fontWeight:700,fontSize:14,color:"#FFF",fontFamily:FF}}>{project.name}</p>
+            <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,.7)",fontFamily:FF}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</p>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function Projects({projects,onOpen}){
+function Projects({projects,onOpen,onDelete}){
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{display:"flex",gap:12,flexWrap:"nowrap",overflowX:"auto",marginBottom:24,paddingBottom:4}}>
@@ -1231,13 +1494,13 @@ function Projects({projects,onOpen}){
         ))}
       </div>
       <div style={{columns:"5 200px",gap:16}}>
-        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen}/>))}
+        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete}/>))}
       </div>
     </div>
   );
 }
 
-function ProjDetail({project,projects,onBack}){
+function ProjDetail({project,projects,onBack,darkMode}){
   const [ap,setAp]=useState(project.pages[0].id);
   const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
@@ -1330,14 +1593,14 @@ function ProjDetail({project,projects,onBack}){
         </div>
       </div>
       {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode}/>)}
-      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
+      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)} isMobile={isMobile}/>)}
       {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
     </div>
   );
 }
 
-function Profile({user,feed}){
+function Profile({user,feed,darkMode}){
   const uf=feed.filter(i=>i.user.id===user.id);
   return (
     <div style={{maxWidth:1100,margin:"0 auto",padding:"48px 32px"}}>
@@ -1369,6 +1632,8 @@ export default function App(){
   const [searchExp,setSearchExp]=useState(false);
   const [showTags,setShowTags]=useState(false);
   const [darkMode,setDarkMode]=useState(false);
+  const [editItem,setEditItem]=useState(null);
+  const [uplError,setUplError]=useState(null);
   const searchRef=useRef(null);
   const logoRef=useRef(null);
 
@@ -1406,7 +1671,7 @@ export default function App(){
   },[searchExp]);
 
   if(view==="project"&&proj){
-    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")}/>);
+    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} darkMode={darkMode}/>);
   }
 
   const toggleDarkMode=()=>{
@@ -1425,6 +1690,18 @@ export default function App(){
   };
 
   const open=p=>{setProj(p);setView("project");};
+  const deleteProj=async projId=>{
+    const isUuid=typeof projId==="string"&&projId.includes("-");
+    if(isUuid){
+      try{
+        await deleteProject(projId);
+        console.log("Deleted project from Supabase:",projId);
+      }catch(e){
+        console.error("Failed to delete from Supabase:",e);
+      }
+    }
+    setProjects(prev=>prev.filter(p=>p.id!==projId));
+  };
   const create=async p=>{
     try{
       const saved=await createProject(p);
@@ -1440,27 +1717,65 @@ export default function App(){
     }
   };
   const addToFeed=async arts=>{
+    setUplError(null);
     const saved=[];
     for(const art of arts){
       let src=art.src;
       if(art._file){
-        try{src=await uploadFile(art._file);}catch(e){console.error(e);}
+        try{src=await uploadFile(art._file);}catch(e){
+          console.error("Upload failed:",e);
+          setUplError(e.message||"Upload failed. Please try a smaller file.");
+          return;
+        }
       }
       const item={...art,src,user:ME};
       try{const r=await insertFeedItem(item);saved.push(r);}
       catch(e){saved.push({...item,id:"upl"+uid()});}
     }
     setFeed(prev=>[...saved,...prev]);
+    setUplFeed(false);
   };
 
-  const [editItem,setEditItem]=useState(null);
   const saveEdit=async updated=>{
+    console.log("saveEdit called with:",{id:updated.id,deviceShell:updated.deviceShell,mobileBg:updated.mobileBg});
     const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
     if(isUuid){
-      try{const r=await updateFeedItem(updated.id,updated);setFeed(prev=>prev.map(f=>f.id===r.id?r:f));return;}
-      catch(e){console.error(e);}
+      try{
+        const r=await updateFeedItem(updated.id,updated);
+        console.log("Supabase update succeeded, new item:",{id:r.id,deviceShell:r.deviceShell,mobileBg:r.mobileBg});
+        setFeed(prev=>prev.map(f=>f.id===r.id?r:f));
+        return;
+      }catch(e){
+        console.error("Supabase update failed, using local state",e);
+      }
     }
-    setFeed(prev=>prev.map(f=>f.id===updated.id?{...f,...updated}:f));
+    setFeed(prev=>{
+      let found=false;
+      const newFeed=prev.map(f=>{
+        if(String(f.id)===String(updated.id)){
+          found=true;
+          console.log("Found matching artifact, updating from",{ds:f.deviceShell,bg:f.mobileBg},"to",{ds:updated.deviceShell,bg:updated.mobileBg});
+          return {...f,...updated};
+        }
+        return f;
+      });
+      if(!found){
+        console.warn("Artifact not found in feed with id",updated.id,"current feed size:",prev.length);
+      }
+      return newFeed;
+    });
+  };
+  const deleteArt=async artId=>{
+    const isUuid=typeof artId==="string"&&artId.includes("-");
+    if(isUuid){
+      try{
+        await deleteFeedItem(artId);
+        console.log("Deleted artifact from Supabase:",artId);
+      }catch(e){
+        console.error("Failed to delete from Supabase:",e);
+      }
+    }
+    setFeed(prev=>prev.filter(f=>f.id!==artId));
   };
 
   const allTags=Array.from(new Set(projects.flatMap(p=>p.tags||[])));
@@ -1490,13 +1805,13 @@ export default function App(){
             <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
             <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:darkMode?"#FFF":T1,textTransform:"uppercase",transition:"color 0.3s"}}>The Stash</span>
           </button>
-          <div style={{flex:1}}/>
           <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,transition:"background 0.3s"}}>
             {["Explore","Projects"].map(v=>(
               <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
             ))}
           </div>
-          <div style={{flex:1,maxWidth:520,margin:"0 0 0 auto",position:"relative"}}>
+          <div style={{flex:1}}/>
+          <div style={{width:520,position:"relative"}}>
             <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:18,pointerEvents:"none"}}>&#x2315;</span>
             <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?(darkMode?"#2A2A2A":"#FFF"):(darkMode?"#1A1A1A":"#F5F5F5"),border:`1px solid ${sf?(darkMode?"#444":BM):"transparent"}`,borderRadius:22,padding:"7px 16px 7px 44px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
             {sf&&showTags&&(
@@ -1516,9 +1831,10 @@ export default function App(){
               </div>
             )}
           </div>
+          <div style={{flex:1}}/>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
             <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
           </div>
         </>)}
@@ -1534,7 +1850,7 @@ export default function App(){
               ))}
             </div>
             <div style={{flex:1}}/>
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
+            {view==="explore"&&(<button onClick={()=>setUplFeed(true)} style={{background:BK,color:"#FFF",border:"none",borderRadius:100,padding:"1px 12px",fontWeight:600,fontSize:24,cursor:"pointer",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>+</button>)}
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={ME} size={28} src={ME.image}/></button>
           </>)}
           {searchExp&&(<>
@@ -1547,58 +1863,66 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} darkMode={darkMode}/>)}
-        {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
-        {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} darkMode={darkMode}/>)}
+        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj}/>)}
+        {view==="profile"&&(<Profile user={ME} feed={feed} darkMode={darkMode}/>)}
       </main>
-      {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create}/>)}
-      {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
-      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})}/>)}
-      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
-      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit}/>)}
+      {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create} isMobile={isMobile}/>)}
+      {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects} isMobile={isMobile}/>)}
+      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})} isMobile={isMobile}/>)}
+      {uplError&&(
+        <div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",background:"#FEE2E2",border:"1px solid #FECACA",borderRadius:8,padding:"12px 16px",color:"#DC2626",fontSize:14,fontFamily:FF,zIndex:2000,maxWidth:400,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>{uplError}</span>
+            <button onClick={()=>setUplError(null)} style={{background:"none",border:"none",cursor:"pointer",color:"#DC2626",fontSize:20,padding:0,lineHeight:1,marginLeft:16}}>×</button>
+          </div>
+        </div>
+      )}
+      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} isMobile={isMobile}/>)}
+      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} projects={projects} isMobile={isMobile}/>)}
       {isMobile&&!searchExp&&(
         <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:32,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
       )}
       {isMobile&&searchExp&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:darkMode?"#0D0D0D":"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#0D0D0D",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
           <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}html,body{margin:0;padding:0}`}</style>
-          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${darkMode?"#333":BD}`,background:darkMode?"#1A1A1A":"#FFF",transition:"all 0.3s",flexShrink:0}}>
-            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:darkMode?"#FFF":T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
+          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid #333",background:"#1A1A1A",transition:"all 0.3s",flexShrink:0}}>
+            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#999",fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
             <div style={{flex:1,position:"relative"}}>
-              <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:T1,outline:"none",fontFamily:FF}}/>
+              <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"#666",fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:"#E8E8E8",outline:"none",fontFamily:FF,placeholder:"#999"}}/>
             </div>
           </div>
           <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 20px"}}>
             {srch.trim()?(
               <div>
-                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
+                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
                 {matchingTags.length>0?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                     {matchingTags.map(t=>(
-                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
                         <span>&#x23;</span>{t}
                       </button>
                     ))}
                   </div>
                 ):(
-                  <p style={{fontSize:13,color:T3,textAlign:"center",padding:"24px 0"}}>No tags match "{srch}"</p>
+                  <p style={{fontSize:13,color:"#666",textAlign:"center",padding:"24px 0"}}>No tags match "{srch}"</p>
                 )}
               </div>
             ):(
               <div>
-                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>All Tags</p>
+                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>All Tags</p>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:24}}>
                   {allTags.slice(0,12).map(t=>(
-                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
                       <span>&#x23;</span>{t}
                     </button>
                   ))}
                 </div>
-                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
+                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   {["web","mobile","redesign","v2","checkout"].map(s=>(
-                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"12px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF}}>
+                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"#262626",border:"1px solid #333",borderRadius:8,padding:"12px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF}}>
                       &#x2315; {s}
                     </button>
                   ))}
