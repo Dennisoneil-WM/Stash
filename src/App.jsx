@@ -216,21 +216,19 @@ function LBox({art,onClose}){
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
-      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",maxWidth:"90vw",maxHeight:"90vh"}}>
+      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",maxWidth:"90vw",maxHeight:"90vh",width:"100%",height:"100%"}}>
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showMobile&&(
-          <div style={{transform:"scale(2.5)",transformOrigin:"center",maxHeight:"100%"}}>
-            <PhoneShell bg={art.mobileBg||"#000"}>
-              {(art.type==="image"||art.type==="gif") && (
-                <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-              )}
-              {art.type==="video" && (
-                <video src={art.src} controls autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-              )}
-            </PhoneShell>
-          </div>
+          <PhoneShell bg={art.mobileBg||"#000"}>
+            {(art.type==="image"||art.type==="gif") && (
+              <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            )}
+            {art.type==="video" && (
+              <video src={art.src} controls autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            )}
+          </PhoneShell>
         )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&(
-          <div style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,overflow:"hidden",background:"#111"}}>
+          <div style={{maxWidth:"90vw",maxHeight:"90vh",overflow:"hidden"}}>
             {(art.type==="image"||art.type==="gif") && (
               <img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
             )}
@@ -240,7 +238,7 @@ function LBox({art,onClose}){
           </div>
         )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&!showMobile&&!showNoDevice&&(
-          <div style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,overflow:"hidden",background:"#111"}}>
+          <div style={{maxWidth:"90vw",maxHeight:"90vh",overflow:"hidden"}}>
             {(art.type==="image"||art.type==="gif") && (
               <img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block"}}/>
             )}
