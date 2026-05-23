@@ -1030,56 +1030,55 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
 function PhoneShell({children,bg="#000",darkMode}){
-  // iPhone Air: thin titanium frame, tight bezels
-  // Dynamic Island lives INSIDE the screen at real iPhone proportions:
-  // DI top ≈ 11pt / 852pt ≈ 1.3%, width ≈ 126pt / 393pt ≈ 32%, height ≈ 37pt / 852pt ≈ 4.3%
-  const frameGrad="linear-gradient(160deg,#E8E8EA 0%,#C8C8CA 20%,#B0B0B4 40%,#D0D0D4 60%,#C0C0C4 80%,#DCDCDE 100%)";
+  // iPhone Air: ultra-thin uniform aluminum frame, no Dynamic Island overlay (it's in the video)
+  const frameGrad="linear-gradient(175deg,#F0F0F2 0%,#D8D8DA 15%,#B8B8BC 35%,#C8C8CC 55%,#D4D4D8 75%,#E8E8EA 100%)";
+  const edgeGrad="linear-gradient(175deg,#E0E0E2 0%,#C0C0C4 40%,#D0D0D4 100%)";
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:darkMode?"#1A1A1A":"#CBD5E0",padding:"20px 16px 24px",transition:"background 0.3s"}}>
-      <div style={{position:"relative",width:260}}>
-        {/* Outer titanium frame */}
+                 background:darkMode?"#1A1A1A":"#BFC9D4",padding:"24px 18px 28px",transition:"background 0.3s"}}>
+      <div style={{position:"relative",width:256}}>
+        {/* Aluminum frame — single band, uniform 3px all around */}
         <div style={{
-          background:frameGrad,borderRadius:52,padding:3,position:"relative",
-          boxShadow:"0 0 0 0.5px rgba(0,0,0,0.25), 0 20px 60px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6)",
+          background:frameGrad,
+          borderRadius:50,
+          padding:"3px",
+          position:"relative",
+          boxShadow:"0 0 0 0.5px rgba(0,0,0,0.18), 0 24px 64px rgba(0,0,0,0.38), 0 6px 16px rgba(0,0,0,0.18), inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.12)",
         }}>
-          {/* Inner bezel */}
+          {/* Thin black inner ring — even 4px all sides */}
           <div style={{
-            background:"#0A0A0A",borderRadius:50,padding:"8px 6px 10px",
-            position:"relative",display:"flex",flexDirection:"column",
-            boxShadow:"inset 0 0 0 0.5px rgba(255,255,255,0.08)",
+            background:"#080808",
+            borderRadius:48,
+            padding:"4px",
+            position:"relative",
           }}>
-            {/* Screen — Dynamic Island sits INSIDE here so it overlays the video at the correct position */}
+            {/* Screen */}
             <div style={{
-              borderRadius:42,overflow:"hidden",background:bg,
-              position:"relative",aspectRatio:"393/852",
+              borderRadius:45,
+              overflow:"hidden",
+              background:bg,
+              position:"relative",
+              aspectRatio:"393/852",
             }}>
-              {/* Content fills 100% — no maxHeight constraints */}
               <div style={{position:"absolute",inset:0,width:"100%",height:"100%"}}>
                 {children}
               </div>
-              {/* Dynamic Island overlay at real iPhone proportions */}
-              <div style={{
-                position:"absolute",top:"1.3%",left:"50%",transform:"translateX(-50%)",
-                width:"32%",height:"4.3%",
-                background:"#000",borderRadius:999,zIndex:10,
-              }}/>
             </div>
           </div>
           {/* Power button - right */}
-          <div style={{position:"absolute",right:-3.5,top:"28%",width:3.5,height:68,background:frameGrad,borderRadius:"0 3px 3px 0",boxShadow:"1px 0 2px rgba(0,0,0,0.3)"}}/>
+          <div style={{position:"absolute",right:-3,top:"30%",width:3,height:64,background:edgeGrad,borderRadius:"0 2.5px 2.5px 0",boxShadow:"1px 0 3px rgba(0,0,0,0.25)"}}/>
           {/* Action button - left */}
-          <div style={{position:"absolute",left:-3.5,top:"18%",width:3.5,height:30,background:frameGrad,borderRadius:"3px 0 0 3px",boxShadow:"-1px 0 2px rgba(0,0,0,0.3)"}}/>
+          <div style={{position:"absolute",left:-3,top:"20%",width:3,height:28,background:edgeGrad,borderRadius:"2.5px 0 0 2.5px",boxShadow:"-1px 0 3px rgba(0,0,0,0.25)"}}/>
           {/* Volume up - left */}
-          <div style={{position:"absolute",left:-3.5,top:"27%",width:3.5,height:44,background:frameGrad,borderRadius:"3px 0 0 3px",boxShadow:"-1px 0 2px rgba(0,0,0,0.3)"}}/>
+          <div style={{position:"absolute",left:-3,top:"29%",width:3,height:42,background:edgeGrad,borderRadius:"2.5px 0 0 2.5px",boxShadow:"-1px 0 3px rgba(0,0,0,0.25)"}}/>
           {/* Volume down - left */}
-          <div style={{position:"absolute",left:-3.5,top:"38%",width:3.5,height:44,background:frameGrad,borderRadius:"3px 0 0 3px",boxShadow:"-1px 0 2px rgba(0,0,0,0.3)"}}/>
+          <div style={{position:"absolute",left:-3,top:"39%",width:3,height:42,background:edgeGrad,borderRadius:"2.5px 0 0 2.5px",boxShadow:"-1px 0 3px rgba(0,0,0,0.25)"}}/>
         </div>
-        {/* Screen glass reflection */}
+        {/* Subtle glass reflection over screen */}
         <div style={{
-          position:"absolute",top:13,left:9,right:9,height:"30%",
-          background:"linear-gradient(180deg,rgba(255,255,255,0.07) 0%,transparent 100%)",
-          borderRadius:"44px 44px 0 0",pointerEvents:"none",zIndex:6,
+          position:"absolute",top:10,left:8,right:8,height:"28%",
+          background:"linear-gradient(180deg,rgba(255,255,255,0.08) 0%,transparent 100%)",
+          borderRadius:"46px 46px 0 0",pointerEvents:"none",zIndex:6,
         }}/>
       </div>
     </div>
