@@ -446,24 +446,28 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
       else if(isImg(f)) t="image";
       else if(isVid(f)) t="video";
       else if(isPdf(f)) t="pdf";
-      const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
-      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile,deviceShell:"auto",crop:null,mobileBg:"#000"});
+      const fileIsMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
+      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile:fileIsMobile,deviceShell:"auto",crop:null,mobileBg:"#000"});
     }
     setUpl(false);
     setPreview(arts);
   },[q]);
 
+  // Render upload progress
   if(upl) return (<UplProg files={q} onDone={done}/>);
 
+  // Render crop tool
+  if(preview&&cropMode!==null){
+    const art=preview[cropMode.artIndex];
+    return (
+      <Mdl title="Crop Image" onClose={()=>setCropMode(null)} w={640} isMobile={isMobile}>
+        <CropTool src={art.src} onCancel={()=>setCropMode(null)} onCrop={(c)=>{art.crop=c;setCropMode(null);setPreview([...preview]);}}/>
+      </Mdl>
+    );
+  }
+
+  // Render preview/metadata
   if(preview){
-    if(cropMode!==null){
-      const art=preview[cropMode.artIndex];
-      return (
-        <Mdl title="Crop Image" onClose={()=>setCropMode(null)} w={640} isMobile={isMobile}>
-          <CropTool src={art.src} onCancel={()=>setCropMode(null)} onCrop={(c)=>{art.crop=c;setCropMode(null);setPreview([...preview]);}}/>
-        </Mdl>
-      );
-    }
     return (
       <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560} isMobile={isMobile}>
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
