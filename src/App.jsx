@@ -210,12 +210,43 @@ function LBox({art,onClose}){
     window.addEventListener("keydown",fn);
     return ()=>window.removeEventListener("keydown",fn);
   },[onClose]);
+  const ds=art.deviceShell||"auto";
+  const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile);
+  const showNoDevice=ds==="none";
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
-      <div onClick={e=>e.stopPropagation()} style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,overflow:"hidden",background:"#111"}}>
-        {(art.type==="image"||art.type==="gif")&&art.src&&(<img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block"}}/>)}
-        {art.type==="video"&&art.src&&(<video src={art.src} controls autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",display:"block"}}/>)}
+      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showMobile&&(
+          <PhoneShell bg={art.mobileBg||"#000"}>
+            {(art.type==="image"||art.type==="gif") && (
+              <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            )}
+            {art.type==="video" && (
+              <video src={art.src} controls autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            )}
+          </PhoneShell>
+        )}
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&(
+          <div style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,overflow:"hidden",background:"#111"}}>
+            {(art.type==="image"||art.type==="gif") && (
+              <img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+            )}
+            {art.type==="video" && (
+              <video src={art.src} controls autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+            )}
+          </div>
+        )}
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&!showMobile&&!showNoDevice&&(
+          <div style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,overflow:"hidden",background:"#111"}}>
+            {(art.type==="image"||art.type==="gif") && (
+              <img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block"}}/>
+            )}
+            {art.type==="video" && (
+              <video src={art.src} controls autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",display:"block"}}/>
+            )}
+          </div>
+        )}
         {(art.type==="pdf"||art.type==="figma"||art.type==="website")&&art.src&&(<iframe src={art.src} title={art.name} allowFullScreen style={{width:"80vw",height:"85vh",border:"none",display:"block"}}/>)}
         {!art.src&&(<div style={{width:560,height:340,background:art.thumb||GR[0],display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,.4)",fontSize:13,fontFamily:FF}}>Seed data placeholder - upload a real file</span></div>)}
       </div>
