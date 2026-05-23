@@ -1374,14 +1374,6 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
                       cursor:"pointer",fontFamily:FF}}
             >Edit</button>
           )}
-          {onDelete&&item.type!=="mockup"&&(
-            <button
-              onClick={e=>{e.stopPropagation();onDelete(item.id);}}
-              style={{background:"rgba(255,0,0,.8)",border:"none",borderRadius:8,
-                      padding:"6px 12px",color:"#FFF",fontSize:12,fontWeight:600,
-                      cursor:"pointer",fontFamily:FF}}
-            >Delete</button>
-          )}
           <button
             onClick={e=>{e.stopPropagation();onSave(item);}}
             style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
