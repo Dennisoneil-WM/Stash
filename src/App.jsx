@@ -1814,7 +1814,7 @@ export default function App(){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+</BBtn>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
             <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
           </div>
         </>)}
