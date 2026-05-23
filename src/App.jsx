@@ -72,7 +72,8 @@ function isPdf(f){return f.type==="application/pdf";}
 function figEmbed(u){if(!u)return "";if(u.includes("figma.com/embed"))return u;return "https://www.figma.com/embed?embed_host=share&url="+encodeURIComponent(u);}
 function ensureHttp(u){if(!u)return "";return u.startsWith("http")?u:"https://"+u;}
 
-function Av({user,size=32}){
+function Av({user,size=32,src}){
+  if(src) return (<img src={src} alt={user.name} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,display:"block"}}/>);
   const bg=["#EBF5FB","#F0EBFB","#FBF0EB","#EBFBF0","#FBEBF0"],fg=["#1A6FA8","#6B21A8","#C2410C","#065F46","#9D174D"],i=(user.id-1)%5;
   return (<div style={{width:size,height:size,borderRadius:"50%",background:bg[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.34,fontWeight:700,color:fg[i],flexShrink:0,userSelect:"none"}}>{user.initials}</div>);
 }
@@ -1409,7 +1410,7 @@ export default function App(){
     <div style={{minHeight:"100vh",background:PG,fontFamily:FF}}>
       <nav style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100}}>
         {!isMobile&&(<>
-          <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,marginRight:4}}>
+          <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
             <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
             <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
           </div>
@@ -1418,9 +1419,9 @@ export default function App(){
               <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF}}>{v}</button>
             ))}
           </div>
-          <div style={{flex:1,maxWidth:520,margin:"0 auto",position:"relative"}}>
-            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?"#FFF":"#F5F5F5",border:`1px solid ${sf?BM:"transparent"}`,borderRadius:22,padding:"7px 16px 7px 36px",color:T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
+          <div style={{flex:1,maxWidth:520,margin:"0 0 0 auto",position:"relative"}}>
+            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:18,pointerEvents:"none"}}>&#x2315;</span>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?"#FFF":"#F5F5F5",border:`1px solid ${sf?BM:"transparent"}`,borderRadius:22,padding:"7px 16px 7px 44px",color:T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
             {sf&&showTags&&(
               <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,boxShadow:"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto"}}>
                 {matchingTags.length>0?(
@@ -1442,7 +1443,6 @@ export default function App(){
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
             {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
             <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32}/></button>
-            <button style={{background:"none",border:`1px solid ${BD}`,borderRadius:8,width:32,height:32,cursor:"pointer",color:T2,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x2699;</button>
           </div>
         </>)}
         {isMobile&&(<>
@@ -1454,7 +1454,7 @@ export default function App(){
                 <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF}}>{v}</button>
               ))}
             </div>
-            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:22,flexShrink:0,marginLeft:6}}>&#x2315;</button>
+            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:28,flexShrink:0,marginLeft:6}}>&#x2315;</button>
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Av user={ME} size={28}/></button>
             <button style={{background:"none",border:`1px solid ${BD}`,borderRadius:8,width:32,height:32,cursor:"pointer",color:T2,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>&#x2699;</button>
           </>)}
