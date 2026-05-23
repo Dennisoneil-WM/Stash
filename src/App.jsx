@@ -1442,7 +1442,7 @@ function Projects({projects,onOpen}){
   );
 }
 
-function ProjDetail({project,projects,onBack}){
+function ProjDetail({project,projects,onBack,darkMode}){
   const [ap,setAp]=useState(project.pages[0].id);
   const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
@@ -1542,7 +1542,7 @@ function ProjDetail({project,projects,onBack}){
   );
 }
 
-function Profile({user,feed}){
+function Profile({user,feed,darkMode}){
   const uf=feed.filter(i=>i.user.id===user.id);
   return (
     <div style={{maxWidth:1100,margin:"0 auto",padding:"48px 32px"}}>
@@ -1612,7 +1612,7 @@ export default function App(){
   },[searchExp]);
 
   if(view==="project"&&proj){
-    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")}/>);
+    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} darkMode={darkMode}/>);
   }
 
   const toggleDarkMode=()=>{
@@ -1787,7 +1787,7 @@ export default function App(){
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} darkMode={darkMode}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
-        {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
+        {view==="profile"&&(<Profile user={ME} feed={feed} darkMode={darkMode}/>)}
       </main>
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create} isMobile={isMobile}/>)}
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects} isMobile={isMobile}/>)}
