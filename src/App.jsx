@@ -1344,7 +1344,9 @@ export default function App(){
     return()=>window.removeEventListener("resize",onResize);
   },[]);
   useEffect(()=>{
-    if(searchExp&&searchRef.current)searchRef.current.focus();
+    if(searchExp&&searchRef.current){
+      setTimeout(()=>{searchRef.current?.focus({preventScroll:true});},300);
+    }
   },[searchExp]);
 
   useEffect(()=>{
@@ -1519,7 +1521,7 @@ export default function App(){
             <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:darkMode?"#FFF":T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
             <div style={{flex:1,position:"relative"}}>
               <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-              <input ref={searchRef} autoFocus value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:T1,outline:"none",fontFamily:FF}}/>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:T1,outline:"none",fontFamily:FF}}/>
             </div>
           </div>
           <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 20px"}}>
