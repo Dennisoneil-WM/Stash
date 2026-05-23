@@ -1447,26 +1447,16 @@ export default function App(){
         </>)}
         {isMobile&&(<>
           {!searchExp&&(<>
-            <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
-              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
-              <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
-            </div>
+            <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block",flexShrink:0}}/>
             <div style={{flex:1}}/>
-            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:22,flexShrink:0}}>&#x2315;</button>
-            <button onClick={()=>setUplFeed(true)} style={{width:34,height:34,borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:22,lineHeight:1,flexShrink:0}}>+</button>
-            <div style={{position:"relative",flexShrink:0}}>
-              <button onClick={()=>setMobileMenu(v=>!v)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T1,fontSize:18}}>&#x22EF;</button>
-              {mobileMenu&&(<div onClick={()=>setMobileMenu(false)} style={{position:"fixed",inset:0,zIndex:199}}/>)}
-              {mobileMenu&&(
-                <div style={{position:"absolute",top:42,right:0,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,boxShadow:"0 4px 20px rgba(0,0,0,.1)",minWidth:160,zIndex:200,overflow:"hidden"}}>
-                  {["Explore","Projects"].map(v=>(
-                    <button key={v} onClick={()=>{setView(v.toLowerCase());setMobileMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",background:view===v.toLowerCase()?"#F5F5F5":"transparent",border:"none",padding:"12px 16px",fontSize:15,fontFamily:FF,color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,cursor:"pointer"}}>{v}</button>
-                  ))}
-                  <div style={{height:1,background:BD,margin:"4px 0"}}/>
-                  <button onClick={()=>{setView("profile");setMobileMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"12px 16px",fontSize:15,fontFamily:FF,color:T2,cursor:"pointer"}}>Profile</button>
-                </div>
-              )}
+            <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3,flexShrink:0}}>
+              {["Explore","Projects"].map(v=>(
+                <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF}}>{v}</button>
+              ))}
             </div>
+            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:22,flexShrink:0,marginLeft:6}}>&#x2315;</button>
+            <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Av user={ME} size={28}/></button>
+            <button style={{background:"none",border:`1px solid ${BD}`,borderRadius:8,width:32,height:32,cursor:"pointer",color:T2,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>&#x2699;</button>
           </>)}
           {searchExp&&(<>
             <div style={{flex:1,position:"relative"}}>
