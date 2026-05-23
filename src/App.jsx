@@ -135,7 +135,7 @@ function Thumb({art,h=220,onClick,darkMode}){
     return (<div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer"}}><img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/></div>);
   }
   if(art.type==="video"&&art.src){
-    if(ds==="none"){
+    if(ds==="none"||ds==="desktop"){
       const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
       return (
         <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative",...(cropClip?{clipPath:cropClip}:{})}}>
@@ -155,8 +155,8 @@ function Thumb({art,h=220,onClick,darkMode}){
     );
     return (
       <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative"}}>
-        <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline/>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline autoPlay/>
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
           <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
         </div>
       </div>
