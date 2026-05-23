@@ -1350,17 +1350,11 @@ export default function App(){
   useEffect(()=>{
     if(searchExp){
       document.body.style.overflow="hidden";
-      document.body.style.position="fixed";
-      document.body.style.width="100%";
     }else{
       document.body.style.overflow="";
-      document.body.style.position="";
-      document.body.style.width="";
     }
     return ()=>{
       document.body.style.overflow="";
-      document.body.style.position="";
-      document.body.style.width="";
     };
   },[searchExp]);
 
@@ -1519,16 +1513,16 @@ export default function App(){
         <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"100px",height:"44px",borderRadius:"22px",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:"#FFF",fontSize:20,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315; Search</button>
       )}
       {isMobile&&searchExp&&(
-        <div style={{position:"fixed",inset:0,background:darkMode?"#0D0D0D":"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s"}}>
-          <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${darkMode?"#333":BD}`,background:darkMode?"#1A1A1A":"#FFF",transition:"all 0.3s"}}>
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:darkMode?"#0D0D0D":"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
+          <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}html,body{margin:0;padding:0}`}</style>
+          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${darkMode?"#333":BD}`,background:darkMode?"#1A1A1A":"#FFF",transition:"all 0.3s",flexShrink:0}}>
             <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:darkMode?"#FFF":T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
             <div style={{flex:1,position:"relative"}}>
               <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-              <input ref={searchRef} autoFocus value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:14,color:T1,outline:"none",fontFamily:FF}}/>
+              <input ref={searchRef} autoFocus value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:T1,outline:"none",fontFamily:FF}}/>
             </div>
           </div>
-          <div style={{flex:1,overflowY:"auto",padding:"16px 20px"}}>
+          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 20px"}}>
             {srch.trim()?(
               <div>
                 <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
