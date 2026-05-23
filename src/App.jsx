@@ -1271,7 +1271,7 @@ function PhoneShell({children,bg="#000",darkMode}){
   );
 }
 
-function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
+function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
@@ -1374,6 +1374,14 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
                       cursor:"pointer",fontFamily:FF}}
             >Edit</button>
           )}
+          {onDelete&&item.type!=="mockup"&&(
+            <button
+              onClick={e=>{e.stopPropagation();onDelete(item.id);}}
+              style={{background:"rgba(255,0,0,.8)",border:"none",borderRadius:8,
+                      padding:"6px 12px",color:"#FFF",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:FF}}
+            >Delete</button>
+          )}
           <button
             onClick={e=>{e.stopPropagation();onSave(item);}}
             style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
@@ -1386,13 +1394,13 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   );
 }
 
-function Explore({feed,projects,onSave,onEdit,darkMode}){
+function Explore({feed,projects,onSave,onEdit,onDelete,darkMode}){
   const [lb,setLb]=useState(null);
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{columns:"4 270px",gap:16}}>
         {feed.map(item=>(
-          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} darkMode={darkMode}/>
+          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
         ))}
       </div>
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1773,7 +1781,7 @@ export default function App(){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
             <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
           </div>
         </>)}
@@ -1789,7 +1797,7 @@ export default function App(){
               ))}
             </div>
             <div style={{flex:1}}/>
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={ME} size={28} src={ME.image}/></button>
           </>)}
           {searchExp&&(<>
@@ -1802,7 +1810,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} darkMode={darkMode}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} darkMode={darkMode}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed} darkMode={darkMode}/>)}
       </main>
