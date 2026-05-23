@@ -1476,7 +1476,7 @@ export default function App(){
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit}/>)}
       {isMobile&&!searchExp&&(
-        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:24,right:24,width:44,height:44,borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:24,boxShadow:"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
+        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"44px",height:"44px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:24,boxShadow:"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
       )}
       {isMobile&&searchExp&&(
         <div style={{position:"fixed",inset:0,background:"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out"}}>
