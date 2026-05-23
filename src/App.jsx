@@ -1323,7 +1323,9 @@ export default function App(){
   const [mobileMenu,setMobileMenu]=useState(false);
   const [searchExp,setSearchExp]=useState(false);
   const [showTags,setShowTags]=useState(false);
+  const [darkMode,setDarkMode]=useState(false);
   const searchRef=useRef(null);
+  const logoRef=useRef(null);
 
   useEffect(()=>{
     Promise.all([fetchProjects(),fetchFeed()])
@@ -1348,6 +1350,21 @@ export default function App(){
   if(view==="project"&&proj){
     return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")}/>);
   }
+
+  const toggleDarkMode=()=>{
+    if(logoRef.current){
+      const rect=logoRef.current.getBoundingClientRect();
+      const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+      for(let i=0;i<12;i++){
+        const angle=Math.random()*Math.PI*2,dist=60+Math.random()*60,x=cx+Math.cos(angle)*dist,y=cy+Math.sin(angle)*dist;
+        const p=document.createElement("div");
+        p.style.cssText=`position:fixed;width:${8+Math.random()*12}px;height:${8+Math.random()*12}px;background:${i%2?"rgba(255,0,0,0.8)":"rgba(100,100,100,0.6)"};border-radius:50%;left:${x}px;top:${y}px;pointer-events:none;z-index:2000;animation:${i%2?"laser":"smoke"} ${0.6+Math.random()*0.4}s ease-out forwards;`;
+        document.body.appendChild(p);
+        setTimeout(()=>p.remove(),1200);
+      }
+    }
+    setDarkMode(v=>!v);
+  };
 
   const open=p=>{setProj(p);setView("project");};
   const create=async p=>{
@@ -1407,29 +1424,30 @@ export default function App(){
   );
 
   return (
-    <div style={{minHeight:"100vh",background:PG,fontFamily:FF}}>
-      <nav style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100}}>
+    <div style={{minHeight:"100vh",background:darkMode?"#0D0D0D":PG,color:darkMode?"#FFF":T1,fontFamily:FF,transition:"background 0.3s, color 0.3s"}}>
+      <style>{`@keyframes smoke{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}@keyframes laser{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0.5)}}`}</style>
+      <nav style={{background:darkMode?"#1A1A1A":"#FFF",borderBottom:`1px solid ${darkMode?"#333":"#E8E8E8"}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100,transition:"background 0.3s, border-color 0.3s"}}>
         {!isMobile&&(<>
-          <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
+          <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,background:"none",border:"none",cursor:"pointer",padding:0}}>
             <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
-            <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
-          </div>
+            <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:darkMode?"#FFF":T1,textTransform:"uppercase",transition:"color 0.3s"}}>The Stash</span>
+          </button>
           <div style={{flex:1}}/>
-          <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3}}>
+          <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,transition:"background 0.3s"}}>
             {["Explore","Projects"].map(v=>(
-              <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF}}>{v}</button>
+              <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
             ))}
           </div>
           <div style={{flex:1,maxWidth:520,margin:"0 0 0 auto",position:"relative"}}>
             <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:18,pointerEvents:"none"}}>&#x2315;</span>
-            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?"#FFF":"#F5F5F5",border:`1px solid ${sf?BM:"transparent"}`,borderRadius:22,padding:"7px 16px 7px 44px",color:T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?(darkMode?"#2A2A2A":"#FFF"):(darkMode?"#1A1A1A":"#F5F5F5"),border:`1px solid ${sf?(darkMode?"#444":BM):"transparent"}`,borderRadius:22,padding:"7px 16px 7px 44px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
             {sf&&showTags&&(
-              <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,boxShadow:"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto"}}>
+              <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:darkMode?"#1A1A1A":"#FFF",border:`1px solid ${darkMode?"#333":BD}`,borderRadius:12,boxShadow:darkMode?"0 4px 20px rgba(0,0,0,.5)":"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto",transition:"all 0.3s"}}>
                 {matchingTags.length>0?(
                   <div style={{padding:8}}>
                     <p style={{margin:"8px 12px 4px",fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase"}}>All Tags</p>
                     {matchingTags.map(t=>(
-                      <button key={t} onClick={()=>{setSrch(t);setShowTags(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"10px 12px",fontSize:13,color:T1,fontFamily:FF,cursor:"pointer",borderRadius:6,marginBottom:2}} onMouseEnter={e=>e.currentTarget.style.background=PG} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <button key={t} onClick={()=>{setSrch(t);setShowTags(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"10px 12px",fontSize:13,color:darkMode?"#FFF":T1,fontFamily:FF,cursor:"pointer",borderRadius:6,marginBottom:2}} onMouseEnter={e=>e.currentTarget.style.background=darkMode?"#2A2A2A":"#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <span style={{fontWeight:600}}>#</span>{t}
                       </button>
                     ))}
@@ -1448,11 +1466,13 @@ export default function App(){
         </>)}
         {isMobile&&(<>
           {!searchExp&&(<>
-            <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block",flexShrink:0}}/>
+            <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
+              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+            </button>
             <div style={{flex:1}}/>
-            <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3,flexShrink:0}}>
+            <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,flexShrink:0,transition:"background 0.3s"}}>
               {["Explore","Projects"].map(v=>(
-                <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF}}>{v}</button>
+                <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
               ))}
             </div>
             <div style={{flex:1}}/>
@@ -1478,10 +1498,10 @@ export default function App(){
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit}/>)}
       {isMobile&&!searchExp&&(
-        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"44px",height:"44px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:24,boxShadow:"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
+        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"44px",height:"44px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:24,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
       )}
       {isMobile&&searchExp&&(
-        <div style={{position:"fixed",inset:0,background:"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out"}}>
+        <div style={{position:"fixed",inset:0,background:darkMode?"#0D0D0D":"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s"}}>
           <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
           <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${BD}`,background:"#FFF"}}>
             <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
