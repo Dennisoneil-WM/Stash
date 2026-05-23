@@ -113,8 +113,18 @@ function Mdl({title,onClose,children,w=520}){
 
 function Thumb({art,h=220,onClick,darkMode}){
   const [fl,setFl]=useState(false);
+  const showMobile=(art.deviceShell==="mobile")||(art.deviceShell==="auto"&&art.isMobile);
+
   if((art.type==="image"||art.type==="gif")&&art.src){
-    if(art.isMobile) return (
+    if(art.deviceShell==="none"){
+      const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
+      return (
+        <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",...(cropClip?{clipPath:cropClip}:{})}}>
+          <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+        </div>
+      );
+    }
+    if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
         <PhoneShell darkMode={darkMode}>
           <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
@@ -124,7 +134,18 @@ function Thumb({art,h=220,onClick,darkMode}){
     return (<div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer"}}><img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/></div>);
   }
   if(art.type==="video"&&art.src){
-    if(art.isMobile) return (
+    if(art.deviceShell==="none"){
+      const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
+      return (
+        <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative",...(cropClip?{clipPath:cropClip}:{})}}>
+          <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline autoPlay/>
+          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+            <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
+          </div>
+        </div>
+      );
+    }
+    if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
         <PhoneShell bg="#000" darkMode={darkMode}>
           <video src={art.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
@@ -237,6 +258,63 @@ function UplProg({files,onDone}){
   );
 }
 
+function CropTool({src,onCrop,onCancel}){
+  const [crop,setCrop]=useState({l:0,t:0,r:100,b:100});
+  const [dragging,setDragging]=useState(null);
+  const imgRef=useRef();
+  const containerRef=useRef();
+
+  const handleMouseDown=(handle)=>(e)=>{
+    e.preventDefault();
+    setDragging(handle);
+  };
+
+  const handleMouseMove=(e)=>{
+    if(!dragging||!containerRef.current) return;
+    const rect=containerRef.current.getBoundingClientRect();
+    const x=Math.max(0,Math.min(e.clientX-rect.left,rect.width));
+    const y=Math.max(0,Math.min(e.clientY-rect.top,rect.height));
+    const pctX=(x/rect.width)*100;
+    const pctY=(y/rect.height)*100;
+
+    setCrop(c=>{
+      const minW=10,minH=10;
+      switch(dragging){
+        case "nw":return {l:Math.min(pctX,c.r-minW),t:Math.min(pctY,c.b-minH),r:c.r,b:c.b};
+        case "ne":return {l:c.l,t:Math.min(pctY,c.b-minH),r:Math.max(pctX,c.l+minW),b:c.b};
+        case "sw":return {l:Math.min(pctX,c.r-minW),t:c.t,r:c.r,b:Math.max(pctY,c.t+minH)};
+        case "se":return {l:c.l,t:c.t,r:Math.max(pctX,c.l+minW),b:Math.max(pctY,c.t+minH)};
+        default:return c;
+      }
+    });
+  };
+
+  const handleMouseUp=()=>setDragging(null);
+
+  useEffect(()=>{
+    window.addEventListener("mousemove",handleMouseMove);
+    window.addEventListener("mouseup",handleMouseUp);
+    return ()=>{window.removeEventListener("mousemove",handleMouseMove);window.removeEventListener("mouseup",handleMouseUp);};
+  },[dragging]);
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div ref={containerRef} style={{position:"relative",borderRadius:12,overflow:"hidden",border:`2px solid ${BD}`,background:"#F0F0F0",maxWidth:"100%"}}>
+        <img ref={imgRef} src={src} alt="crop" style={{display:"block",width:"100%",height:"auto"}}/>
+        <div style={{position:"absolute",left:crop.l+"%",top:crop.t+"%",right:(100-crop.r)+"%",bottom:(100-crop.b)+"%",border:`2px solid ${BK}`,boxShadow:"inset 0 0 0 4000px rgba(0,0,0,.4)"}}>
+          {["nw","ne","sw","se"].map(h=>(
+            <div key={h} onMouseDown={handleMouseDown(h)} style={{position:"absolute",...(h.includes("n")?{top:"-6px"}:{bottom:"-6px"}),...(h.includes("w")?{left:"-6px"}:{right:"-6px"}),width:12,height:12,background:"#FFF",border:`2px solid ${BK}`,borderRadius:"50%",cursor:`${h}-resize`,zIndex:10}}/>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <GBtn sm onClick={onCancel}>Cancel</GBtn>
+        <BBtn sm onClick={()=>onCrop({l:crop.l,t:crop.t,r:crop.r,b:crop.b})}>Apply Crop</BBtn>
+      </div>
+    </div>
+  );
+}
+
 function TagInput({tags,setTags}){
   const [tg,setTg]=useState("");
   const add=()=>{const v=tg.trim().toLowerCase();if(v&&!tags.includes(v)){setTags([...tags,v]);}setTg("");};
@@ -308,6 +386,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   const [q,setQ]=useState([]);
   const [upl,setUpl]=useState(false);
   const [preview,setPreview]=useState(null); // {art, index} for editing metadata
+  const [cropMode,setCropMode]=useState(null); // {artIndex} when cropping
   // per-source fields
   const [fu,setFu]=useState(""); const [fn,setFn]=useState("");
   const [su,setSu]=useState(""); const [sn,setSn]=useState("");
@@ -348,7 +427,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
       else if(isVid(f)) t="video";
       else if(isPdf(f)) t="pdf";
       const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
-      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
+      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile,deviceShell:"auto",crop:null});
     }
     setUpl(false);
     setPreview(arts);
@@ -357,12 +436,36 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   if(upl) return (<UplProg files={q} onDone={done}/>);
 
   if(preview){
+    if(cropMode!==null){
+      const art=preview[cropMode.artIndex];
+      return (
+        <Mdl title="Crop Image" onClose={()=>setCropMode(null)} w={640}>
+          <CropTool src={art.src} onCancel={()=>setCropMode(null)} onCrop={(c)=>{art.crop=c;setCropMode(null);setPreview([...preview]);}}/>
+        </Mdl>
+      );
+    }
     return (
       <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560}>
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           {preview.map((art,i)=>(
             <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
               <Thumb art={art} h={200} darkMode={darkMode}/>
+              {(art.type==="image"||art.type==="video"||art.type==="gif")&&(
+                <Fld label="Device Shell">
+                  <div style={{display:"flex",gap:8}}>
+                    {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
+                      <button key={o.v} onClick={()=>{art.deviceShell=o.v;setPreview([...preview]);}} style={{flex:1,background:art.deviceShell===o.v?BK:"#FFF",border:`1px solid ${art.deviceShell===o.v?"transparent":BD}`,color:art.deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                </Fld>
+              )}
+              {art.deviceShell==="none"&&(art.type==="image"||art.type==="gif")&&art.src&&(
+                <button onClick={()=>setCropMode({artIndex:i})} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
+                  {art.crop?"Adjust Crop":"Add Crop Tool"}
+                </button>
+              )}
               <Fld label="Name"><TIn value={art.name} set={v=>{art.name=v;setPreview([...preview]);}} ph="Artifact name"/></Fld>
               <Fld label="Description (optional)"><TIn value={art.desc||""} set={v=>{art.desc=v;setPreview([...preview]);}} ph="Add a description..." multi/></Fld>
               <Fld label="Tags (optional)">
@@ -430,7 +533,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
             The file must be set to "Anyone with the link can view" in Figma share settings.
           </div>
           {sharedFields}
-          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null}])}>Add Figma Artifact</BBtn>
+          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null,deviceShell:"auto",crop:null}])}>Add Figma Artifact</BBtn>
         </div>
       )}
 
@@ -445,7 +548,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
           <Fld label="Viewport"><TSel val={vp} set={setVp} opts={Object.keys(VPS)}/></Fld>
           <Fld label="Name"><TIn ph="weedmaps.com" val={sn} set={setSn}/></Fld>
           {sharedFields}
-          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile")}])}>Add Website Artifact</BBtn>
+          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile"),deviceShell:"auto",crop:null}])}>Add Website Artifact</BBtn>
         </div>
       )}
     </Mdl>
@@ -1089,9 +1192,10 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
-  const isMobile=item.isMobile===true;
-  const isMobileWebsite=item.type==="website"&&item.src&&isMobile;
-  const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&isMobile;
+  const showMobile=(item.deviceShell==="mobile")||(item.deviceShell!=="desktop"&&item.deviceShell!=="none"&&item.isMobile===true);
+  const showNoDevice=item.deviceShell==="none";
+  const isMobileWebsite=item.type==="website"&&item.src&&showMobile;
+  const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&showMobile&&!showNoDevice;
 
   // Timeout to detect iframe load failure (X-Frame-Options blocking)
   const ifRef=useRef();
@@ -1155,7 +1259,24 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
           )}
         </PhoneShell>
       )}
-      {!isMock&&!isMobileMedia&&!isMobileWebsite && (
+      {showNoDevice && (item.type==="image"||item.type==="gif"||item.type==="video")&&item.src && (
+        <>
+          {(item.type==="image"||item.type==="gif") && (
+            <div style={{width:"100%",aspectRatio:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
+              <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            </div>
+          )}
+          {item.type==="video" && (
+            <div style={{width:"100%",aspectRatio:"auto",overflow:"hidden",background:"#000",position:"relative",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
+              <video src={item.src} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      {!isMock&&!isMobileMedia&&!isMobileWebsite&&!showNoDevice && (
         <Thumb art={item} h={320} darkMode={darkMode}/>
       )}
       {hov&&(
