@@ -1104,7 +1104,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
 
   return (
     <div
-      style={{breakInside:"avoid",marginBottom:16,borderRadius:24,overflow:"hidden",
+      style={{breakInside:"avoid",marginBottom:16,borderRadius:32,overflow:"hidden",
               position:"relative",cursor:"pointer",background:"#EBEBEB"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
@@ -1524,8 +1524,8 @@ export default function App(){
         </>)}
         {isMobile&&(<>
           {!searchExp&&(<>
-            <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
-              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+            <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",justifyContent:"center",width:isMobile?42:28,height:isMobile?42:28,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0,transition:"width 0.3s, height 0.3s"}}>
+              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:isMobile?42:28,height:isMobile?42:28,borderRadius:"50%",objectFit:"cover",display:"block",transition:"width 0.3s, height 0.3s"}}/>
             </button>
             <div style={{flex:1}}/>
             <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,flexShrink:0,transition:"background 0.3s"}}>
