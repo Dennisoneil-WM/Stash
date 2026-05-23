@@ -263,38 +263,45 @@ function CropTool({src,onCrop,onCancel}){
   const [dragging,setDragging]=useState(null);
   const imgRef=useRef();
   const containerRef=useRef();
+  const dragRef=useRef(null);
 
   const handleMouseDown=(handle)=>(e)=>{
     e.preventDefault();
+    dragRef.current=handle;
     setDragging(handle);
   };
 
-  const handleMouseMove=(e)=>{
-    if(!dragging||!containerRef.current) return;
-    const rect=containerRef.current.getBoundingClientRect();
-    const x=Math.max(0,Math.min(e.clientX-rect.left,rect.width));
-    const y=Math.max(0,Math.min(e.clientY-rect.top,rect.height));
-    const pctX=(x/rect.width)*100;
-    const pctY=(y/rect.height)*100;
-
-    setCrop(c=>{
-      const minW=10,minH=10;
-      switch(dragging){
-        case "nw":return {l:Math.min(pctX,c.r-minW),t:Math.min(pctY,c.b-minH),r:c.r,b:c.b};
-        case "ne":return {l:c.l,t:Math.min(pctY,c.b-minH),r:Math.max(pctX,c.l+minW),b:c.b};
-        case "sw":return {l:Math.min(pctX,c.r-minW),t:c.t,r:c.r,b:Math.max(pctY,c.t+minH)};
-        case "se":return {l:c.l,t:c.t,r:Math.max(pctX,c.l+minW),b:Math.max(pctY,c.t+minH)};
-        default:return c;
-      }
-    });
-  };
-
-  const handleMouseUp=()=>setDragging(null);
-
   useEffect(()=>{
-    window.addEventListener("mousemove",handleMouseMove);
-    window.addEventListener("mouseup",handleMouseUp);
-    return ()=>{window.removeEventListener("mousemove",handleMouseMove);window.removeEventListener("mouseup",handleMouseUp);};
+    const handleMouseMove=(e)=>{
+      if(!dragRef.current||!containerRef.current) return;
+      const rect=containerRef.current.getBoundingClientRect();
+      const x=Math.max(0,Math.min(e.clientX-rect.left,rect.width));
+      const y=Math.max(0,Math.min(e.clientY-rect.top,rect.height));
+      const pctX=(x/rect.width)*100;
+      const pctY=(y/rect.height)*100;
+
+      setCrop(c=>{
+        const minW=10,minH=10;
+        switch(dragRef.current){
+          case "nw":return {l:Math.min(pctX,c.r-minW),t:Math.min(pctY,c.b-minH),r:c.r,b:c.b};
+          case "ne":return {l:c.l,t:Math.min(pctY,c.b-minH),r:Math.max(pctX,c.l+minW),b:c.b};
+          case "sw":return {l:Math.min(pctX,c.r-minW),t:c.t,r:c.r,b:Math.max(pctY,c.t+minH)};
+          case "se":return {l:c.l,t:c.t,r:Math.max(pctX,c.l+minW),b:Math.max(pctY,c.t+minH)};
+          default:return c;
+        }
+      });
+    };
+
+    const handleMouseUp=()=>{
+      dragRef.current=null;
+      setDragging(null);
+    };
+
+    if(dragging){
+      window.addEventListener("mousemove",handleMouseMove);
+      window.addEventListener("mouseup",handleMouseUp);
+      return ()=>{window.removeEventListener("mousemove",handleMouseMove);window.removeEventListener("mouseup",handleMouseUp);};
+    }
   },[dragging]);
 
   return (
