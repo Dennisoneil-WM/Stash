@@ -18,7 +18,7 @@ const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
 const FF="'Geist','DM Sans',-apple-system,sans-serif";
 const GR=["linear-gradient(135deg,#0d1117,#1a472a)","linear-gradient(135deg,#1a0030,#6b21a8)","linear-gradient(135deg,#1c1c1c,#f97316)","linear-gradient(160deg,#0f172a,#1e40af)","linear-gradient(135deg,#0a0a0a,#dc2626)","linear-gradient(135deg,#111827,#059669)","linear-gradient(135deg,#1c1917,#d97706)","linear-gradient(160deg,#0f0f23,#7c3aed)","linear-gradient(135deg,#0c1a0c,#16a34a)","linear-gradient(135deg,#1e1b4b,#a78bfa)"];
-const USERS=[{id:1,name:"Dennis O'Neil",title:"Senior Product Designer",initials:"DO"},{id:2,name:"Maria Chen",title:"Lead UX Designer",initials:"MC"},{id:3,name:"Jake Torres",title:"Principal Designer",initials:"JT"}];
+const USERS=[{id:1,name:"Dennis O'Neil",title:"Senior Product Designer",initials:"DO",image:"https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F8d0ed44f84aa42ffb662bd68b4c40eb8?format=webp&width=800&height=1200"},{id:2,name:"Maria Chen",title:"Lead UX Designer",initials:"MC"},{id:3,name:"Jake Torres",title:"Principal Designer",initials:"JT"}];
 const ME=USERS[0];
 const VPS={"Desktop (1512x900)":{w:1512,h:900},"Laptop (1280x800)":{w:1280,h:800},"Mobile (390x844)":{w:390,h:844},"Tablet (768x1024)":{w:768,h:1024}};
 const FOLDERS=[{id:1,name:"Product Design",count:8},{id:2,name:"Brand & Marketing",count:5},{id:3,name:"Research",count:3},{id:4,name:"Documentation",count:6},{id:5,name:"Archive",count:15}];
@@ -1414,6 +1414,7 @@ export default function App(){
             <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
             <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
           </div>
+          <div style={{flex:1}}/>
           <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3}}>
             {["Explore","Projects"].map(v=>(
               <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF}}>{v}</button>
@@ -1442,7 +1443,7 @@ export default function App(){
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
             {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
-            <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32}/></button>
+            <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
           </div>
         </>)}
         {isMobile&&(<>
@@ -1454,7 +1455,7 @@ export default function App(){
                 <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF}}>{v}</button>
               ))}
             </div>
-            <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Av user={ME} size={28}/></button>
+            <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Av user={ME} size={28} src={ME.image}/></button>
           </>)}
           {searchExp&&(<>
             <div style={{flex:1,position:"relative"}}>
