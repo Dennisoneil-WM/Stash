@@ -1814,7 +1814,7 @@ export default function App(){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+</BBtn>)}
             <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
           </div>
         </>)}
@@ -1830,7 +1830,7 @@ export default function App(){
               ))}
             </div>
             <div style={{flex:1}}/>
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+</BBtn>)}
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={ME} size={28} src={ME.image}/></button>
           </>)}
           {searchExp&&(<>
