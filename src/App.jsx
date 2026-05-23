@@ -1456,7 +1456,6 @@ export default function App(){
             </div>
             <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:28,flexShrink:0,marginLeft:6}}>&#x2315;</button>
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Av user={ME} size={28}/></button>
-            <button style={{background:"none",border:`1px solid ${BD}`,borderRadius:8,width:32,height:32,cursor:"pointer",color:T2,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>&#x2699;</button>
           </>)}
           {searchExp&&(<>
             <div style={{flex:1,position:"relative"}}>
