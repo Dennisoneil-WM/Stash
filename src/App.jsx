@@ -1786,13 +1786,13 @@ export default function App(){
             <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
             <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:darkMode?"#FFF":T1,textTransform:"uppercase",transition:"color 0.3s"}}>The Stash</span>
           </button>
-          <div style={{flex:1}}/>
           <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,transition:"background 0.3s"}}>
             {["Explore","Projects"].map(v=>(
               <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
             ))}
           </div>
-          <div style={{flex:1,maxWidth:520,margin:"0 0 0 auto",position:"relative"}}>
+          <div style={{flex:1}}/>
+          <div style={{width:520,position:"relative"}}>
             <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:18,pointerEvents:"none"}}>&#x2315;</span>
             <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?(darkMode?"#2A2A2A":"#FFF"):(darkMode?"#1A1A1A":"#F5F5F5"),border:`1px solid ${sf?(darkMode?"#444":BM):"transparent"}`,borderRadius:22,padding:"7px 16px 7px 44px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
             {sf&&showTags&&(
@@ -1812,6 +1812,7 @@ export default function App(){
               </div>
             )}
           </div>
+          <div style={{flex:1}}/>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
             {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
