@@ -512,8 +512,15 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
           {preview.map((art,i)=>(
             <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
               {art.type==="video"?(
-                <div style={{height:200,borderRadius:12,overflow:"hidden",background:"#000",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <video src={art.src||art._prev} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
+                <div style={{height:200,borderRadius:12,overflow:"hidden",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+                  {art.src||art._prev?(
+                    <video src={art.src||art._prev} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay controls={false}/>
+                  ):(
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,color:"#666"}}>
+                      <span style={{fontSize:32}}>🎬</span>
+                      <span style={{fontSize:12}}>Loading video...</span>
+                    </div>
+                  )}
                 </div>
               ):(
                 <Thumb art={art} h={200} darkMode={darkMode}/>
