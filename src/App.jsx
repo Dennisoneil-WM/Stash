@@ -483,9 +483,12 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
               )}
               {(art.deviceShell==="mobile"||art.deviceShell==="auto")&&(art.type==="image"||art.type==="video"||art.type==="gif")&&(
                 <Fld label="Mobile Background">
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
                     {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
-                      <button key={o.v} onClick={()=>{art.mobileBg=o.v;setPreview([...preview]);}} style={{flex:1,minWidth:80,background:o.v,border:`2px solid ${(art.mobileBg||"#000")===o.v?BK:"#DDD"}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,color:(o.v==="#FFF"||o.v==="#E8E8E8")?"#000":"#FFF"}}>{o.l}</button>
+                      <button key={o.v} onClick={()=>{art.mobileBg=o.v;setPreview([...preview]);}} style={{flex:1,minWidth:70,display:"flex",flexDirection:"column",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:FF}}>
+                        <div style={{width:"100%",height:50,background:o.v,borderRadius:8,border:`2px solid ${(art.mobileBg||"#000")===o.v?BK:BD}`,boxSizing:"border-box"}}/>
+                        <span style={{fontSize:11,fontWeight:500,color:T2}}>{o.l}</span>
+                      </button>
                     ))}
                   </div>
                 </Fld>
@@ -630,9 +633,12 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
         )}
         {(art.type==="image"||art.type==="video"||art.type==="gif")&&(deviceShell==="mobile"||deviceShell==="auto")&&(
           <Fld label="Mobile Background">
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
               {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
-                <button key={o.v} onClick={()=>setMobileBg(o.v)} style={{flex:1,minWidth:80,background:o.v,border:`2px solid ${mobileBg===o.v?BK:"#DDD"}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,color:(o.v==="#FFF"||o.v==="#E8E8E8")?"#000":"#FFF"}}>{o.l}</button>
+                <button key={o.v} onClick={()=>setMobileBg(o.v)} style={{flex:1,minWidth:70,display:"flex",flexDirection:"column",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:FF}}>
+                  <div style={{width:"100%",height:50,background:o.v,borderRadius:8,border:`2px solid ${mobileBg===o.v?BK:BD}`,boxSizing:"border-box"}}/>
+                  <span style={{fontSize:11,fontWeight:500,color:T2}}>{o.l}</span>
+                </button>
               ))}
             </div>
           </Fld>
@@ -1658,10 +1664,12 @@ export default function App(){
 
   const [editItem,setEditItem]=useState(null);
   const saveEdit=async updated=>{
+    console.log("saveEdit called with:",{id:updated.id,deviceShell:updated.deviceShell,mobileBg:updated.mobileBg});
     const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
     if(isUuid){
       try{
         const r=await updateFeedItem(updated.id,updated);
+        console.log("Supabase update succeeded, new item:",{id:r.id,deviceShell:r.deviceShell,mobileBg:r.mobileBg});
         setFeed(prev=>prev.map(f=>f.id===r.id?r:f));
         return;
       }catch(e){
@@ -1673,12 +1681,13 @@ export default function App(){
       const newFeed=prev.map(f=>{
         if(String(f.id)===String(updated.id)){
           found=true;
+          console.log("Found matching artifact, updating from",{ds:f.deviceShell,bg:f.mobileBg},"to",{ds:updated.deviceShell,bg:updated.mobileBg});
           return {...f,...updated};
         }
         return f;
       });
       if(!found){
-        console.warn("Artifact not found in feed with id",updated.id,"feed ids:",prev.map(f=>f.id));
+        console.warn("Artifact not found in feed with id",updated.id,"current feed size:",prev.length);
       }
       return newFeed;
     });
