@@ -216,16 +216,18 @@ function LBox({art,onClose}){
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
-      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",maxWidth:"90vw",maxHeight:"90vh",width:"100%",height:"100%"}}>
+      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"90vw",height:"90vh"}}>
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showMobile&&(
-          <PhoneShell bg={art.mobileBg||"#000"}>
-            {(art.type==="image"||art.type==="gif") && (
-              <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-            )}
-            {art.type==="video" && (
-              <video src={art.src} controls autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-            )}
-          </PhoneShell>
+          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <PhoneShell bg={art.mobileBg||"#000"} noBackground={true}>
+              {(art.type==="image"||art.type==="gif") && (
+                <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              )}
+              {art.type==="video" && (
+                <video src={art.src} controls autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              )}
+            </PhoneShell>
+          </div>
         )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&(
           <div style={{maxWidth:"90vw",maxHeight:"90vh",overflow:"hidden"}}>
@@ -1246,13 +1248,13 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
-function PhoneShell({children,bg="#000",darkMode}){
+function PhoneShell({children,bg="#000",darkMode,noBackground=false}){
   // iPhone Air: ultra-thin uniform aluminum frame, no Dynamic Island overlay (it's in the video)
   const frameGrad="linear-gradient(175deg,#F0F0F2 0%,#D8D8DA 15%,#B8B8BC 35%,#C8C8CC 55%,#D4D4D8 75%,#E8E8EA 100%)";
   const edgeGrad="linear-gradient(175deg,#E0E0E2 0%,#C0C0C4 40%,#D0D0D4 100%)";
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:darkMode?"#1A1A1A":"#BFC9D4",padding:"24px 18px 28px",transition:"background 0.3s"}}>
+                 background:noBackground?"transparent":darkMode?"#1A1A1A":"#BFC9D4",padding:noBackground?"0":"24px 18px 28px",transition:"background 0.3s"}}>
       <div style={{position:"relative",width:307}}>
         {/* Aluminum frame — single band, uniform 3px all around */}
         <div style={{
