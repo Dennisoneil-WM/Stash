@@ -1574,6 +1574,7 @@ export default function App(){
   const [searchExp,setSearchExp]=useState(false);
   const [showTags,setShowTags]=useState(false);
   const [darkMode,setDarkMode]=useState(false);
+  const [editItem,setEditItem]=useState(null);
   const searchRef=useRef(null);
   const logoRef=useRef(null);
 
@@ -1658,7 +1659,6 @@ export default function App(){
     setFeed(prev=>[...saved,...prev]);
   };
 
-  const [editItem,setEditItem]=useState(null);
   const saveEdit=async updated=>{
     console.log("saveEdit called with:",{id:updated.id,deviceShell:updated.deviceShell,mobileBg:updated.mobileBg});
     const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
