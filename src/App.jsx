@@ -231,12 +231,12 @@ function LBox({art,onClose}){
           </div>
         )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&(
-          <div style={{maxWidth:"90vw",maxHeight:"90vh",overflow:"hidden"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",maxWidth:"90vw",maxHeight:"90vh",aspectRatio:art.crop?`${(art.crop.r-art.crop.l)/(art.crop.b-art.crop.t)}`:"16/9"}}>
             {(art.type==="image"||art.type==="gif") && (
-              <img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+              <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
             )}
             {art.type==="video" && (
-              <video src={art.src} controls autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+              <video src={art.src} controls autoPlay style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
             )}
           </div>
         )}
