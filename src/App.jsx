@@ -1347,6 +1347,23 @@ export default function App(){
     if(searchExp&&searchRef.current)searchRef.current.focus();
   },[searchExp]);
 
+  useEffect(()=>{
+    if(searchExp){
+      document.body.style.overflow="hidden";
+      document.body.style.position="fixed";
+      document.body.style.width="100%";
+    }else{
+      document.body.style.overflow="";
+      document.body.style.position="";
+      document.body.style.width="";
+    }
+    return ()=>{
+      document.body.style.overflow="";
+      document.body.style.position="";
+      document.body.style.width="";
+    };
+  },[searchExp]);
+
   if(view==="project"&&proj){
     return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")}/>);
   }
@@ -1504,8 +1521,8 @@ export default function App(){
       {isMobile&&searchExp&&(
         <div style={{position:"fixed",inset:0,background:darkMode?"#0D0D0D":"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s"}}>
           <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${BD}`,background:"#FFF"}}>
-            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
+          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${darkMode?"#333":BD}`,background:darkMode?"#1A1A1A":"#FFF",transition:"all 0.3s"}}>
+            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:darkMode?"#FFF":T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
             <div style={{flex:1,position:"relative"}}>
               <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
               <input ref={searchRef} autoFocus value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:14,color:T1,outline:"none",fontFamily:FF}}/>
