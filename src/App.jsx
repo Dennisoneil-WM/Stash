@@ -1030,36 +1030,85 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
 function PhoneShell({children,bg="#000",darkMode}){
-  // iPhone 15: 393×852pt logical screen. Device frame 280px wide with proper proportions
+  // iPhone Air: thin titanium frame, tight bezels, Dynamic Island
+  const frameGrad="linear-gradient(160deg,#E8E8EA 0%,#C8C8CA 20%,#B0B0B4 40%,#D0D0D4 60%,#C0C0C4 80%,#DCDCDE 100%)";
+  const outerBg=darkMode?"#1C1C1E":"#C8C8CA";
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:darkMode?"#2A2A2A":"#E8E8E8",padding:"12px 16px 18px",transition:"background 0.3s"}}>
-      <div style={{position:"relative",width:280,aspectRatio:"393/852"}}>
+                 background:darkMode?"#1A1A1A":"#CBD5E0",padding:"20px 16px 24px",transition:"background 0.3s"}}>
+      <div style={{position:"relative",width:260}}>
+        {/* Outer titanium frame */}
         <div style={{
-          background:"#1C1C1E",borderRadius:"45px",padding:"16px 10px",
-          boxShadow:"0 0 0 2px #0A0A0A, inset 0 0 0 1.5px #333",
-          position:"relative",height:"100%",display:"flex",flexDirection:"column",
+          background:frameGrad,
+          borderRadius:52,
+          padding:3,
+          boxShadow:"0 0 0 0.5px rgba(0,0,0,0.25), 0 20px 60px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6)",
+          position:"relative",
         }}>
-          {/* Dynamic Island */}
+          {/* Inner bezel (black surround) */}
           <div style={{
-            position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",
-            width:96,height:27,background:"#000",borderRadius:13,zIndex:10,
-          }}/>
-          {/* Screen */}
-          <div style={{
-            borderRadius:40,overflow:"hidden",
-            background:bg,
+            background:"#0A0A0A",
+            borderRadius:50,
+            padding:"10px 7px 12px",
             position:"relative",
-            flex:1,marginTop:10,
+            display:"flex",flexDirection:"column",
+            boxShadow:"inset 0 0 0 0.5px rgba(255,255,255,0.08)",
           }}>
-            {children}
+            {/* Dynamic Island */}
+            <div style={{
+              position:"absolute",top:14,left:"50%",transform:"translateX(-50%)",
+              width:88,height:26,background:"#000",borderRadius:13,zIndex:10,
+              boxShadow:"0 0 0 1px rgba(255,255,255,0.08)",
+            }}/>
+            {/* Screen */}
+            <div style={{
+              borderRadius:42,overflow:"hidden",
+              background:bg,
+              position:"relative",
+              aspectRatio:"393/852",
+            }}>
+              {children}
+            </div>
           </div>
-          {/* Side buttons */}
-          <div style={{position:"absolute",left:-5,top:"20%",width:5,height:32,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-5,top:"32%",width:5,height:60,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-5,top:"50%",width:5,height:60,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",right:-5,top:"32%",width:5,height:80,background:"#333",borderRadius:"0 2px 2px 0"}}/>
+          {/* Side button - right (power) */}
+          <div style={{
+            position:"absolute",right:-3.5,top:"28%",
+            width:3.5,height:68,
+            background:frameGrad,
+            borderRadius:"0 3px 3px 0",
+            boxShadow:"1px 0 2px rgba(0,0,0,0.3)",
+          }}/>
+          {/* Volume up - left */}
+          <div style={{
+            position:"absolute",left:-3.5,top:"26%",
+            width:3.5,height:44,
+            background:frameGrad,
+            borderRadius:"3px 0 0 3px",
+            boxShadow:"-1px 0 2px rgba(0,0,0,0.3)",
+          }}/>
+          {/* Volume down - left */}
+          <div style={{
+            position:"absolute",left:-3.5,top:"38%",
+            width:3.5,height:44,
+            background:frameGrad,
+            borderRadius:"3px 0 0 3px",
+            boxShadow:"-1px 0 2px rgba(0,0,0,0.3)",
+          }}/>
+          {/* Action button - left top */}
+          <div style={{
+            position:"absolute",left:-3.5,top:"18%",
+            width:3.5,height:30,
+            background:frameGrad,
+            borderRadius:"3px 0 0 3px",
+            boxShadow:"-1px 0 2px rgba(0,0,0,0.3)",
+          }}/>
         </div>
+        {/* Subtle screen reflection */}
+        <div style={{
+          position:"absolute",top:15,left:10,right:10,height:"35%",
+          background:"linear-gradient(180deg,rgba(255,255,255,0.06) 0%,transparent 100%)",
+          borderRadius:"42px 42px 0 0",pointerEvents:"none",zIndex:5,
+        }}/>
       </div>
     </div>
   );
