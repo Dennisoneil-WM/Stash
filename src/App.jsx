@@ -1864,45 +1864,45 @@ export default function App(){
         <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:32,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
       )}
       {isMobile&&searchExp&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:darkMode?"#0D0D0D":"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#0D0D0D",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
           <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}html,body{margin:0;padding:0}`}</style>
-          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${darkMode?"#333":BD}`,background:darkMode?"#1A1A1A":"#FFF",transition:"all 0.3s",flexShrink:0}}>
-            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:darkMode?"#FFF":T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
+          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid #333",background:"#1A1A1A",transition:"all 0.3s",flexShrink:0}}>
+            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#999",fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
             <div style={{flex:1,position:"relative"}}>
-              <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:T1,outline:"none",fontFamily:FF}}/>
+              <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"#666",fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:"#E8E8E8",outline:"none",fontFamily:FF,placeholder:"#999"}}/>
             </div>
           </div>
           <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 20px"}}>
             {srch.trim()?(
               <div>
-                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
+                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
                 {matchingTags.length>0?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                     {matchingTags.map(t=>(
-                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
                         <span>&#x23;</span>{t}
                       </button>
                     ))}
                   </div>
                 ):(
-                  <p style={{fontSize:13,color:T3,textAlign:"center",padding:"24px 0"}}>No tags match "{srch}"</p>
+                  <p style={{fontSize:13,color:"#666",textAlign:"center",padding:"24px 0"}}>No tags match "{srch}"</p>
                 )}
               </div>
             ):(
               <div>
-                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>All Tags</p>
+                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>All Tags</p>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:24}}>
                   {allTags.slice(0,12).map(t=>(
-                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
                       <span>&#x23;</span>{t}
                     </button>
                   ))}
                 </div>
-                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
+                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   {["web","mobile","redesign","v2","checkout"].map(s=>(
-                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"12px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF}}>
+                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"#262626",border:"1px solid #333",borderRadius:8,padding:"12px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF}}>
                       &#x2315; {s}
                     </button>
                   ))}
