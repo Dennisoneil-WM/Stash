@@ -113,10 +113,11 @@ function Mdl({title,onClose,children,w=520}){
 
 function Thumb({art,h=220,onClick,darkMode}){
   const [fl,setFl]=useState(false);
-  const showMobile=(art.deviceShell==="mobile")||(art.deviceShell==="auto"&&art.isMobile);
+  const ds=art.deviceShell||"auto";
+  const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile);
 
   if((art.type==="image"||art.type==="gif")&&art.src){
-    if(art.deviceShell==="none"){
+    if(ds==="none"){
       const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
       return (
         <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",...(cropClip?{clipPath:cropClip}:{})}}>
@@ -134,7 +135,7 @@ function Thumb({art,h=220,onClick,darkMode}){
     return (<div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer"}}><img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/></div>);
   }
   if(art.type==="video"&&art.src){
-    if(art.deviceShell==="none"){
+    if(ds==="none"){
       const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
       return (
         <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative",...(cropClip?{clipPath:cropClip}:{})}}>
@@ -173,7 +174,7 @@ function Thumb({art,h=220,onClick,darkMode}){
     );
   }
   if(art.type==="website"&&art.src){
-    if(art.isMobile) return (
+    if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
         <PhoneShell bg="#FFF" darkMode={darkMode}>
           <div style={{position:"relative",height:420,overflow:"hidden"}}>
@@ -265,42 +266,54 @@ function CropTool({src,onCrop,onCancel}){
   const containerRef=useRef();
   const dragRef=useRef(null);
 
+  const updateCrop=(clientX,clientY)=>{
+    if(!dragRef.current||!containerRef.current) return;
+    const rect=containerRef.current.getBoundingClientRect();
+    const x=Math.max(0,Math.min(clientX-rect.left,rect.width));
+    const y=Math.max(0,Math.min(clientY-rect.top,rect.height));
+    const pctX=(x/rect.width)*100;
+    const pctY=(y/rect.height)*100;
+
+    setCrop(c=>{
+      const minW=10,minH=10;
+      switch(dragRef.current){
+        case "nw":return {l:Math.min(pctX,c.r-minW),t:Math.min(pctY,c.b-minH),r:c.r,b:c.b};
+        case "ne":return {l:c.l,t:Math.min(pctY,c.b-minH),r:Math.max(pctX,c.l+minW),b:c.b};
+        case "sw":return {l:Math.min(pctX,c.r-minW),t:c.t,r:c.r,b:Math.max(pctY,c.t+minH)};
+        case "se":return {l:c.l,t:c.t,r:Math.max(pctX,c.l+minW),b:Math.max(pctY,c.t+minH)};
+        default:return c;
+      }
+    });
+  };
+
   const handleMouseDown=(handle)=>(e)=>{
     e.preventDefault();
     dragRef.current=handle;
     setDragging(handle);
   };
 
+  const handleTouchStart=(handle)=>(e)=>{
+    e.preventDefault();
+    dragRef.current=handle;
+    setDragging(handle);
+  };
+
   useEffect(()=>{
-    const handleMouseMove=(e)=>{
-      if(!dragRef.current||!containerRef.current) return;
-      const rect=containerRef.current.getBoundingClientRect();
-      const x=Math.max(0,Math.min(e.clientX-rect.left,rect.width));
-      const y=Math.max(0,Math.min(e.clientY-rect.top,rect.height));
-      const pctX=(x/rect.width)*100;
-      const pctY=(y/rect.height)*100;
-
-      setCrop(c=>{
-        const minW=10,minH=10;
-        switch(dragRef.current){
-          case "nw":return {l:Math.min(pctX,c.r-minW),t:Math.min(pctY,c.b-minH),r:c.r,b:c.b};
-          case "ne":return {l:c.l,t:Math.min(pctY,c.b-minH),r:Math.max(pctX,c.l+minW),b:c.b};
-          case "sw":return {l:Math.min(pctX,c.r-minW),t:c.t,r:c.r,b:Math.max(pctY,c.t+minH)};
-          case "se":return {l:c.l,t:c.t,r:Math.max(pctX,c.l+minW),b:Math.max(pctY,c.t+minH)};
-          default:return c;
-        }
-      });
-    };
-
-    const handleMouseUp=()=>{
-      dragRef.current=null;
-      setDragging(null);
-    };
+    const handleMouseMove=(e)=>updateCrop(e.clientX,e.clientY);
+    const handleTouchMove=(e)=>{if(e.touches.length>0) updateCrop(e.touches[0].clientX,e.touches[0].clientY);};
+    const handleEnd=()=>{dragRef.current=null;setDragging(null);};
 
     if(dragging){
       window.addEventListener("mousemove",handleMouseMove);
-      window.addEventListener("mouseup",handleMouseUp);
-      return ()=>{window.removeEventListener("mousemove",handleMouseMove);window.removeEventListener("mouseup",handleMouseUp);};
+      window.addEventListener("touchmove",handleTouchMove);
+      window.addEventListener("mouseup",handleEnd);
+      window.addEventListener("touchend",handleEnd);
+      return ()=>{
+        window.removeEventListener("mousemove",handleMouseMove);
+        window.removeEventListener("touchmove",handleTouchMove);
+        window.removeEventListener("mouseup",handleEnd);
+        window.removeEventListener("touchend",handleEnd);
+      };
     }
   },[dragging]);
 
@@ -310,7 +323,7 @@ function CropTool({src,onCrop,onCancel}){
         <img ref={imgRef} src={src} alt="crop" style={{display:"block",width:"100%",height:"auto"}}/>
         <div style={{position:"absolute",left:crop.l+"%",top:crop.t+"%",right:(100-crop.r)+"%",bottom:(100-crop.b)+"%",border:`2px solid ${BK}`,boxShadow:"inset 0 0 0 4000px rgba(0,0,0,.4)"}}>
           {["nw","ne","sw","se"].map(h=>(
-            <div key={h} onMouseDown={handleMouseDown(h)} style={{position:"absolute",...(h.includes("n")?{top:"-6px"}:{bottom:"-6px"}),...(h.includes("w")?{left:"-6px"}:{right:"-6px"}),width:12,height:12,background:"#FFF",border:`2px solid ${BK}`,borderRadius:"50%",cursor:`${h}-resize`,zIndex:10}}/>
+            <div key={h} onMouseDown={handleMouseDown(h)} onTouchStart={handleTouchStart(h)} style={{position:"absolute",...(h.includes("n")?{top:"-8px"}:{bottom:"-8px"}),...(h.includes("w")?{left:"-8px"}:{right:"-8px"}),width:24,height:24,background:"#FFF",border:`2px solid ${BK}`,borderRadius:"50%",cursor:`${h}-resize`,zIndex:10,touchAction:"none"}}/>
           ))}
         </div>
       </div>
@@ -562,25 +575,52 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   );
 }
 
-function EditArtMdl({art,onClose,onSave}){
+function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
   const [name,setName]=useState(art.name||"");
   const [desc,setDesc]=useState(art.desc||"");
   const [tags,setTags]=useState(art.tags||[]);
+  const [deviceShell,setDeviceShell]=useState(art.deviceShell||"auto");
+  const [cropMode,setCropMode]=useState(false);
+  const [crop,setCrop]=useState(art.crop||null);
   const [saving,setSaving]=useState(false);
 
   const save=async()=>{
     setSaving(true);
-    await onSave({...art,name,desc,tags});
+    await onSave({...art,name,desc,tags,deviceShell,crop});
     setSaving(false);
     onClose();
   };
 
+  if(cropMode){
+    return (
+      <Mdl title="Crop Image" onClose={()=>setCropMode(false)} w={640}>
+        <CropTool src={art.src} onCancel={()=>setCropMode(false)} onCrop={(c)=>{setCrop(c);setCropMode(false);}}/>
+      </Mdl>
+    );
+  }
+
   return (
-    <Mdl title="Edit Artifact" onClose={onClose} w={520}>
+    <Mdl title="Edit Artifact" onClose={onClose} w={560}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
         <Fld label="Name"><TIn af val={name} set={setName} ph="Artifact name"/></Fld>
         <Fld label="Description (optional)"><TIn val={desc} set={setDesc} ph="Describe this artifact..." multi/></Fld>
         <Fld label="Tags (optional)"><TagInput tags={tags} setTags={setTags}/></Fld>
+        {(art.type==="image"||art.type==="video"||art.type==="gif")&&(
+          <Fld label="Device Shell">
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
+                <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:deviceShell===o.v?BK:"#FFF",border:`1px solid ${deviceShell===o.v?"transparent":BD}`,color:deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          </Fld>
+        )}
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&deviceShell==="none"&&art.src&&(
+          <button onClick={()=>setCropMode(true)} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
+            {crop?"Adjust Crop":"Add Crop Tool"}
+          </button>
+        )}
         {art.src&&(art.type==="image"||art.type==="gif")&&(
           <div style={{borderRadius:10,overflow:"hidden",border:`1px solid ${BD}`,maxHeight:200}}>
             <img src={art.src} alt={art.name} style={{width:"100%",objectFit:"cover",display:"block",maxHeight:200}}/>
@@ -598,9 +638,14 @@ function EditArtMdl({art,onClose,onSave}){
           </div>
         )}
       </div>
-      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-        <GBtn sm onClick={onClose}>Cancel</GBtn>
-        <BBtn disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save Changes"}</BBtn>
+      <div style={{display:"flex",gap:10,justifyContent:"space-between"}}>
+        {onDelete&&(
+          <button onClick={()=>{if(confirm("Delete this artifact?")){onDelete(art.id);onClose();}}} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:8,padding:"8px 14px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete</button>
+        )}
+        <div style={{display:"flex",gap:10}}>
+          <GBtn sm onClick={onClose}>Cancel</GBtn>
+          <BBtn sm disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save"}</BBtn>
+        </div>
       </div>
     </Mdl>
   );
@@ -1199,8 +1244,9 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
-  const showMobile=(item.deviceShell==="mobile")||(item.deviceShell!=="desktop"&&item.deviceShell!=="none"&&item.isMobile===true);
-  const showNoDevice=item.deviceShell==="none";
+  const ds=item.deviceShell||"auto";
+  const showMobile=(ds==="mobile")||(ds==="auto"&&item.isMobile===true);
+  const showNoDevice=ds==="none";
   const isMobileWebsite=item.type==="website"&&item.src&&showMobile;
   const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&showMobile&&!showNoDevice;
 
@@ -1590,6 +1636,9 @@ export default function App(){
     }
     setFeed(prev=>prev.map(f=>f.id===updated.id?{...f,...updated}:f));
   };
+  const deleteArt=artId=>{
+    setFeed(prev=>prev.filter(f=>f.id!==artId));
+  };
 
   const allTags=Array.from(new Set(projects.flatMap(p=>p.tags||[])));
   const matchingTags=srch.toLowerCase().trim()?allTags.filter(t=>t.includes(srch.toLowerCase())):allTags;
@@ -1683,7 +1732,7 @@ export default function App(){
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
       {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})}/>)}
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
-      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit}/>)}
+      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} projects={projects}/>)}
       {isMobile&&!searchExp&&(
         <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:32,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
       )}
