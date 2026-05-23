@@ -1388,10 +1388,11 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
 
 function Explore({feed,projects,onSave,onEdit,onDelete,darkMode}){
   const [lb,setLb]=useState(null);
+  const realItems=feed.filter(item=>item.type!=="mockup");
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{columns:"4 270px",gap:16}}>
-        {feed.map(item=>(
+        {realItems.map(item=>(
           <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
         ))}
       </div>
