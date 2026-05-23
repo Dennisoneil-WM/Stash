@@ -1161,7 +1161,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   );
 }
 
-function Explore({feed,projects,onSave,onEdit}){
+function Explore({feed,projects,onSave,onEdit,darkMode}){
   const [lb,setLb]=useState(null);
   return (
     <div style={{padding:"16px 0"}}>
@@ -1527,7 +1527,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} darkMode={darkMode}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
       </main>
