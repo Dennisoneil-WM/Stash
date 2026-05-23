@@ -1631,8 +1631,13 @@ export default function App(){
   const saveEdit=async updated=>{
     const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
     if(isUuid){
-      try{const r=await updateFeedItem(updated.id,updated);setFeed(prev=>prev.map(f=>f.id===r.id?r:f));return;}
-      catch(e){console.error(e);}
+      try{
+        const r=await updateFeedItem(updated.id,updated);
+        setFeed(prev=>prev.map(f=>f.id===r.id?r:f));
+        return;
+      }catch(e){
+        console.error(e);
+      }
     }
     setFeed(prev=>prev.map(f=>f.id===updated.id?{...f,...updated}:f));
   };
