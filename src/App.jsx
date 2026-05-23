@@ -350,10 +350,15 @@ function CropTool({src,onCrop,onCancel}){
     }
   },[dragging]);
 
+  const isVideo=src&&(src.includes(".mp4")||src.includes(".mov")||src.includes(".webm")||src.includes(".avi"));
   return (
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div ref={containerRef} style={{position:"relative",borderRadius:12,overflow:"hidden",border:`2px solid ${BD}`,background:"#F0F0F0",maxWidth:"100%"}}>
-        <img ref={imgRef} src={src} alt="crop" style={{display:"block",width:"100%",height:"auto"}}/>
+      <div ref={containerRef} style={{position:"relative",borderRadius:12,overflow:"hidden",border:`2px solid ${BD}`,background:"#000",maxWidth:"100%",aspectRatio:"16/9"}}>
+        {isVideo?(
+          <video ref={imgRef} src={src} style={{display:"block",width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline/>
+        ):(
+          <img ref={imgRef} src={src} alt="crop" style={{display:"block",width:"100%",height:"100%",objectFit:"cover"}}/>
+        )}
         <div style={{position:"absolute",left:crop.l+"%",top:crop.t+"%",right:(100-crop.r)+"%",bottom:(100-crop.b)+"%",border:`2px solid ${BK}`,boxShadow:"inset 0 0 0 4000px rgba(0,0,0,.4)"}}>
           {["nw","ne","sw","se"].map(h=>(
             <div key={h} onMouseDown={handleMouseDown(h)} onTouchStart={handleTouchStart(h)} style={{position:"absolute",...(h.includes("n")?{top:"-8px"}:{bottom:"-8px"}),...(h.includes("w")?{left:"-8px"}:{right:"-8px"}),width:24,height:24,background:"#FFF",border:`2px solid ${BK}`,borderRadius:"50%",cursor:`${h}-resize`,zIndex:10,touchAction:"none"}}/>
