@@ -119,8 +119,9 @@ function Thumb({art,h=220,onClick,darkMode}){
   if((art.type==="image"||art.type==="gif")&&art.src){
     if(ds==="none"){
       const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
+      const croppedHeight=art.crop?h/(((art.crop.r-art.crop.l)/(art.crop.b-art.crop.t))):h;
       return (
-        <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",...(cropClip?{clipPath:cropClip}:{})}}>
+        <div onClick={onClick} style={{height:croppedHeight,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",...(cropClip?{clipPath:cropClip}:{})}}>
           <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"cover",display:"block"}}/>
         </div>
       );
@@ -1397,12 +1398,12 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
       {showNoDevice && (item.type==="image"||item.type==="gif"||item.type==="video")&&item.src && (
         <>
           {(item.type==="image"||item.type==="gif") && (
-            <div style={{width:"100%",aspectRatio:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
+            <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
               <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",display:"block"}}/>
             </div>
           )}
           {item.type==="video" && (
-            <div style={{width:"100%",aspectRatio:"auto",overflow:"hidden",background:"#000",position:"relative",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
+            <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#000",position:"relative",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
               <video src={item.src} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",display:"block"}} muted loop playsInline autoPlay/>
               <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
                 <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
