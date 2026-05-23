@@ -127,7 +127,7 @@ function Thumb({art,h=220,onClick,darkMode}){
     }
     if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell darkMode={darkMode}>
+        <PhoneShell bg={art.mobileBg||"#000"} darkMode={darkMode}>
           <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
         </PhoneShell>
       </div>
@@ -148,7 +148,7 @@ function Thumb({art,h=220,onClick,darkMode}){
     }
     if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#000" darkMode={darkMode}>
+        <PhoneShell bg={art.mobileBg||"#000"} darkMode={darkMode}>
           <video src={art.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
         </PhoneShell>
       </div>
@@ -176,7 +176,7 @@ function Thumb({art,h=220,onClick,darkMode}){
   if(art.type==="website"&&art.src){
     if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#FFF" darkMode={darkMode}>
+        <PhoneShell bg={art.mobileBg||"#FFF"} darkMode={darkMode}>
           <div style={{position:"relative",height:420,overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,width:390,height:844,transform:"scale("+(204/390)+")",transformOrigin:"top left",pointerEvents:"none"}}>
               <iframe src={art.src} title={art.name} style={{width:390,height:844,border:"none",display:"block"}} sandbox="allow-scripts allow-same-origin"/>
@@ -447,7 +447,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
       else if(isVid(f)) t="video";
       else if(isPdf(f)) t="pdf";
       const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
-      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile,deviceShell:"auto",crop:null});
+      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile,deviceShell:"auto",crop:null,mobileBg:"#000"});
     }
     setUpl(false);
     setPreview(arts);
@@ -477,6 +477,15 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
                       <button key={o.v} onClick={()=>{art.deviceShell=o.v;setPreview([...preview]);}} style={{flex:1,background:art.deviceShell===o.v?BK:"#FFF",border:`1px solid ${art.deviceShell===o.v?"transparent":BD}`,color:art.deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
                         {o.l}
                       </button>
+                    ))}
+                  </div>
+                </Fld>
+              )}
+              {(art.deviceShell==="mobile"||art.deviceShell==="auto")&&(art.type==="image"||art.type==="video"||art.type==="gif")&&(
+                <Fld label="Mobile Background">
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
+                      <button key={o.v} onClick={()=>{art.mobileBg=o.v;setPreview([...preview]);}} style={{flex:1,minWidth:80,background:o.v,border:`2px solid ${(art.mobileBg||"#000")===o.v?BK:"#DDD"}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,color:(o.v==="#FFF"||o.v==="#E8E8E8")?"#000":"#FFF"}}>{o.l}</button>
                     ))}
                   </div>
                 </Fld>
@@ -553,7 +562,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
             The file must be set to "Anyone with the link can view" in Figma share settings.
           </div>
           {sharedFields}
-          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null,deviceShell:"auto",crop:null}])}>Add Figma Artifact</BBtn>
+          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null,deviceShell:"auto",crop:null,mobileBg:"#000"}])}>Add Figma Artifact</BBtn>
         </div>
       )}
 
@@ -568,7 +577,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
           <Fld label="Viewport"><TSel val={vp} set={setVp} opts={Object.keys(VPS)}/></Fld>
           <Fld label="Name"><TIn ph="weedmaps.com" val={sn} set={setSn}/></Fld>
           {sharedFields}
-          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile"),deviceShell:"auto",crop:null}])}>Add Website Artifact</BBtn>
+          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile"),deviceShell:"auto",crop:null,mobileBg:"#FFF"}])}>Add Website Artifact</BBtn>
         </div>
       )}
     </Mdl>
@@ -580,13 +589,14 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
   const [desc,setDesc]=useState(art.desc||"");
   const [tags,setTags]=useState(art.tags||[]);
   const [deviceShell,setDeviceShell]=useState(art.deviceShell||"auto");
+  const [mobileBg,setMobileBg]=useState(art.mobileBg||"#000");
   const [cropMode,setCropMode]=useState(false);
   const [crop,setCrop]=useState(art.crop||null);
   const [saving,setSaving]=useState(false);
 
   const save=async()=>{
     setSaving(true);
-    const updated={...art,name,desc,tags,deviceShell,crop};
+    const updated={...art,name,desc,tags,deviceShell,crop,mobileBg};
     console.log("Saving artifact:",{id:updated.id,deviceShell:updated.deviceShell,name:updated.name});
     await onSave(updated);
     setSaving(false);
@@ -614,6 +624,15 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[]}){
                 <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:deviceShell===o.v?BK:"#FFF",border:`1px solid ${deviceShell===o.v?"transparent":BD}`,color:deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
                   {o.l}
                 </button>
+              ))}
+            </div>
+          </Fld>
+        )}
+        {(art.type==="image"||art.type==="video"||art.type==="gif")&&(deviceShell==="mobile"||deviceShell==="auto")&&(
+          <Fld label="Mobile Background">
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
+                <button key={o.v} onClick={()=>setMobileBg(o.v)} style={{flex:1,minWidth:80,background:o.v,border:`2px solid ${mobileBg===o.v?BK:"#DDD"}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,color:(o.v==="#FFF"||o.v==="#E8E8E8")?"#000":"#FFF"}}>{o.l}</button>
               ))}
             </div>
           </Fld>
@@ -1283,7 +1302,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
         </div>
       )}
       {isMobileMedia && (
-        <PhoneShell darkMode={darkMode}>
+        <PhoneShell bg={item.mobileBg||"#000"} darkMode={darkMode}>
           {(item.type==="image"||item.type==="gif") && (
             <img src={item.src} alt={item.name}
               style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
@@ -1295,7 +1314,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
         </PhoneShell>
       )}
       {isMobileWebsite && (
-        <PhoneShell bg="#FFF" darkMode={darkMode}>
+        <PhoneShell bg={item.mobileBg||"#FFF"} darkMode={darkMode}>
           {ifErr ? (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:445,padding:20,textAlign:"center"}}>
               <div style={{fontSize:32,marginBottom:12,color:T3}}>&#x26A0;</div>
