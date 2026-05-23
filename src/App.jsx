@@ -1454,7 +1454,6 @@ export default function App(){
                 <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF}}>{v}</button>
               ))}
             </div>
-            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:28,flexShrink:0,marginLeft:6}}>&#x2315;</button>
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Av user={ME} size={28}/></button>
           </>)}
           {searchExp&&(<>
@@ -1476,6 +1475,58 @@ export default function App(){
       {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})}/>)}
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit}/>)}
+      {isMobile&&!searchExp&&(
+        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:24,right:24,width:44,height:44,borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:24,boxShadow:"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
+      )}
+      {isMobile&&searchExp&&(
+        <div style={{position:"fixed",inset:0,background:"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out"}}>
+          <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${BD}`,background:"#FFF"}}>
+            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
+            <div style={{flex:1,position:"relative"}}>
+              <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
+              <input ref={searchRef} autoFocus value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:14,color:T1,outline:"none",fontFamily:FF}}/>
+            </div>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:"16px 20px"}}>
+            {srch.trim()?(
+              <div>
+                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
+                {matchingTags.length>0?(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                    {matchingTags.map(t=>(
+                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                        <span>&#x23;</span>{t}
+                      </button>
+                    ))}
+                  </div>
+                ):(
+                  <p style={{fontSize:13,color:T3,textAlign:"center",padding:"24px 0"}}>No tags match "{srch}"</p>
+                )}
+              </div>
+            ):(
+              <div>
+                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>All Tags</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:24}}>
+                  {allTags.slice(0,12).map(t=>(
+                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                      <span>&#x23;</span>{t}
+                    </button>
+                  ))}
+                </div>
+                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {["web","mobile","redesign","v2","checkout"].map(s=>(
+                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"12px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF}}>
+                      &#x2315; {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
