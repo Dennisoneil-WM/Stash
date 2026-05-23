@@ -1830,7 +1830,7 @@ export default function App(){
               ))}
             </div>
             <div style={{flex:1}}/>
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+</BBtn>)}
+            {view==="explore"&&(<button onClick={()=>setUplFeed(true)} style={{background:BK,color:"#FFF",border:"none",borderRadius:16,padding:"4px 12px",fontWeight:600,fontSize:24,cursor:"pointer",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>+</button>)}
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={ME} size={28} src={ME.image}/></button>
           </>)}
           {searchExp&&(<>
