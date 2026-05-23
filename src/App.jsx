@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile } from "./supabase.js";
+import { supabase, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -1400,7 +1400,7 @@ function Explore({feed,projects,onSave,onEdit,darkMode}){
   );
 }
 
-function ProjCard({project,onOpen}){
+function ProjCard({project,onOpen,onDelete}){
   const [hov,setHov]=useState(false);
   const mock=DMOCKS[(project.id-1)%DMOCKS.length];
   const pad=mock.device==="iphone"?"20px 28px 20px":mock.device==="ipad"?"14px 12px":"10px 8px";
@@ -1412,16 +1412,21 @@ function ProjCard({project,onOpen}){
         <MockSVG mock={mock}/>
       </div>
       {hov&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end",padding:14}}>
-          <p style={{margin:"0 0 2px",fontWeight:700,fontSize:14,color:"#FFF",fontFamily:FF}}>{project.name}</p>
-          <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,.7)",fontFamily:FF}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</p>
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:14}}>
+          <div style={{display:"flex",justifyContent:"flex-end"}}>
+            <button onClick={e=>{e.stopPropagation();onDelete(project.id);}} style={{background:"rgba(255,0,0,.8)",border:"none",color:"#FFF",width:32,height:32,borderRadius:"50%",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700}}>×</button>
+          </div>
+          <div>
+            <p style={{margin:"0 0 2px",fontWeight:700,fontSize:14,color:"#FFF",fontFamily:FF}}>{project.name}</p>
+            <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,.7)",fontFamily:FF}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</p>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function Projects({projects,onOpen}){
+function Projects({projects,onOpen,onDelete}){
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{display:"flex",gap:12,flexWrap:"nowrap",overflowX:"auto",marginBottom:24,paddingBottom:4}}>
@@ -1436,7 +1441,7 @@ function Projects({projects,onOpen}){
         ))}
       </div>
       <div style={{columns:"5 200px",gap:16}}>
-        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen}/>))}
+        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete}/>))}
       </div>
     </div>
   );
@@ -1631,6 +1636,18 @@ export default function App(){
   };
 
   const open=p=>{setProj(p);setView("project");};
+  const deleteProj=async projId=>{
+    const isUuid=typeof projId==="string"&&projId.includes("-");
+    if(isUuid){
+      try{
+        await deleteProject(projId);
+        console.log("Deleted project from Supabase:",projId);
+      }catch(e){
+        console.error("Failed to delete from Supabase:",e);
+      }
+    }
+    setProjects(prev=>prev.filter(p=>p.id!==projId));
+  };
   const create=async p=>{
     try{
       const saved=await createProject(p);
@@ -1786,7 +1803,7 @@ export default function App(){
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} darkMode={darkMode}/>)}
-        {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
+        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed} darkMode={darkMode}/>)}
       </main>
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create} isMobile={isMobile}/>)}
