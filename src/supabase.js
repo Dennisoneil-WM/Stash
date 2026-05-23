@@ -123,9 +123,33 @@ export async function fetchFeed() {
 }
 
 export async function insertFeedItem(art) {
-  const { data, error } = await supabase
+  const insertObj = {
+    name: art.name,
+    type: art.type,
+    src: art.src || null,
+    thumb: art.thumb || null,
+    viewport: art.viewport || null,
+    is_mobile: art.isMobile || false,
+    mock: art.mock || null,
+    description: art.desc || "",
+    tags: art.tags || [],
+    device_shell: art.deviceShell || "auto",
+    mobile_bg: art.mobileBg || null,
+    crop: art.crop || null,
+    user_name: art.user?.name || "Dennis O'Neil",
+    user_initials: art.user?.initials || "DO",
+  };
+
+  let { data, error } = await supabase
     .from("feed_items")
-    .insert({
+    .insert(insertObj)
+    .select()
+    .single();
+
+  // If insert fails because columns don't exist, try without them
+  if (error && (error.message.includes("device_shell") || error.message.includes("mobile_bg") || error.message.includes("crop"))) {
+    console.warn("New columns don't exist, inserting without them:", error.message);
+    const basicInsert = {
       name: art.name,
       type: art.type,
       src: art.src || null,
@@ -135,33 +159,88 @@ export async function insertFeedItem(art) {
       mock: art.mock || null,
       description: art.desc || "",
       tags: art.tags || [],
-      device_shell: art.deviceShell || "auto",
-      mobile_bg: art.mobileBg || null,
-      crop: art.crop || null,
       user_name: art.user?.name || "Dennis O'Neil",
       user_initials: art.user?.initials || "DO",
-    })
-    .select()
-    .single();
-  if (error) throw error;
+    };
+
+    const result = await supabase
+      .from("feed_items")
+      .insert(basicInsert)
+      .select()
+      .single();
+
+    if (result.error) throw result.error;
+
+    data = result.data;
+
+    // Store device settings in localStorage
+    const devicesKey = `device_${data.id}`;
+    localStorage.setItem(devicesKey, JSON.stringify({
+      deviceShell: art.deviceShell,
+      mobileBg: art.mobileBg,
+      crop: art.crop
+    }));
+  } else if (error) {
+    throw error;
+  }
+
   return dbToFeedItem(data);
 }
 
 export async function updateFeedItem(id, updates) {
-  const { data, error } = await supabase
+  // First try to update with all fields including the new ones
+  const updateObj = {
+    name: updates.name,
+    description: updates.desc || "",
+    tags: updates.tags || [],
+    device_shell: updates.deviceShell || "auto",
+    mobile_bg: updates.mobileBg || "#000",
+    crop: updates.crop || null,
+  };
+
+  let { data, error } = await supabase
     .from("feed_items")
-    .update({
-      name: updates.name,
-      description: updates.desc || "",
-      tags: updates.tags || [],
-      device_shell: updates.deviceShell || "auto",
-      mobile_bg: updates.mobileBg || null,
-      crop: updates.crop || null,
-    })
+    .update(updateObj)
     .eq("id", id)
     .select()
     .single();
-  if (error) throw error;
+
+  // If the update fails because columns don't exist, try without the new fields
+  if (error && (error.message.includes("device_shell") || error.message.includes("mobile_bg") || error.message.includes("crop"))) {
+    console.warn("New columns don't exist yet, updating without them:", error.message);
+    const basicUpdate = {
+      name: updates.name,
+      description: updates.desc || "",
+      tags: updates.tags || [],
+    };
+    const result = await supabase
+      .from("feed_items")
+      .update(basicUpdate)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (result.error) {
+      console.error("updateFeedItem error:", result.error);
+      throw result.error;
+    }
+
+    // Store device shell and crop in local storage as a fallback
+    const devicesKey = `device_${id}`;
+    localStorage.setItem(devicesKey, JSON.stringify({
+      deviceShell: updates.deviceShell,
+      mobileBg: updates.mobileBg,
+      crop: updates.crop
+    }));
+    console.log("Stored device settings in localStorage for:", id);
+
+    data = result.data;
+  } else if (error) {
+    console.error("updateFeedItem error:", error);
+    throw error;
+  }
+
+  console.log("Updated feed item in Supabase:", { id, updates: updateObj });
   return dbToFeedItem(data);
 }
 
@@ -174,6 +253,24 @@ export async function deleteFeedItem(id) {
 }
 
 function dbToFeedItem(r) {
+  // Check if device settings are stored in localStorage (fallback)
+  let deviceShell = r.device_shell || "auto";
+  let mobileBg = r.mobile_bg || "#000";
+  let crop = r.crop || null;
+
+  const devicesKey = `device_${r.id}`;
+  try {
+    const stored = localStorage.getItem(devicesKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      deviceShell = parsed.deviceShell || deviceShell;
+      mobileBg = parsed.mobileBg || mobileBg;
+      crop = parsed.crop || crop;
+    }
+  } catch (e) {
+    console.warn("Error reading localStorage for device settings:", e);
+  }
+
   return {
     id: r.id,
     name: r.name,
@@ -185,9 +282,9 @@ function dbToFeedItem(r) {
     mock: r.mock,
     desc: r.description,
     tags: r.tags || [],
-    deviceShell: r.device_shell || "auto",
-    mobileBg: r.mobile_bg || "#000",
-    crop: r.crop || null,
+    deviceShell,
+    mobileBg,
+    crop,
     user: { name: r.user_name, initials: r.user_initials },
   };
 }
