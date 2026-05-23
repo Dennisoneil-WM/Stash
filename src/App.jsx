@@ -511,7 +511,13 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           {preview.map((art,i)=>(
             <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
-              <Thumb art={art} h={200} darkMode={darkMode}/>
+              {art.type==="video"?(
+                <div style={{height:200,borderRadius:12,overflow:"hidden",background:"#000",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <video src={art.src||art._prev} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
+                </div>
+              ):(
+                <Thumb art={art} h={200} darkMode={darkMode}/>
+              )}
               {(art.type==="image"||art.type==="video"||art.type==="gif")&&(
                 <Fld label="Device Shell">
                   <div style={{display:"flex",gap:8}}>
