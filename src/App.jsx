@@ -12,25 +12,26 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
+import { supabase, fetchProjects, createProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, uploadFile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
 const FF="'Geist','DM Sans',-apple-system,sans-serif";
 const GR=["linear-gradient(135deg,#0d1117,#1a472a)","linear-gradient(135deg,#1a0030,#6b21a8)","linear-gradient(135deg,#1c1c1c,#f97316)","linear-gradient(160deg,#0f172a,#1e40af)","linear-gradient(135deg,#0a0a0a,#dc2626)","linear-gradient(135deg,#111827,#059669)","linear-gradient(135deg,#1c1917,#d97706)","linear-gradient(160deg,#0f0f23,#7c3aed)","linear-gradient(135deg,#0c1a0c,#16a34a)","linear-gradient(135deg,#1e1b4b,#a78bfa)"];
-const USERS=[{id:1,name:"Dennis O'Neil",title:"Senior Product Designer",initials:"DO"},{id:2,name:"Maria Chen",title:"Lead UX Designer",initials:"MC"},{id:3,name:"Jake Torres",title:"Principal Designer",initials:"JT"}];
+const USERS=[{id:1,name:"Dennis O'Neil",title:"Senior Product Designer",initials:"DO",image:"https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F8d0ed44f84aa42ffb662bd68b4c40eb8?format=webp&width=800&height=1200"},{id:2,name:"Maria Chen",title:"Lead UX Designer",initials:"MC"},{id:3,name:"Jake Torres",title:"Principal Designer",initials:"JT"}];
 const ME=USERS[0];
 const VPS={"Desktop (1512x900)":{w:1512,h:900},"Laptop (1280x800)":{w:1280,h:800},"Mobile (390x844)":{w:390,h:844},"Tablet (768x1024)":{w:768,h:1024}};
 const FOLDERS=[{id:1,name:"Product Design",count:8},{id:2,name:"Brand & Marketing",count:5},{id:3,name:"Research",count:3},{id:4,name:"Documentation",count:6},{id:5,name:"Archive",count:15}];
 const a=(id,n,t,g)=>({id,name:n,type:t,thumb:g,src:null,viewport:null});
 const SPROJ=[
-  {id:1,name:"Website Redesign",folder:1,artifactCount:4,thumbs:[GR[0],GR[1],GR[2],GR[3]],
+  {id:1,name:"Website Redesign",folder:1,artifactCount:4,thumbs:[GR[0],GR[1],GR[2],GR[3]],tags:["web","redesign","core"],
    pages:[{id:"p1",label:"2",name:"Discovery"},{id:"p2",label:"3",name:"Concepts"},{id:"p3",label:"4",name:"Visual"},{id:"p4",label:"5",name:"Prototype"},{id:"p5",label:"6",name:"Handoff"}],
    rows:["R1","PDP","R2","R3"],
    artifacts:{p1:[a("a1","Logo Animation","image",GR[0]),a("a2","Promo Video","image",GR[1]),a("a3","Hero Banner","image",GR[2]),a("a4","Mobile Mockup","image",GR[3])],p2:[a("a5","shop-routing","figma",GR[4]),a("a6","type-to-image","image",GR[5]),a("a7","Home Z Index B","image",GR[6]),a("a8","shop-search","figma",GR[7])],p3:[a("a9","UI Kit v1","figma",GR[8]),a("a10","Color System","image",GR[9])],p4:[a("a11","Prototype v1","website",GR[0])],p5:[a("a12","Handoff Doc","file",GR[1])]}},
-  {id:2,name:"Mobile App",folder:1,artifactCount:2,thumbs:[GR[4],GR[5]],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"}],rows:["R1","R2"],artifacts:{p1:[a("b1","User Flows","figma",GR[4])],p2:[a("b2","Hi-fi Screens","image",GR[5])]}},
-  {id:3,name:"Brand Refresh",folder:2,artifactCount:1,thumbs:[GR[6]],pages:[{id:"p1",label:"1",name:"Assets"}],rows:["Brand"],artifacts:{p1:[a("c1","Logo System","image",GR[6])]}},
-  {id:4,name:"API Integration",folder:1,artifactCount:2,thumbs:[GR[7],GR[8]],pages:[{id:"p1",label:"1",name:"Specs"},{id:"p2",label:"2",name:"Docs"}],rows:["R1"],artifacts:{p1:[a("d1","Flow Diagram","figma",GR[7])],p2:[a("d2","API Docs","website",GR[8])]}},
-  {id:5,name:"User Portal",folder:1,artifactCount:5,thumbs:[GR[9],GR[0],GR[1],GR[2]],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"},{id:"p3",label:"3",name:"Dev"}],rows:["R1","R2","R3"],artifacts:{p1:[a("e1","Research Deck","file",GR[9]),a("e2","Interview Clips","image",GR[0])],p2:[a("e3","Wireframes","figma",GR[1]),a("e4","Visual Design","figma",GR[2])],p3:[a("e5","Spec Sheet","file",GR[3])]}},
+  {id:2,name:"Mobile App",folder:1,artifactCount:2,thumbs:[GR[4],GR[5]],tags:["mobile","app"],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"}],rows:["R1","R2"],artifacts:{p1:[a("b1","User Flows","figma",GR[4])],p2:[a("b2","Hi-fi Screens","image",GR[5])]}},
+  {id:3,name:"Brand Refresh",folder:2,artifactCount:1,thumbs:[GR[6]],tags:["brand","refresh"],pages:[{id:"p1",label:"1",name:"Assets"}],rows:["Brand"],artifacts:{p1:[a("c1","Logo System","image",GR[6])]}},
+  {id:4,name:"API Integration",folder:1,artifactCount:2,thumbs:[GR[7],GR[8]],tags:["api","backend"],pages:[{id:"p1",label:"1",name:"Specs"},{id:"p2",label:"2",name:"Docs"}],rows:["R1"],artifacts:{p1:[a("d1","Flow Diagram","figma",GR[7])],p2:[a("d2","API Docs","website",GR[8])]}},
+  {id:5,name:"User Portal",folder:1,artifactCount:5,thumbs:[GR[9],GR[0],GR[1],GR[2]],tags:["portal","user"],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"},{id:"p3",label:"3",name:"Dev"}],rows:["R1","R2","R3"],artifacts:{p1:[a("e1","Research Deck","file",GR[9]),a("e2","Interview Clips","image",GR[0])],p2:[a("e3","Wireframes","figma",GR[1]),a("e4","Visual Design","figma",GR[2])],p3:[a("e5","Spec Sheet","file",GR[3])]}},
 ];
 // Device mockup types and screen color themes for each feed card
 const DMOCKS=[
@@ -71,7 +72,8 @@ function isPdf(f){return f.type==="application/pdf";}
 function figEmbed(u){if(!u)return "";if(u.includes("figma.com/embed"))return u;return "https://www.figma.com/embed?embed_host=share&url="+encodeURIComponent(u);}
 function ensureHttp(u){if(!u)return "";return u.startsWith("http")?u:"https://"+u;}
 
-function Av({user,size=32}){
+function Av({user,size=32,src}){
+  if(src) return (<img src={src} alt={user.name} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,display:"block"}}/>);
   const bg=["#EBF5FB","#F0EBFB","#FBF0EB","#EBFBF0","#FBEBF0"],fg=["#1A6FA8","#6B21A8","#C2410C","#065F46","#9D174D"],i=(user.id-1)%5;
   return (<div style={{width:size,height:size,borderRadius:"50%",background:bg[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.34,fontWeight:700,color:fg[i],flexShrink:0,userSelect:"none"}}>{user.initials}</div>);
 }
@@ -80,10 +82,10 @@ function Bdg({type}){
   return (<span style={{fontSize:10,fontWeight:600,color:T2,background:"#F0F0F0",padding:"2px 7px",borderRadius:4,letterSpacing:"0.04em",textTransform:"uppercase"}}>{L[type]||"Media"}</span>);
 }
 function BBtn({children,onClick,disabled,fw,sm}){
-  return (<button onClick={onClick} disabled={disabled} style={{background:disabled?"#E0E0E0":BK,color:disabled?T3:"#FFF",border:"none",borderRadius:10,padding:sm?"9px 20px":"13px 24px",fontWeight:600,fontSize:sm?13:15,cursor:disabled?"default":"pointer",width:fw?"100%":"auto",fontFamily:FF}}>{children}</button>);
+  return (<button onClick={onClick} disabled={disabled} style={{background:disabled?"#E0E0E0":BK,color:disabled?T3:"#FFF",border:"none",borderRadius:16,padding:sm?"9px 20px":"13px 24px",fontWeight:600,fontSize:sm?13:15,cursor:disabled?"default":"pointer",width:fw?"100%":"auto",fontFamily:FF}}>{children}</button>);
 }
 function GBtn({children,onClick,sm}){
-  return (<button onClick={onClick} style={{background:"transparent",color:T1,border:`1px solid ${BM}`,borderRadius:10,padding:sm?"8px 18px":"12px 22px",fontWeight:500,fontSize:sm?13:15,cursor:"pointer",fontFamily:FF}}>{children}</button>);
+  return (<button onClick={onClick} style={{background:"transparent",color:T1,border:`1px solid ${BM}`,borderRadius:16,padding:sm?"8px 18px":"12px 22px",fontWeight:500,fontSize:sm?13:15,cursor:"pointer",fontFamily:FF}}>{children}</button>);
 }
 function TIn({ph,val,set,multi,af}){
   const s={background:"#FAFAFA",border:`1px solid ${BD}`,borderRadius:10,padding:"11px 14px",color:T1,fontSize:14,width:"100%",outline:"none",fontFamily:FF,boxSizing:"border-box"};
@@ -109,13 +111,13 @@ function Mdl({title,onClose,children,w=520}){
   );
 }
 
-function Thumb({art,h=220,onClick}){
+function Thumb({art,h=220,onClick,darkMode}){
   const [fl,setFl]=useState(false);
   if((art.type==="image"||art.type==="gif")&&art.src){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell>
-          <img src={art.src} alt={art.name} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}/>
+        <PhoneShell darkMode={darkMode}>
+          <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
         </PhoneShell>
       </div>
     );
@@ -124,8 +126,8 @@ function Thumb({art,h=220,onClick}){
   if(art.type==="video"&&art.src){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#000">
-          <video src={art.src} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}} muted loop playsInline autoPlay/>
+        <PhoneShell bg="#000" darkMode={darkMode}>
+          <video src={art.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
         </PhoneShell>
       </div>
     );
@@ -152,7 +154,7 @@ function Thumb({art,h=220,onClick}){
   if(art.type==="website"&&art.src){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#FFF">
+        <PhoneShell bg="#FFF" darkMode={darkMode}>
           <div style={{position:"relative",height:420,overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,width:390,height:844,transform:"scale("+(204/390)+")",transformOrigin:"top left",pointerEvents:"none"}}>
               <iframe src={art.src} title={art.name} style={{width:390,height:844,border:"none",display:"block"}} sandbox="allow-scripts allow-same-origin"/>
@@ -235,14 +237,85 @@ function UplProg({files,onDone}){
   );
 }
 
-function NewArtMdl({onClose,onAdd}){
+function TagInput({tags,setTags}){
+  const [tg,setTg]=useState("");
+  const add=()=>{const v=tg.trim().toLowerCase();if(v&&!tags.includes(v)){setTags([...tags,v]);}setTg("");};
+  return (
+    <div>
+      {tags.length>0&&(
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+          {tags.map(t=>(
+            <div key={t} style={{display:"flex",alignItems:"center",gap:5,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:6,padding:"3px 10px",fontSize:12,color:T1,fontFamily:FF}}>
+              #{t}
+              <button onClick={()=>setTags(tags.filter(x=>x!==t))} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:13,padding:0,lineHeight:1,marginLeft:2}}>&#x2715;</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{display:"flex",gap:8}}>
+        <input value={tg} onChange={e=>setTg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add();}}} placeholder="e.g. mobile, checkout, v2" style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF,transition:"border .15s"}} onFocus={e=>e.target.style.borderColor=BM} onBlur={e=>e.target.style.borderColor=BD}/>
+        <button onClick={add} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 14px",color:T1,cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
+      </div>
+    </div>
+  );
+}
+
+function ProjectPicker({projects,selected,onSelect,onNewProject}){
+  const [mode,setMode]=useState("none"); // "none"|"existing"|"new"
+  const [newName,setNewName]=useState("");
+  return (
+    <div>
+      {mode==="none"&&(
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setMode("existing")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>Link to existing project</button>
+          <button onClick={()=>setMode("new")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>+ Create new project</button>
+        </div>
+      )}
+      {mode==="existing"&&(
+        <div style={{border:`1px solid ${BD}`,borderRadius:10,overflow:"hidden",maxHeight:180,overflowY:"auto"}}>
+          {projects.map(p=>(
+            <button key={p.id} onClick={()=>{onSelect(p);setMode("selected");}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:selected?.id===p.id?"#F5F5F5":"#FFF",border:"none",borderBottom:`1px solid ${BD}`,padding:"10px 14px",cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+              <div style={{display:"flex",gap:3,flexShrink:0}}>
+                {(p.thumbs||[]).slice(0,2).map((t,i)=>(<div key={i} style={{width:20,height:20,borderRadius:4,background:t}}/>))}
+              </div>
+              <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{p.name}</span>
+              {selected?.id===p.id&&<span style={{color:T3,fontSize:16}}>&#x2713;</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {mode==="new"&&(
+        <div style={{display:"flex",gap:8}}>
+          <input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newName.trim()){onNewProject(newName.trim());setMode("none");setNewName("");}}} placeholder="New project name..." autoFocus style={{flex:1,background:"#F5F5F5",border:`1px solid ${BM}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
+          <button onClick={()=>{if(newName.trim()){onNewProject(newName.trim());setMode("none");setNewName("");}}} style={{background:BK,border:"none",borderRadius:8,padding:"8px 14px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Create</button>
+          <button onClick={()=>{setMode("none");setNewName("");}} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 14px",color:T2,cursor:"pointer",fontSize:13,fontFamily:FF}}>Cancel</button>
+        </div>
+      )}
+      {mode==="selected"&&selected&&(
+        <div style={{display:"flex",alignItems:"center",gap:10,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px"}}>
+          <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{selected.name}</span>
+          <button onClick={()=>{onSelect(null);setMode("existing");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:13,fontFamily:FF}}>Change</button>
+          <button onClick={()=>{onSelect(null);setMode("none");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:16,padding:0}}>&#x2715;</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   const [tab,setTab]=useState("file");
   const [drag,setDrag]=useState(false);
   const [q,setQ]=useState([]);
   const [upl,setUpl]=useState(false);
-  const [fu,setFu]=useState(""); const [fn,setFn]=useState(""); const [fd,setFd]=useState("");
-  const [su,setSu]=useState(""); const [sn,setSn]=useState(""); const [sd,setSd]=useState("");
+  const [preview,setPreview]=useState(null); // {art, index} for editing metadata
+  // per-source fields
+  const [fu,setFu]=useState(""); const [fn,setFn]=useState("");
+  const [su,setSu]=useState(""); const [sn,setSn]=useState("");
   const [vp,setVp]=useState("Desktop (1512x900)");
+  // shared fields
+  const [desc,setDesc]=useState("");
+  const [tags,setTags]=useState([]);
+  const [linkedProj,setLinkedProj]=useState(null);
   const ref=useRef();
 
   const proc=useCallback(async raw=>{
@@ -251,25 +324,20 @@ function NewArtMdl({onClose,onAdd}){
       if(isImg(f)||isVid(f)||isPdf(f)){
         try{f._prev=await toURL(f);}catch(e){}
         if(isImg(f)&&f._prev){
-          await new Promise(res=>{
-            const img=new Image();
-            img.onload=()=>{f._iw=img.naturalWidth;f._ih=img.naturalHeight;res();};
-            img.onerror=res;
-            img.src=f._prev;
-          });
+          await new Promise(res=>{const img=new Image();img.onload=()=>{f._iw=img.naturalWidth;f._ih=img.naturalHeight;res();};img.onerror=res;img.src=f._prev;});
         }
         if(isVid(f)&&f._prev){
-          await new Promise(res=>{
-            const v=document.createElement("video");
-            v.onloadedmetadata=()=>{f._iw=v.videoWidth;f._ih=v.videoHeight;res();};
-            v.onerror=res;
-            v.src=f._prev;
-          });
+          await new Promise(res=>{const v=document.createElement("video");v.onloadedmetadata=()=>{f._iw=v.videoWidth;f._ih=v.videoHeight;res();};v.onerror=res;v.src=f._prev;});
         }
       }
     }
     setQ(list);setUpl(true);
   },[]);
+
+  const submit=useCallback(arts=>{
+    onAdd(arts.map(a=>({...a,desc,tags,linkedProjectId:linkedProj?.id||null})));
+    onClose();
+  },[desc,tags,linkedProj,onAdd,onClose]);
 
   const done=useCallback(async()=>{
     const arts=[];
@@ -280,21 +348,57 @@ function NewArtMdl({onClose,onAdd}){
       else if(isVid(f)) t="video";
       else if(isPdf(f)) t="pdf";
       const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
-      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
+      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
     }
-    onAdd(arts);onClose();
-  },[q,onAdd,onClose]);
+    setUpl(false);
+    setPreview(arts);
+  },[q]);
 
   if(upl) return (<UplProg files={q} onDone={done}/>);
 
-  const tabs=[{id:"file",icon:"^",label:"File"},{id:"figma",icon:"*",label:"Figma"},{id:"website",icon:"+",label:"Website"}];
+  if(preview){
+    return (
+      <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560}>
+        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+          {preview.map((art,i)=>(
+            <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
+              <Thumb art={art} h={200} darkMode={darkMode}/>
+              <Fld label="Name"><TIn value={art.name} set={v=>{art.name=v;setPreview([...preview]);}} ph="Artifact name"/></Fld>
+              <Fld label="Description (optional)"><TIn value={art.desc||""} set={v=>{art.desc=v;setPreview([...preview]);}} ph="Add a description..." multi/></Fld>
+              <Fld label="Tags (optional)">
+                <TagInput tags={art.tags||[]} setTags={v=>{art.tags=v;setPreview([...preview]);}}/>
+              </Fld>
+            </div>
+          ))}
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <GBtn sm onClick={()=>setPreview(null)}>Cancel</GBtn>
+            <BBtn fw onClick={()=>{submit(preview);setPreview(null);}}>Add {preview.length} Artifact{preview.length!==1?"s":""}</BBtn>
+          </div>
+        </div>
+      </Mdl>
+    );
+  }
+
+  const tabs=[{id:"file",label:"File"},{id:"figma",label:"Figma"},{id:"website",label:"Website"}];
+
+  const sharedFields=(
+    <div style={{display:"flex",flexDirection:"column",gap:16,marginTop:16,paddingTop:16,borderTop:`1px solid ${BD}`}}>
+      <Fld label="Description (optional)"><TIn ph="What is this artifact?" val={desc} set={setDesc} multi/></Fld>
+      <Fld label="Tags (optional)"><TagInput tags={tags} setTags={setTags}/></Fld>
+      {projects.length>0&&(
+        <Fld label="Link to Project (optional)">
+          <ProjectPicker projects={projects} selected={linkedProj} onSelect={setLinkedProj} onNewProject={nm=>{if(onCreateProject){onCreateProject({name:nm,folder:1,tags:[],desc:"",pages:[{id:"p1",label:"1",name:"Page 1"}],thumbs:[],artifacts:{p1:[]},rows:["R1"]},p=>setLinkedProj(p));}}}/>
+        </Fld>
+      )}
+    </div>
+  );
 
   return (
-    <Mdl title="New Artifact" onClose={onClose} w={520}>
+    <Mdl title="New Artifact" onClose={onClose} w={560}>
       <div style={{display:"flex",gap:8,marginBottom:24,background:"#F5F5F5",borderRadius:12,padding:4}}>
         {tabs.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:tab===t.id?"#FFF":"transparent",border:tab===t.id?`1px solid ${BD}`:"1px solid transparent",borderRadius:9,padding:"9px 0",cursor:"pointer",color:tab===t.id?T1:T2,fontWeight:600,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:7,fontFamily:FF}}>
-            <span>{t.icon}</span>{t.label}
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:tab===t.id?"#FFF":"transparent",border:tab===t.id?`1px solid ${BD}`:"1px solid transparent",borderRadius:9,padding:"9px 0",cursor:"pointer",color:tab===t.id?T1:T2,fontWeight:600,fontSize:14,fontFamily:FF}}>
+            {t.label}
           </button>
         ))}
       </div>
@@ -306,31 +410,32 @@ function NewArtMdl({onClose,onAdd}){
             onDragLeave={()=>setDrag(false)}
             onDrop={e=>{e.preventDefault();setDrag(false);if(e.dataTransfer.files.length)proc(e.dataTransfer.files);}}
             onClick={()=>ref.current.click()}
-            style={{border:`1.5px dashed ${drag?BK:BM}`,borderRadius:14,padding:"44px 24px",textAlign:"center",marginBottom:20,background:drag?"#F5F5F5":"#FAFAFA",cursor:"pointer",transition:"all .15s"}}>
+            style={{border:`1.5px dashed ${drag?BK:BM}`,borderRadius:14,padding:"36px 24px",textAlign:"center",background:drag?"#F5F5F5":"#FAFAFA",cursor:"pointer",transition:"all .15s"}}>
             <input ref={ref} type="file" multiple accept="image/*,video/*,.pdf,.gif" style={{display:"none"}} onChange={e=>{if(e.target.files.length)proc(e.target.files);}}/>
-            <div style={{fontSize:28,marginBottom:12,color:T3}}>&#x2191;</div>
-            <p style={{color:T1,fontWeight:600,margin:"0 0 6px",fontSize:15}}>{drag?"Drop files here":"Drag and drop files here"}</p>
-            <p style={{color:T1,fontSize:14,margin:"0 0 10px",textDecoration:"underline"}}>or browse files</p>
+            <div style={{fontSize:28,marginBottom:10,color:T3}}>&#x2191;</div>
+            <p style={{color:T1,fontWeight:600,margin:"0 0 4px",fontSize:15}}>{drag?"Drop files here":"Drag and drop files here"}</p>
+            <p style={{color:T1,fontSize:14,margin:"0 0 8px",textDecoration:"underline"}}>or browse files</p>
             <p style={{color:T3,fontSize:12,margin:0}}>Images, videos, GIFs, and PDFs supported</p>
           </div>
-          <BBtn fw disabled>Add Artifact</BBtn>
+          {sharedFields}
+          <div style={{marginTop:20}}><BBtn fw disabled>Add Artifact</BBtn></div>
         </>
       )}
 
       {tab==="figma" && (
-        <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="Figma URL"><TIn af ph="https://www.figma.com/design/..." val={fu} set={v=>{setFu(v);if(!fn)setFn(v.split("/").filter(Boolean).pop()||"");}} /></Fld>
           <Fld label="Name"><TIn ph="Frame or file name" val={fn} set={setFn}/></Fld>
-          <Fld label="Description (optional)"><TIn ph="Add a description..." val={fd} set={setFd} multi/></Fld>
           <div style={{background:"#FFFBEB",border:"1px solid #F0D060",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#7A6000",fontFamily:FF,lineHeight:1.5}}>
-            Paste any Figma file, frame, or prototype link. The file must be set to "Anyone with the link can view" in Figma share settings.
+            The file must be set to "Anyone with the link can view" in Figma share settings.
           </div>
-          <BBtn fw disabled={!fu.trim()} onClick={()=>{onAdd([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null}]);onClose();}}>Add Figma Artifact</BBtn>
+          {sharedFields}
+          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null}])}>Add Figma Artifact</BBtn>
         </div>
       )}
 
       {tab==="website" && (
-        <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="URL">
             <div style={{position:"relative"}}>
               <TIn af ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
@@ -339,26 +444,90 @@ function NewArtMdl({onClose,onAdd}){
           </Fld>
           <Fld label="Viewport"><TSel val={vp} set={setVp} opts={Object.keys(VPS)}/></Fld>
           <Fld label="Name"><TIn ph="weedmaps.com" val={sn} set={setSn}/></Fld>
-          <Fld label="Description (optional)"><TIn ph="Add a description..." val={sd} set={setSd} multi/></Fld>
-          <BBtn fw disabled={!su.trim()} onClick={()=>{onAdd([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile")}]);onClose();}}>Add Website Artifact</BBtn>
+          {sharedFields}
+          <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile")}])}>Add Website Artifact</BBtn>
         </div>
       )}
     </Mdl>
   );
 }
 
+function EditArtMdl({art,onClose,onSave}){
+  const [name,setName]=useState(art.name||"");
+  const [desc,setDesc]=useState(art.desc||"");
+  const [tags,setTags]=useState(art.tags||[]);
+  const [saving,setSaving]=useState(false);
+
+  const save=async()=>{
+    setSaving(true);
+    await onSave({...art,name,desc,tags});
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <Mdl title="Edit Artifact" onClose={onClose} w={520}>
+      <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+        <Fld label="Name"><TIn af val={name} set={setName} ph="Artifact name"/></Fld>
+        <Fld label="Description (optional)"><TIn val={desc} set={setDesc} ph="Describe this artifact..." multi/></Fld>
+        <Fld label="Tags (optional)"><TagInput tags={tags} setTags={setTags}/></Fld>
+        {art.src&&(art.type==="image"||art.type==="gif")&&(
+          <div style={{borderRadius:10,overflow:"hidden",border:`1px solid ${BD}`,maxHeight:200}}>
+            <img src={art.src} alt={art.name} style={{width:"100%",objectFit:"cover",display:"block",maxHeight:200}}/>
+          </div>
+        )}
+        {art.type==="website"&&art.src&&(
+          <div style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T2,fontFamily:FF,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{color:T3}}>&#x1F517;</span>
+            <a href={art.src} target="_blank" rel="noopener noreferrer" style={{color:"#0066CC",textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.src}</a>
+          </div>
+        )}
+        {art.type==="figma"&&(
+          <div style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T2,fontFamily:FF}}>
+            Figma embed
+          </div>
+        )}
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <GBtn sm onClick={onClose}>Cancel</GBtn>
+        <BBtn disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save Changes"}</BBtn>
+      </div>
+    </Mdl>
+  );
+}
+
 function NewProjMdl({onClose,onCreate}){
-  const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [fl,setFl]=useState(1);
+  const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [fl,setFl]=useState(1); const [tg,setTg]=useState(""); const [tags,setTags]=useState([]);
+  const addTag=()=>{
+    if(tg.trim()&&!tags.includes(tg.trim().toLowerCase())){
+      setTags([...tags,tg.trim().toLowerCase()]);
+      setTg("");
+    }
+  };
   return (
     <Mdl title="New Project" onClose={onClose} w={480}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
         <Fld label="Project Name"><TIn af ph="e.g. Search Redesign" val={nm} set={setNm}/></Fld>
         <Fld label="Description (optional)"><TIn ph="What is this project about?" val={ds} set={setDs} multi/></Fld>
         <Fld label="Folder"><TSel val={fl} set={v=>setFl(Number(v))} opts={FOLDERS.map(f=>({v:f.id,l:f.name}))}/></Fld>
+        <Fld label="Tags (optional)">
+          <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+            {tags.map(t=>(
+              <div key={t} style={{display:"flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:6,padding:"4px 10px",fontSize:12,color:T1,fontFamily:FF}}>
+                {t}
+                <button onClick={()=>setTags(tags.filter(x=>x!==t))} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:14,padding:0,lineHeight:1}}>&#x2715;</button>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <input value={tg} onChange={e=>setTg(e.target.value)} onKeyPress={e=>{if(e.key==="Enter"){e.preventDefault();addTag();}}} placeholder="Add a tag..." style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
+            <button onClick={addTag} style={{background:BK,border:"none",borderRadius:8,padding:"8px 14px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
+          </div>
+        </Fld>
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
         <GBtn sm onClick={onClose}>Cancel</GBtn>
-        <BBtn disabled={!nm.trim()} onClick={()=>{onCreate({name:nm.trim(),desc:ds,folder:fl,artifactCount:0,pages:[{id:"p1",label:"1",name:"Page 1"}],thumbs:[],artifacts:{p1:[]},rows:["R1"]});onClose();}}>Create Project</BBtn>
+        <BBtn disabled={!nm.trim()} onClick={()=>{onCreate({name:nm.trim(),desc:ds,folder:fl,tags,artifactCount:0,pages:[{id:"p1",label:"1",name:"Page 1"}],thumbs:[],artifacts:{p1:[]},rows:["R1"]});onClose();}}>Create Project</BBtn>
       </div>
     </Mdl>
   );
@@ -442,11 +611,11 @@ function SaveMdl({art,projects,onClose}){
   );
 }
 
-function ArtTile({art,onPublish,onSave,onOpen}){
+function ArtTile({art,onPublish,onSave,onOpen,darkMode}){
   const [hov,setHov]=useState(false); const [menu,setMenu]=useState(false);
   return (
     <div style={{position:"relative"}} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>{setHov(false);setMenu(false);}}>
-      <Thumb art={art} onClick={()=>onOpen(art)}/>
+      <Thumb art={art} onClick={()=>onOpen(art)} darkMode={darkMode}/>
       {hov&&(
         <div style={{position:"absolute",top:10,right:10,display:"flex",gap:6}}>
           <button onClick={e=>{e.stopPropagation();onSave(art);}} style={{background:"rgba(255,255,255,.94)",border:`1px solid ${BM}`,borderRadius:8,padding:"6px 12px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
@@ -860,54 +1029,82 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
-function PhoneShell({children,bg="#000"}){
-  // iPhone 17: 393×852pt logical → 2.168:1 ratio. Screen width 204px → minHeight 442px.
+function PhoneShell({children,bg="#000",darkMode}){
+  // iPhone Air: ultra-thin uniform aluminum frame, no Dynamic Island overlay (it's in the video)
+  const frameGrad="linear-gradient(175deg,#F0F0F2 0%,#D8D8DA 15%,#B8B8BC 35%,#C8C8CC 55%,#D4D4D8 75%,#E8E8EA 100%)";
+  const edgeGrad="linear-gradient(175deg,#E0E0E2 0%,#C0C0C4 40%,#D0D0D4 100%)";
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:"#E8E8E8",padding:"18px 22px 24px"}}>
-      <div style={{position:"relative",width:220}}>
+                 background:darkMode?"#1A1A1A":"#BFC9D4",padding:"24px 18px 28px",transition:"background 0.3s"}}>
+      <div style={{position:"relative",width:307}}>
+        {/* Aluminum frame — single band, uniform 3px all around */}
         <div style={{
-          background:"#1C1C1E",borderRadius:48,padding:"12px 8px",
-          boxShadow:"0 0 0 1.5px #0A0A0A, inset 0 0 0 1px #333",
+          background:frameGrad,
+          borderRadius:50,
+          padding:"3px",
           position:"relative",
+          boxShadow:"0 0 0 0.5px rgba(0,0,0,0.18), 0 24px 64px rgba(0,0,0,0.38), 0 6px 16px rgba(0,0,0,0.18), inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.12)",
         }}>
-          {/* Dynamic Island — iPhone 17 pill */}
+          {/* Thin black inner ring — even 4px all sides */}
           <div style={{
-            position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",
-            width:72,height:20,background:"#000",borderRadius:10,zIndex:10,
-          }}/>
-          {/* Screen — minHeight enforces iPhone 17 proportions */}
-          <div style={{
-            borderRadius:38,overflow:"hidden",
-            background:bg,
+            background:"#080808",
+            borderRadius:48,
+            padding:"4px",
             position:"relative",
-            minHeight:442,
           }}>
-            {children}
+            {/* Screen */}
+            <div style={{
+              borderRadius:45,
+              overflow:"hidden",
+              background:bg,
+              position:"relative",
+              aspectRatio:"393/852",
+            }}>
+              <div style={{position:"absolute",inset:0,width:"100%",height:"100%"}}>
+                {children}
+              </div>
+            </div>
           </div>
-          {/* Side buttons */}
-          <div style={{position:"absolute",left:-4,top:"18%",width:4,height:26,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-4,top:"28%",width:4,height:48,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-4,top:"42%",width:4,height:48,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",right:-4,top:"28%",width:4,height:68,background:"#333",borderRadius:"0 2px 2px 0"}}/>
+          {/* Power button - right */}
+          <div style={{position:"absolute",right:-3,top:"30%",width:3,height:64,background:edgeGrad,borderRadius:"0 2.5px 2.5px 0",boxShadow:"1px 0 3px rgba(0,0,0,0.25)"}}/>
+          {/* Action button - left */}
+          <div style={{position:"absolute",left:-3,top:"20%",width:3,height:28,background:edgeGrad,borderRadius:"2.5px 0 0 2.5px",boxShadow:"-1px 0 3px rgba(0,0,0,0.25)"}}/>
+          {/* Volume up - left */}
+          <div style={{position:"absolute",left:-3,top:"29%",width:3,height:42,background:edgeGrad,borderRadius:"2.5px 0 0 2.5px",boxShadow:"-1px 0 3px rgba(0,0,0,0.25)"}}/>
+          {/* Volume down - left */}
+          <div style={{position:"absolute",left:-3,top:"39%",width:3,height:42,background:edgeGrad,borderRadius:"2.5px 0 0 2.5px",boxShadow:"-1px 0 3px rgba(0,0,0,0.25)"}}/>
         </div>
+        {/* Subtle glass reflection over screen */}
+        <div style={{
+          position:"absolute",top:10,left:8,right:8,height:"28%",
+          background:"linear-gradient(180deg,rgba(255,255,255,0.08) 0%,transparent 100%)",
+          borderRadius:"46px 46px 0 0",pointerEvents:"none",zIndex:6,
+        }}/>
       </div>
     </div>
   );
 }
 
-function ExploreCard({item,onSave,onOpen}){
+function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   const [hov,setHov]=useState(false);
+  const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
   const isMobile=item.isMobile===true;
-
-  // For mobile website viewport, render scaled iframe inside phone shell
   const isMobileWebsite=item.type==="website"&&item.src&&isMobile;
   const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&isMobile;
 
+  // Timeout to detect iframe load failure (X-Frame-Options blocking)
+  const ifRef=useRef();
+  useEffect(()=>{
+    if(isMobileWebsite&&ifRef.current&&!ifErr){
+      const t=setTimeout(()=>setIfErr(true),3000);
+      return ()=>clearTimeout(t);
+    }
+  },[isMobileWebsite,ifErr]);
+
   return (
     <div
-      style={{breakInside:"avoid",marginBottom:16,borderRadius:12,overflow:"hidden",
+      style={{breakInside:"avoid",marginBottom:16,borderRadius:32,overflow:"hidden",
               position:"relative",cursor:"pointer",background:"#EBEBEB"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
@@ -919,40 +1116,59 @@ function ExploreCard({item,onSave,onOpen}){
         </div>
       )}
       {isMobileMedia && (
-        <PhoneShell>
+        <PhoneShell darkMode={darkMode}>
           {(item.type==="image"||item.type==="gif") && (
             <img src={item.src} alt={item.name}
-              style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}/>
+              style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
           )}
           {item.type==="video" && (
-            <video src={item.src} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}
+            <video src={item.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}
               muted loop playsInline autoPlay/>
           )}
         </PhoneShell>
       )}
       {isMobileWebsite && (
-        <PhoneShell bg="#FFF">
-          <div style={{position:"relative",height:420,overflow:"hidden"}}>
-            <div style={{
-              position:"absolute",top:0,left:0,
-              width:390,height:844,
-              transform:"scale("+204/390+")",
-              transformOrigin:"top left",
-              pointerEvents:"none",
-            }}>
-              <iframe src={item.src} title={item.name}
-                style={{width:390,height:844,border:"none",display:"block"}}
-                sandbox="allow-scripts allow-same-origin"/>
+        <PhoneShell bg="#FFF" darkMode={darkMode}>
+          {ifErr ? (
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:445,padding:20,textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:12,color:T3}}>&#x26A0;</div>
+              <p style={{margin:"0 0 8px",fontSize:13,fontWeight:600,color:T1}}>Cannot embed this site</p>
+              <p style={{margin:"0 0 14px",fontSize:12,color:T2}}>This website blocks iframe embedding</p>
+              <a href={item.src} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:"#0066CC",textDecoration:"none",fontWeight:500,cursor:"pointer"}} onClick={e=>e.stopPropagation()}>Open in new tab &#x2192;</a>
             </div>
-          </div>
+          ) : (
+            <div style={{position:"relative",height:445,overflow:"hidden"}}>
+              <div style={{
+                position:"absolute",top:0,left:0,
+                width:390,height:844,
+                transform:"scale("+220/390+")",
+                transformOrigin:"top left",
+                pointerEvents:"none",
+              }}>
+                <iframe ref={ifRef} src={item.src} title={item.name}
+                  style={{width:390,height:844,border:"none",display:"block"}}
+                  sandbox="allow-scripts allow-same-origin"
+                  onError={()=>setIfErr(true)}
+                  onLoad={()=>setIfErr(false)}/>
+              </div>
+            </div>
+          )}
         </PhoneShell>
       )}
       {!isMock&&!isMobileMedia&&!isMobileWebsite && (
-        <Thumb art={item} h={320}/>
+        <Thumb art={item} h={320} darkMode={darkMode}/>
       )}
       {hov&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.1)",
-                     display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10}}>
+                     display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10,gap:6}}>
+          {onEdit&&item.type!=="mockup"&&(
+            <button
+              onClick={e=>{e.stopPropagation();onEdit(item);}}
+              style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
+                      padding:"6px 12px",color:T1,fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:FF}}
+            >Edit</button>
+          )}
           <button
             onClick={e=>{e.stopPropagation();onSave(item);}}
             style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
@@ -965,13 +1181,13 @@ function ExploreCard({item,onSave,onOpen}){
   );
 }
 
-function Explore({feed,projects,onSave}){
+function Explore({feed,projects,onSave,onEdit,darkMode}){
   const [lb,setLb]=useState(null);
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{columns:"5 200px",gap:16}}>
+      <div style={{columns:"4 270px",gap:16}}>
         {feed.map(item=>(
-          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb}/>
+          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} darkMode={darkMode}/>
         ))}
       </div>
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1023,17 +1239,39 @@ function Projects({projects,onOpen}){
 
 function ProjDetail({project,projects,onBack}){
   const [ap,setAp]=useState(project.pages[0].id);
-  const [arts,setArts]=useState(project.artifacts);
+  const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
   const [showNew,setShowNew]=useState(false);
   const [pub,setPub]=useState(null);
   const [save,setSave]=useState(null);
   const [lb,setLb]=useState(null);
+  const [artsLoaded,setArtsLoaded]=useState(false);
+
+  // Load artifacts from Supabase if the project has a UUID id
+  useEffect(()=>{
+    const isUuid=typeof project.id==="string"&&project.id.includes("-");
+    if(!isUuid){setArtsLoaded(true);return;}
+    fetchArtifactsForProject(project.id)
+      .then(byPage=>{setArts(byPage);setArtsLoaded(true);})
+      .catch(()=>setArtsLoaded(true));
+  },[project.id]);
 
   const pa=arts[ap]||[];
 
-  const addArts=list=>{
-    setArts(prev=>({...prev,[ap]:[...(prev[ap]||[]),...list]}));
+  const addArts=async list=>{
+    const isUuid=typeof project.id==="string"&&project.id.includes("-");
+    const saved=[];
+    for(const art of list){
+      if(isUuid){
+        try{
+          let src=art.src;
+          if(art._file){try{src=await uploadFile(art._file);}catch(e){console.error(e);}}
+          const r=await insertArtifact(project.id,ap,{...art,src});
+          saved.push(r);
+        }catch(e){saved.push(art);}
+      }else{saved.push(art);}
+    }
+    setArts(prev=>({...prev,[ap]:[...(prev[ap]||[]),...saved]}));
   };
 
   const addPage=()=>{
@@ -1084,14 +1322,14 @@ function ProjDetail({project,projects,onBack}){
                     <span style={{fontSize:12,color:T3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
                     <Bdg type={art.type}/>
                   </div>
-                  <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb}/>
+                  <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} darkMode={darkMode}/>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
-      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts}/>)}
+      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode}/>)}
       {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
       {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1110,7 +1348,7 @@ function Profile({user,feed}){
         <button style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"6px 16px",fontSize:13,color:T2,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,fontFamily:FF}}>&#x1F4AC; Slack</button>
       </div>
       <div style={{columns:"5 200px",gap:16}}>
-        {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}}/>))}
+        {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}} darkMode={darkMode}/>))}
       </div>
     </div>
   );
@@ -1119,8 +1357,9 @@ function Profile({user,feed}){
 export default function App(){
   const [view,setView]=useState("explore");
   const [proj,setProj]=useState(null);
-  const [projects,setProjects]=useState(SPROJ);
+  const [projects,setProjects]=useState([]);
   const [feed,setFeed]=useState(SFEED);
+  const [loading,setLoading]=useState(true);
   const [srch,setSrch]=useState(""); const [sf,setSf]=useState(false);
   const [newP,setNewP]=useState(false); const [newF,setNewF]=useState(false);
   const [uplFeed,setUplFeed]=useState(false);
@@ -1128,78 +1367,175 @@ export default function App(){
   const [isMobile,setIsMobile]=useState(()=>window.innerWidth<=640);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [searchExp,setSearchExp]=useState(false);
+  const [showTags,setShowTags]=useState(false);
+  const [darkMode,setDarkMode]=useState(false);
   const searchRef=useRef(null);
+  const logoRef=useRef(null);
+
+  useEffect(()=>{
+    Promise.all([fetchProjects(),fetchFeed()])
+      .then(([projs,feedItems])=>{
+        setProjects(projs.length?projs:SPROJ);
+        const realItems=feedItems.filter(f=>f.type!=="mockup");
+        setFeed(realItems.length?[...realItems,...SFEED]:SFEED);
+      })
+      .catch(()=>{setProjects(SPROJ);setFeed(SFEED);})
+      .finally(()=>setLoading(false));
+  },[]);
+
   useEffect(()=>{
     const onResize=()=>setIsMobile(window.innerWidth<=640);
     window.addEventListener("resize",onResize);
     return()=>window.removeEventListener("resize",onResize);
   },[]);
   useEffect(()=>{
-    if(searchExp&&searchRef.current)searchRef.current.focus();
+    if(searchExp&&searchRef.current){
+      setTimeout(()=>{searchRef.current?.focus({preventScroll:true});},300);
+    }
+  },[searchExp]);
+
+  useEffect(()=>{
+    if(searchExp){
+      document.body.style.overflow="hidden";
+    }else{
+      document.body.style.overflow="";
+    }
+    return ()=>{
+      document.body.style.overflow="";
+    };
   },[searchExp]);
 
   if(view==="project"&&proj){
     return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")}/>);
   }
 
+  const toggleDarkMode=()=>{
+    if(logoRef.current){
+      const rect=logoRef.current.getBoundingClientRect();
+      const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+      for(let i=0;i<12;i++){
+        const angle=Math.random()*Math.PI*2,dist=60+Math.random()*60,x=cx+Math.cos(angle)*dist,y=cy+Math.sin(angle)*dist;
+        const p=document.createElement("div");
+        p.style.cssText=`position:fixed;width:${8+Math.random()*12}px;height:${8+Math.random()*12}px;background:${i%2?"rgba(255,0,0,0.8)":"rgba(100,100,100,0.6)"};border-radius:50%;left:${x}px;top:${y}px;pointer-events:none;z-index:2000;animation:${i%2?"laser":"smoke"} ${0.6+Math.random()*0.4}s ease-out forwards;`;
+        document.body.appendChild(p);
+        setTimeout(()=>p.remove(),1200);
+      }
+    }
+    setDarkMode(v=>!v);
+  };
+
   const open=p=>{setProj(p);setView("project");};
-  const create=p=>{
-    const n={...p,id:Date.now(),thumbs:[]};
-    setProjects(prev=>[...prev,n]);
-    open(n);
+  const create=async p=>{
+    try{
+      const saved=await createProject(p);
+      setProjects(prev=>[saved,...prev]);
+      if(p._navigate!==false) open(saved);
+      return saved;
+    }catch(e){
+      console.error("createProject failed",e);
+      const n={...p,id:Date.now(),thumbs:[],artifacts:{}};
+      setProjects(prev=>[n,...prev]);
+      if(p._navigate!==false) open(n);
+      return n;
+    }
   };
-  const addToFeed=arts=>{
-    const items=arts.map(a=>({...a,user:ME,id:"upl"+uid()}));
-    setFeed(prev=>[...items,...prev]);
+  const addToFeed=async arts=>{
+    const saved=[];
+    for(const art of arts){
+      let src=art.src;
+      if(art._file){
+        try{src=await uploadFile(art._file);}catch(e){console.error(e);}
+      }
+      const item={...art,src,user:ME};
+      try{const r=await insertFeedItem(item);saved.push(r);}
+      catch(e){saved.push({...item,id:"upl"+uid()});}
+    }
+    setFeed(prev=>[...saved,...prev]);
   };
-  const filtProj=projects.filter(p=>!srch||p.name.toLowerCase().includes(srch.toLowerCase()));
+
+  const [editItem,setEditItem]=useState(null);
+  const saveEdit=async updated=>{
+    const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
+    if(isUuid){
+      try{const r=await updateFeedItem(updated.id,updated);setFeed(prev=>prev.map(f=>f.id===r.id?r:f));return;}
+      catch(e){console.error(e);}
+    }
+    setFeed(prev=>prev.map(f=>f.id===updated.id?{...f,...updated}:f));
+  };
+
+  const allTags=Array.from(new Set(projects.flatMap(p=>p.tags||[])));
+  const matchingTags=srch.toLowerCase().trim()?allTags.filter(t=>t.includes(srch.toLowerCase())):allTags;
+  const filtProj=projects.filter(p=>{
+    const matchName=!srch||p.name.toLowerCase().includes(srch.toLowerCase());
+    const matchTag=!srch||(p.tags||[]).some(t=>t.includes(srch.toLowerCase()));
+    return matchName||matchTag;
+  });
+
+  if(loading) return (
+    <div style={{minHeight:"100vh",background:PG,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{width:36,height:36,border:`3px solid ${BD}`,borderTopColor:BK,borderRadius:"50%",animation:"spin 0.7s linear infinite",margin:"0 auto 16px"}}/>
+        <p style={{color:T3,fontSize:14,margin:0}}>Loading Stash...</p>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
   return (
-    <div style={{minHeight:"100vh",background:PG,fontFamily:FF}}>
-      <nav style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100}}>
+    <div style={{minHeight:"100vh",background:darkMode?"#0D0D0D":PG,color:darkMode?"#FFF":T1,fontFamily:FF,transition:"background 0.3s, color 0.3s"}}>
+      <style>{`@keyframes smoke{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}@keyframes laser{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0.5)}}`}</style>
+      <nav style={{background:darkMode?"#1A1A1A":"#FFF",borderBottom:`1px solid ${darkMode?"#333":"#E8E8E8"}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100,transition:"background 0.3s, border-color 0.3s"}}>
         {!isMobile&&(<>
-          <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,marginRight:4}}>
+          <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,background:"none",border:"none",cursor:"pointer",padding:0}}>
             <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
-            <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
-          </div>
-          <div style={{display:"flex",gap:2,background:"#F0F0F0",borderRadius:20,padding:3}}>
+            <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:darkMode?"#FFF":T1,textTransform:"uppercase",transition:"color 0.3s"}}>The Stash</span>
+          </button>
+          <div style={{flex:1}}/>
+          <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,transition:"background 0.3s"}}>
             {["Explore","Projects"].map(v=>(
-              <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?"#FFF":"transparent",border:view===v.toLowerCase()?`1px solid ${BD}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF}}>{v}</button>
+              <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
             ))}
           </div>
-          <div style={{flex:1,maxWidth:520,margin:"0 auto",position:"relative"}}>
-            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>setSf(true)} onBlur={()=>setSf(false)} placeholder="Search" style={{width:"100%",boxSizing:"border-box",background:sf?"#FFF":"#F5F5F5",border:`1px solid ${sf?BM:"transparent"}`,borderRadius:22,padding:"7px 16px 7px 36px",color:T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
+          <div style={{flex:1,maxWidth:520,margin:"0 0 0 auto",position:"relative"}}>
+            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:18,pointerEvents:"none"}}>&#x2315;</span>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?(darkMode?"#2A2A2A":"#FFF"):(darkMode?"#1A1A1A":"#F5F5F5"),border:`1px solid ${sf?(darkMode?"#444":BM):"transparent"}`,borderRadius:22,padding:"7px 16px 7px 44px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
+            {sf&&showTags&&(
+              <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:darkMode?"#1A1A1A":"#FFF",border:`1px solid ${darkMode?"#333":BD}`,borderRadius:12,boxShadow:darkMode?"0 4px 20px rgba(0,0,0,.5)":"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto",transition:"all 0.3s"}}>
+                {matchingTags.length>0?(
+                  <div style={{padding:8}}>
+                    <p style={{margin:"8px 12px 4px",fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase"}}>All Tags</p>
+                    {matchingTags.map(t=>(
+                      <button key={t} onClick={()=>{setSrch(t);setShowTags(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"10px 12px",fontSize:13,color:darkMode?"#FFF":T1,fontFamily:FF,cursor:"pointer",borderRadius:6,marginBottom:2}} onMouseEnter={e=>e.currentTarget.style.background=darkMode?"#2A2A2A":"#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <span style={{fontWeight:600}}>#</span>{t}
+                      </button>
+                    ))}
+                  </div>
+                ):(
+                  <div style={{padding:"16px 12px",textAlign:"center",color:T3,fontSize:13}}>No tags found</div>
+                )}
+              </div>
+            )}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
             {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
-            <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32}/></button>
-            <button style={{background:"none",border:`1px solid ${BD}`,borderRadius:8,width:32,height:32,cursor:"pointer",color:T2,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x2699;</button>
+            <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
           </div>
         </>)}
         {isMobile&&(<>
           {!searchExp&&(<>
-            <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
-              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
-              <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:T1,textTransform:"uppercase"}}>The Stash</span>
+            <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",justifyContent:"center",width:isMobile?42:28,height:isMobile?42:28,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0,transition:"width 0.3s, height 0.3s"}}>
+              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:isMobile?42:28,height:isMobile?42:28,borderRadius:"50%",objectFit:"cover",display:"block",transition:"width 0.3s, height 0.3s"}}/>
+            </button>
+            <div style={{flex:1}}/>
+            <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,flexShrink:0,transition:"background 0.3s"}}>
+              {["Explore","Projects"].map(v=>(
+                <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
+              ))}
             </div>
             <div style={{flex:1}}/>
-            <button onClick={()=>setSearchExp(true)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T2,fontSize:22,flexShrink:0}}>&#x2315;</button>
-            <button onClick={()=>setUplFeed(true)} style={{width:34,height:34,borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:22,lineHeight:1,flexShrink:0}}>+</button>
-            <div style={{position:"relative",flexShrink:0}}>
-              <button onClick={()=>setMobileMenu(v=>!v)} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T1,fontSize:18}}>&#x22EF;</button>
-              {mobileMenu&&(<div onClick={()=>setMobileMenu(false)} style={{position:"fixed",inset:0,zIndex:199}}/>)}
-              {mobileMenu&&(
-                <div style={{position:"absolute",top:42,right:0,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,boxShadow:"0 4px 20px rgba(0,0,0,.1)",minWidth:160,zIndex:200,overflow:"hidden"}}>
-                  {["Explore","Projects"].map(v=>(
-                    <button key={v} onClick={()=>{setView(v.toLowerCase());setMobileMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",background:view===v.toLowerCase()?"#F5F5F5":"transparent",border:"none",padding:"12px 16px",fontSize:15,fontFamily:FF,color:view===v.toLowerCase()?T1:T2,fontWeight:view===v.toLowerCase()?600:400,cursor:"pointer"}}>{v}</button>
-                  ))}
-                  <div style={{height:1,background:BD,margin:"4px 0"}}/>
-                  <button onClick={()=>{setView("profile");setMobileMenu(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"12px 16px",fontSize:15,fontFamily:FF,color:T2,cursor:"pointer"}}>Profile</button>
-                </div>
-              )}
-            </div>
+            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>Upload</BBtn>)}
+            <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={ME} size={28} src={ME.image}/></button>
           </>)}
           {searchExp&&(<>
             <div style={{flex:1,position:"relative"}}>
@@ -1211,14 +1547,67 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} darkMode={darkMode}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed}/>)}
       </main>
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create}/>)}
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects}/>)}
-      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed}/>)}
+      {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})}/>)}
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)}/>)}
+      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit}/>)}
+      {isMobile&&!searchExp&&(
+        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:32,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
+      )}
+      {isMobile&&searchExp&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:darkMode?"#0D0D0D":"#FFF",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
+          <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}html,body{margin:0;padding:0}`}</style>
+          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${darkMode?"#333":BD}`,background:darkMode?"#1A1A1A":"#FFF",transition:"all 0.3s",flexShrink:0}}>
+            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:darkMode?"#FFF":T1,fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
+            <div style={{flex:1,position:"relative"}}>
+              <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:T1,outline:"none",fontFamily:FF}}/>
+            </div>
+          </div>
+          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 20px"}}>
+            {srch.trim()?(
+              <div>
+                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
+                {matchingTags.length>0?(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                    {matchingTags.map(t=>(
+                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                        <span>&#x23;</span>{t}
+                      </button>
+                    ))}
+                  </div>
+                ):(
+                  <p style={{fontSize:13,color:T3,textAlign:"center",padding:"24px 0"}}>No tags match "{srch}"</p>
+                )}
+              </div>
+            ):(
+              <div>
+                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>All Tags</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:24}}>
+                  {allTags.slice(0,12).map(t=>(
+                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"8px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                      <span>&#x23;</span>{t}
+                    </button>
+                  ))}
+                </div>
+                <p style={{fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {["web","mobile","redesign","v2","checkout"].map(s=>(
+                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"12px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF}}>
+                      &#x2315; {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
