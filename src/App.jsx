@@ -111,12 +111,12 @@ function Mdl({title,onClose,children,w=520}){
   );
 }
 
-function Thumb({art,h=220,onClick}){
+function Thumb({art,h=220,onClick,darkMode}){
   const [fl,setFl]=useState(false);
   if((art.type==="image"||art.type==="gif")&&art.src){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell>
+        <PhoneShell darkMode={darkMode}>
           <img src={art.src} alt={art.name} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}/>
         </PhoneShell>
       </div>
@@ -126,7 +126,7 @@ function Thumb({art,h=220,onClick}){
   if(art.type==="video"&&art.src){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#000">
+        <PhoneShell bg="#000" darkMode={darkMode}>
           <video src={art.src} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}} muted loop playsInline autoPlay/>
         </PhoneShell>
       </div>
@@ -154,7 +154,7 @@ function Thumb({art,h=220,onClick}){
   if(art.type==="website"&&art.src){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
-        <PhoneShell bg="#FFF">
+        <PhoneShell bg="#FFF" darkMode={darkMode}>
           <div style={{position:"relative",height:420,overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,width:390,height:844,transform:"scale("+(204/390)+")",transformOrigin:"top left",pointerEvents:"none"}}>
               <iframe src={art.src} title={art.name} style={{width:390,height:844,border:"none",display:"block"}} sandbox="allow-scripts allow-same-origin"/>
@@ -302,7 +302,7 @@ function ProjectPicker({projects,selected,onSelect,onNewProject}){
   );
 }
 
-function NewArtMdl({onClose,onAdd,projects=[],onCreateProject}){
+function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
   const [tab,setTab]=useState("file");
   const [drag,setDrag]=useState(false);
   const [q,setQ]=useState([]);
@@ -362,7 +362,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject}){
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           {preview.map((art,i)=>(
             <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
-              <Thumb art={art} h={200}/>
+              <Thumb art={art} h={200} darkMode={darkMode}/>
               <Fld label="Name"><TIn value={art.name} set={v=>{art.name=v;setPreview([...preview]);}} ph="Artifact name"/></Fld>
               <Fld label="Description (optional)"><TIn value={art.desc||""} set={v=>{art.desc=v;setPreview([...preview]);}} ph="Add a description..." multi/></Fld>
               <Fld label="Tags (optional)">
@@ -611,11 +611,11 @@ function SaveMdl({art,projects,onClose}){
   );
 }
 
-function ArtTile({art,onPublish,onSave,onOpen}){
+function ArtTile({art,onPublish,onSave,onOpen,darkMode}){
   const [hov,setHov]=useState(false); const [menu,setMenu]=useState(false);
   return (
     <div style={{position:"relative"}} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>{setHov(false);setMenu(false);}}>
-      <Thumb art={art} onClick={()=>onOpen(art)}/>
+      <Thumb art={art} onClick={()=>onOpen(art)} darkMode={darkMode}/>
       {hov&&(
         <div style={{position:"absolute",top:10,right:10,display:"flex",gap:6}}>
           <button onClick={e=>{e.stopPropagation();onSave(art);}} style={{background:"rgba(255,255,255,.94)",border:`1px solid ${BM}`,borderRadius:8,padding:"6px 12px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
@@ -1029,7 +1029,7 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
-function PhoneShell({children,bg="#000"}){
+function PhoneShell({children,bg="#000",darkMode}){
   // iPhone 15: 393×852pt logical screen. Device frame 280px wide with proper proportions
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
@@ -1065,7 +1065,7 @@ function PhoneShell({children,bg="#000"}){
   );
 }
 
-function ExploreCard({item,onSave,onOpen,onEdit}){
+function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const isMock=item.type==="mockup"&&item.mock;
@@ -1096,7 +1096,7 @@ function ExploreCard({item,onSave,onOpen,onEdit}){
         </div>
       )}
       {isMobileMedia && (
-        <PhoneShell>
+        <PhoneShell darkMode={darkMode}>
           {(item.type==="image"||item.type==="gif") && (
             <img src={item.src} alt={item.name}
               style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}/>
@@ -1108,7 +1108,7 @@ function ExploreCard({item,onSave,onOpen,onEdit}){
         </PhoneShell>
       )}
       {isMobileWebsite && (
-        <PhoneShell bg="#FFF">
+        <PhoneShell bg="#FFF" darkMode={darkMode}>
           {ifErr ? (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:445,padding:20,textAlign:"center"}}>
               <div style={{fontSize:32,marginBottom:12,color:T3}}>&#x26A0;</div>
@@ -1136,7 +1136,7 @@ function ExploreCard({item,onSave,onOpen,onEdit}){
         </PhoneShell>
       )}
       {!isMock&&!isMobileMedia&&!isMobileWebsite && (
-        <Thumb art={item} h={320}/>
+        <Thumb art={item} h={320} darkMode={darkMode}/>
       )}
       {hov&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.1)",
@@ -1167,7 +1167,7 @@ function Explore({feed,projects,onSave,onEdit}){
     <div style={{padding:"16px 0"}}>
       <div style={{columns:"4 270px",gap:16}}>
         {feed.map(item=>(
-          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit}/>
+          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} darkMode={darkMode}/>
         ))}
       </div>
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1302,14 +1302,14 @@ function ProjDetail({project,projects,onBack}){
                     <span style={{fontSize:12,color:T3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
                     <Bdg type={art.type}/>
                   </div>
-                  <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb}/>
+                  <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} darkMode={darkMode}/>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
-      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects}/>)}
+      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode}/>)}
       {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
       {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
@@ -1328,7 +1328,7 @@ function Profile({user,feed}){
         <button style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"6px 16px",fontSize:13,color:T2,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,fontFamily:FF}}>&#x1F4AC; Slack</button>
       </div>
       <div style={{columns:"5 200px",gap:16}}>
-        {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}}/>))}
+        {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}} darkMode={darkMode}/>))}
       </div>
     </div>
   );
