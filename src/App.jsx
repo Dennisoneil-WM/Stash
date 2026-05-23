@@ -461,7 +461,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode}){
                   </div>
                 </Fld>
               )}
-              {art.deviceShell==="none"&&(art.type==="image"||art.type==="gif")&&art.src&&(
+              {art.deviceShell==="none"&&(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&(
                 <button onClick={()=>setCropMode({artIndex:i})} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
                   {art.crop?"Adjust Crop":"Add Crop Tool"}
                 </button>
