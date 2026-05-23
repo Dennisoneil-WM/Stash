@@ -117,7 +117,7 @@ function Thumb({art,h=220,onClick,darkMode}){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
         <PhoneShell darkMode={darkMode}>
-          <img src={art.src} alt={art.name} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}/>
+          <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
         </PhoneShell>
       </div>
     );
@@ -127,7 +127,7 @@ function Thumb({art,h=220,onClick,darkMode}){
     if(art.isMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
         <PhoneShell bg="#000" darkMode={darkMode}>
-          <video src={art.src} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}} muted loop playsInline autoPlay/>
+          <video src={art.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>
         </PhoneShell>
       </div>
     );
@@ -1030,84 +1030,56 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
 function PhoneShell({children,bg="#000",darkMode}){
-  // iPhone Air: thin titanium frame, tight bezels, Dynamic Island
+  // iPhone Air: thin titanium frame, tight bezels
+  // Dynamic Island lives INSIDE the screen at real iPhone proportions:
+  // DI top ≈ 11pt / 852pt ≈ 1.3%, width ≈ 126pt / 393pt ≈ 32%, height ≈ 37pt / 852pt ≈ 4.3%
   const frameGrad="linear-gradient(160deg,#E8E8EA 0%,#C8C8CA 20%,#B0B0B4 40%,#D0D0D4 60%,#C0C0C4 80%,#DCDCDE 100%)";
-  const outerBg=darkMode?"#1C1C1E":"#C8C8CA";
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
                  background:darkMode?"#1A1A1A":"#CBD5E0",padding:"20px 16px 24px",transition:"background 0.3s"}}>
       <div style={{position:"relative",width:260}}>
         {/* Outer titanium frame */}
         <div style={{
-          background:frameGrad,
-          borderRadius:52,
-          padding:3,
+          background:frameGrad,borderRadius:52,padding:3,position:"relative",
           boxShadow:"0 0 0 0.5px rgba(0,0,0,0.25), 0 20px 60px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6)",
-          position:"relative",
         }}>
-          {/* Inner bezel (black surround) */}
+          {/* Inner bezel */}
           <div style={{
-            background:"#0A0A0A",
-            borderRadius:50,
-            padding:"10px 7px 12px",
-            position:"relative",
-            display:"flex",flexDirection:"column",
+            background:"#0A0A0A",borderRadius:50,padding:"8px 6px 10px",
+            position:"relative",display:"flex",flexDirection:"column",
             boxShadow:"inset 0 0 0 0.5px rgba(255,255,255,0.08)",
           }}>
-            {/* Dynamic Island */}
+            {/* Screen — Dynamic Island sits INSIDE here so it overlays the video at the correct position */}
             <div style={{
-              position:"absolute",top:14,left:"50%",transform:"translateX(-50%)",
-              width:88,height:26,background:"#000",borderRadius:13,zIndex:10,
-              boxShadow:"0 0 0 1px rgba(255,255,255,0.08)",
-            }}/>
-            {/* Screen */}
-            <div style={{
-              borderRadius:42,overflow:"hidden",
-              background:bg,
-              position:"relative",
-              aspectRatio:"393/852",
+              borderRadius:42,overflow:"hidden",background:bg,
+              position:"relative",aspectRatio:"393/852",
             }}>
-              {children}
+              {/* Content fills 100% — no maxHeight constraints */}
+              <div style={{position:"absolute",inset:0,width:"100%",height:"100%"}}>
+                {children}
+              </div>
+              {/* Dynamic Island overlay at real iPhone proportions */}
+              <div style={{
+                position:"absolute",top:"1.3%",left:"50%",transform:"translateX(-50%)",
+                width:"32%",height:"4.3%",
+                background:"#000",borderRadius:999,zIndex:10,
+              }}/>
             </div>
           </div>
-          {/* Side button - right (power) */}
-          <div style={{
-            position:"absolute",right:-3.5,top:"28%",
-            width:3.5,height:68,
-            background:frameGrad,
-            borderRadius:"0 3px 3px 0",
-            boxShadow:"1px 0 2px rgba(0,0,0,0.3)",
-          }}/>
+          {/* Power button - right */}
+          <div style={{position:"absolute",right:-3.5,top:"28%",width:3.5,height:68,background:frameGrad,borderRadius:"0 3px 3px 0",boxShadow:"1px 0 2px rgba(0,0,0,0.3)"}}/>
+          {/* Action button - left */}
+          <div style={{position:"absolute",left:-3.5,top:"18%",width:3.5,height:30,background:frameGrad,borderRadius:"3px 0 0 3px",boxShadow:"-1px 0 2px rgba(0,0,0,0.3)"}}/>
           {/* Volume up - left */}
-          <div style={{
-            position:"absolute",left:-3.5,top:"26%",
-            width:3.5,height:44,
-            background:frameGrad,
-            borderRadius:"3px 0 0 3px",
-            boxShadow:"-1px 0 2px rgba(0,0,0,0.3)",
-          }}/>
+          <div style={{position:"absolute",left:-3.5,top:"27%",width:3.5,height:44,background:frameGrad,borderRadius:"3px 0 0 3px",boxShadow:"-1px 0 2px rgba(0,0,0,0.3)"}}/>
           {/* Volume down - left */}
-          <div style={{
-            position:"absolute",left:-3.5,top:"38%",
-            width:3.5,height:44,
-            background:frameGrad,
-            borderRadius:"3px 0 0 3px",
-            boxShadow:"-1px 0 2px rgba(0,0,0,0.3)",
-          }}/>
-          {/* Action button - left top */}
-          <div style={{
-            position:"absolute",left:-3.5,top:"18%",
-            width:3.5,height:30,
-            background:frameGrad,
-            borderRadius:"3px 0 0 3px",
-            boxShadow:"-1px 0 2px rgba(0,0,0,0.3)",
-          }}/>
+          <div style={{position:"absolute",left:-3.5,top:"38%",width:3.5,height:44,background:frameGrad,borderRadius:"3px 0 0 3px",boxShadow:"-1px 0 2px rgba(0,0,0,0.3)"}}/>
         </div>
-        {/* Subtle screen reflection */}
+        {/* Screen glass reflection */}
         <div style={{
-          position:"absolute",top:15,left:10,right:10,height:"35%",
-          background:"linear-gradient(180deg,rgba(255,255,255,0.06) 0%,transparent 100%)",
-          borderRadius:"42px 42px 0 0",pointerEvents:"none",zIndex:5,
+          position:"absolute",top:13,left:9,right:9,height:"30%",
+          background:"linear-gradient(180deg,rgba(255,255,255,0.07) 0%,transparent 100%)",
+          borderRadius:"44px 44px 0 0",pointerEvents:"none",zIndex:6,
         }}/>
       </div>
     </div>
@@ -1148,10 +1120,10 @@ function ExploreCard({item,onSave,onOpen,onEdit,darkMode}){
         <PhoneShell darkMode={darkMode}>
           {(item.type==="image"||item.type==="gif") && (
             <img src={item.src} alt={item.name}
-              style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}/>
+              style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
           )}
           {item.type==="video" && (
-            <video src={item.src} style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}
+            <video src={item.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}
               muted loop playsInline autoPlay/>
           )}
         </PhoneShell>
