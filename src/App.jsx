@@ -307,6 +307,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject}){
   const [drag,setDrag]=useState(false);
   const [q,setQ]=useState([]);
   const [upl,setUpl]=useState(false);
+  const [preview,setPreview]=useState(null); // {art, index} for editing metadata
   // per-source fields
   const [fu,setFu]=useState(""); const [fn,setFn]=useState("");
   const [su,setSu]=useState(""); const [sn,setSn]=useState("");
@@ -349,10 +350,34 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject}){
       const isMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
       arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile});
     }
-    submit(arts);
-  },[q,submit]);
+    setUpl(false);
+    setPreview(arts);
+  },[q]);
 
   if(upl) return (<UplProg files={q} onDone={done}/>);
+
+  if(preview){
+    return (
+      <Mdl title="Review & Add Metadata" onClose={()=>setPreview(null)} w={560}>
+        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+          {preview.map((art,i)=>(
+            <div key={art.id} style={{display:"flex",flexDirection:"column",gap:12,padding:16,background:"#F5F5F5",borderRadius:12}}>
+              <Thumb art={art} h={200}/>
+              <Fld label="Name"><TIn value={art.name} set={v=>{art.name=v;setPreview([...preview]);}} ph="Artifact name"/></Fld>
+              <Fld label="Description (optional)"><TIn value={art.desc||""} set={v=>{art.desc=v;setPreview([...preview]);}} ph="Add a description..." multi/></Fld>
+              <Fld label="Tags (optional)">
+                <TagInput tags={art.tags||[]} setTags={v=>{art.tags=v;setPreview([...preview]);}}/>
+              </Fld>
+            </div>
+          ))}
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <GBtn sm onClick={()=>setPreview(null)}>Cancel</GBtn>
+            <BBtn fw onClick={()=>{submit(preview);setPreview(null);}}>Add {preview.length} Artifact{preview.length!==1?"s":""}</BBtn>
+          </div>
+        </div>
+      </Mdl>
+    );
+  }
 
   const tabs=[{id:"file",label:"File"},{id:"figma",label:"Figma"},{id:"website",label:"Website"}];
 
@@ -1005,35 +1030,35 @@ function ScreenDraw({layout,c,dim,sub,card,card2,W,H}){
 // ── ExploreCard ───────────────────────────────────────────────────────────────
 // iPhone shell wrapper for real uploaded mobile content
 function PhoneShell({children,bg="#000"}){
-  // iPhone 17: 393×852pt logical → 2.168:1 ratio. Screen width 220px → minHeight 477px.
+  // iPhone 15: 393×852pt logical screen. Device frame 280px wide with proper proportions
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:"#E8E8E8",padding:"18px 22px 24px"}}>
-      <div style={{position:"relative",width:220}}>
+                 background:darkMode?"#2A2A2A":"#E8E8E8",padding:"12px 16px 18px",transition:"background 0.3s"}}>
+      <div style={{position:"relative",width:280,aspectRatio:"393/852"}}>
         <div style={{
-          background:"#1C1C1E",borderRadius:48,padding:"12px 8px",
-          boxShadow:"0 0 0 1.5px #0A0A0A, inset 0 0 0 1px #333",
-          position:"relative",
+          background:"#1C1C1E",borderRadius:"45px",padding:"16px 10px",
+          boxShadow:"0 0 0 2px #0A0A0A, inset 0 0 0 1.5px #333",
+          position:"relative",height:"100%",display:"flex",flexDirection:"column",
         }}>
-          {/* Dynamic Island — iPhone 17 pill */}
+          {/* Dynamic Island */}
           <div style={{
-            position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",
-            width:72,height:20,background:"#000",borderRadius:10,zIndex:10,
+            position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",
+            width:96,height:27,background:"#000",borderRadius:13,zIndex:10,
           }}/>
-          {/* Screen — minHeight enforces iPhone 17 proportions */}
+          {/* Screen */}
           <div style={{
-            borderRadius:38,overflow:"hidden",
+            borderRadius:40,overflow:"hidden",
             background:bg,
             position:"relative",
-            minHeight:477,
+            flex:1,marginTop:10,
           }}>
             {children}
           </div>
           {/* Side buttons */}
-          <div style={{position:"absolute",left:-4,top:"18%",width:4,height:26,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-4,top:"28%",width:4,height:48,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",left:-4,top:"42%",width:4,height:48,background:"#333",borderRadius:"2px 0 0 2px"}}/>
-          <div style={{position:"absolute",right:-4,top:"28%",width:4,height:68,background:"#333",borderRadius:"0 2px 2px 0"}}/>
+          <div style={{position:"absolute",left:-5,top:"20%",width:5,height:32,background:"#333",borderRadius:"2px 0 0 2px"}}/>
+          <div style={{position:"absolute",left:-5,top:"32%",width:5,height:60,background:"#333",borderRadius:"2px 0 0 2px"}}/>
+          <div style={{position:"absolute",left:-5,top:"50%",width:5,height:60,background:"#333",borderRadius:"2px 0 0 2px"}}/>
+          <div style={{position:"absolute",right:-5,top:"32%",width:5,height:80,background:"#333",borderRadius:"0 2px 2px 0"}}/>
         </div>
       </div>
     </div>
