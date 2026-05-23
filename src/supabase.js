@@ -297,6 +297,10 @@ function dbToFeedItem(r) {
 // ── File Storage ──────────────────────────────────────────────────────────────
 
 export async function uploadFile(file) {
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds maximum allowed size of 50MB`);
+  }
   const ext = file.name.split(".").pop();
   const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage.from("artifacts").upload(path, file);

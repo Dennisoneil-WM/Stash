@@ -1581,6 +1581,7 @@ export default function App(){
   const [showTags,setShowTags]=useState(false);
   const [darkMode,setDarkMode]=useState(false);
   const [editItem,setEditItem]=useState(null);
+  const [uplError,setUplError]=useState(null);
   const searchRef=useRef(null);
   const logoRef=useRef(null);
 
@@ -1664,17 +1665,23 @@ export default function App(){
     }
   };
   const addToFeed=async arts=>{
+    setUplError(null);
     const saved=[];
     for(const art of arts){
       let src=art.src;
       if(art._file){
-        try{src=await uploadFile(art._file);}catch(e){console.error(e);}
+        try{src=await uploadFile(art._file);}catch(e){
+          console.error("Upload failed:",e);
+          setUplError(e.message||"Upload failed. Please try a smaller file.");
+          return;
+        }
       }
       const item={...art,src,user:ME};
       try{const r=await insertFeedItem(item);saved.push(r);}
       catch(e){saved.push({...item,id:"upl"+uid()});}
     }
     setFeed(prev=>[...saved,...prev]);
+    setUplFeed(false);
   };
 
   const saveEdit=async updated=>{
@@ -1810,6 +1817,14 @@ export default function App(){
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create} isMobile={isMobile}/>)}
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects} isMobile={isMobile}/>)}
       {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})} isMobile={isMobile}/>)}
+      {uplError&&(
+        <div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",background:"#FEE2E2",border:"1px solid #FECACA",borderRadius:8,padding:"12px 16px",color:"#DC2626",fontSize:14,fontFamily:FF,zIndex:2000,maxWidth:400,boxShadow:"0 4px 12px rgba(0,0,0,.15)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>{uplError}</span>
+            <button onClick={()=>setUplError(null)} style={{background:"none",border:"none",cursor:"pointer",color:"#DC2626",fontSize:20,padding:0,lineHeight:1,marginLeft:16}}>×</button>
+          </div>
+        </div>
+      )}
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} isMobile={isMobile}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} projects={projects} isMobile={isMobile}/>)}
       {isMobile&&!searchExp&&(
