@@ -1036,7 +1036,7 @@ function PhoneShell({children,bg="#000",darkMode}){
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
                  background:darkMode?"#1A1A1A":"#BFC9D4",padding:"24px 18px 28px",transition:"background 0.3s"}}>
-      <div style={{position:"relative",width:256}}>
+      <div style={{position:"relative",width:307}}>
         {/* Aluminum frame — single band, uniform 3px all around */}
         <div style={{
           background:frameGrad,
