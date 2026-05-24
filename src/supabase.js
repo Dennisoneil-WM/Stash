@@ -3,7 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(url, key);
+export const configured = !!(url && key);
+export const supabase = configured
+  ? createClient(url, key)
+  : createClient("https://placeholder.supabase.co", "placeholder");
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
@@ -141,6 +144,7 @@ export async function insertFeedItem(art) {
     device_shell: art.deviceShell || "auto",
     mobile_bg: art.mobileBg || null,
     crop: art.crop || null,
+    align: art.align || "center",
     user_name: art.user?.name || "Dennis O'Neil",
     user_initials: art.user?.initials || "DO",
   };
@@ -152,7 +156,7 @@ export async function insertFeedItem(art) {
     .single();
 
   // If insert fails because columns don't exist, try without them
-  if (error && (error.message.includes("device_shell") || error.message.includes("mobile_bg") || error.message.includes("crop"))) {
+  if (error && (error.message.includes("device_shell") || error.message.includes("mobile_bg") || error.message.includes("crop") || error.message.includes("align"))) {
     console.warn("New columns don't exist, inserting without them:", error.message);
     const basicInsert = {
       name: art.name,
@@ -183,7 +187,8 @@ export async function insertFeedItem(art) {
     localStorage.setItem(devicesKey, JSON.stringify({
       deviceShell: art.deviceShell,
       mobileBg: art.mobileBg,
-      crop: art.crop
+      crop: art.crop,
+      align: art.align || "center",
     }));
   } else if (error) {
     throw error;
@@ -201,6 +206,7 @@ export async function updateFeedItem(id, updates) {
     device_shell: updates.deviceShell || "auto",
     mobile_bg: updates.mobileBg || "#000",
     crop: updates.crop || null,
+    align: updates.align || "center",
   };
 
   let { data, error } = await supabase
@@ -211,7 +217,7 @@ export async function updateFeedItem(id, updates) {
     .single();
 
   // If the update fails because columns don't exist, try without the new fields
-  if (error && (error.message.includes("device_shell") || error.message.includes("mobile_bg") || error.message.includes("crop"))) {
+  if (error && (error.message.includes("device_shell") || error.message.includes("mobile_bg") || error.message.includes("crop") || error.message.includes("align"))) {
     console.warn("New columns don't exist yet, updating without them:", error.message);
     const basicUpdate = {
       name: updates.name,
@@ -235,7 +241,8 @@ export async function updateFeedItem(id, updates) {
     localStorage.setItem(devicesKey, JSON.stringify({
       deviceShell: updates.deviceShell,
       mobileBg: updates.mobileBg,
-      crop: updates.crop
+      crop: updates.crop,
+      align: updates.align || "center",
     }));
     console.log("Stored device settings in localStorage for:", id);
 
@@ -262,6 +269,7 @@ function dbToFeedItem(r) {
   let deviceShell = r.device_shell || "auto";
   let mobileBg = r.mobile_bg || "#000";
   let crop = r.crop || null;
+  let align = r.align || "center";
 
   const devicesKey = `device_${r.id}`;
   try {
@@ -271,6 +279,7 @@ function dbToFeedItem(r) {
       deviceShell = parsed.deviceShell || deviceShell;
       mobileBg = parsed.mobileBg || mobileBg;
       crop = parsed.crop || crop;
+      align = parsed.align || align;
     }
   } catch (e) {
     console.warn("Error reading localStorage for device settings:", e);
@@ -290,6 +299,7 @@ function dbToFeedItem(r) {
     deviceShell,
     mobileBg,
     crop,
+    align,
     user: { name: r.user_name, initials: r.user_initials },
   };
 }

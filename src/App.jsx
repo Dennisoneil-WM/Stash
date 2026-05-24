@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile } from "./supabase.js";
+import { supabase, configured, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -111,18 +111,40 @@ function Mdl({title,onClose,children,w=520,isMobile=false}){
   );
 }
 
-function Thumb({art,h=220,onClick,darkMode}){
+function CroppedVideo({src, crop, onClick, wrapStyle={}}){
+  const vRef=useRef();
+  const cW=crop.r-crop.l, cH=crop.b-crop.t;
+  const [pt,setPt]=useState(cH/cW*100);
+  useEffect(()=>{
+    const v=vRef.current; if(!v)return;
+    const update=()=>setPt((cH/cW)*(v.videoHeight/v.videoWidth)*100);
+    if(v.readyState>=1)update();
+    else v.addEventListener("loadedmetadata",update,{once:true});
+    return ()=>v.removeEventListener("loadedmetadata",update);
+  },[cW,cH]);
+  return (
+    <div onClick={onClick} style={{width:"100%",paddingTop:`${pt}%`,overflow:"hidden",position:"relative",background:"#000",...wrapStyle}}>
+      <video ref={vRef} src={src} muted loop playsInline autoPlay
+        style={{position:"absolute",top:`${-crop.t*100/cH}%`,left:`${-crop.l*100/cW}%`,width:`${10000/cW}%`,height:"auto",display:"block"}}
+      />
+    </div>
+  );
+}
+
+function Thumb({art,h=220,onClick,darkMode,bare=false}){
   const [fl,setFl]=useState(false);
   const ds=art.deviceShell||"auto";
   const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile);
+  const br=bare?0:12;
+  const bd=bare?"none":`1px solid ${BD}`;
 
   if((art.type==="image"||art.type==="gif")&&art.src){
     if(ds==="none"){
       const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
       const croppedHeight=art.crop?h/(((art.crop.r-art.crop.l)/(art.crop.b-art.crop.t))):h;
       return (
-        <div onClick={onClick} style={{height:croppedHeight,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",...(cropClip?{clipPath:cropClip}:{})}}>
-          <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"cover",display:"block"}}/>
+        <div onClick={onClick} style={{height:croppedHeight,borderRadius:br,overflow:"hidden",border:bd,cursor:"pointer",...(cropClip?{clipPath:cropClip}:{})}}>
+          <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"cover",objectPosition:!art.crop&&art.align==="left"?"left center":"center",display:"block"}}/>
         </div>
       );
     }
@@ -133,19 +155,15 @@ function Thumb({art,h=220,onClick,darkMode}){
         </PhoneShell>
       </div>
     );
-    return (<div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer"}}><img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/></div>);
+    return (<div onClick={onClick} style={{height:h,borderRadius:br,overflow:"hidden",border:bd,cursor:"pointer"}}><img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:art.align==="left"?"left center":"center",display:"block"}}/></div>);
   }
   if(art.type==="video"&&art.src){
     if(ds==="none"||ds==="desktop"){
-      const cropClip=art.crop?`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`:null;
-      return (
-        <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative",...(cropClip?{clipPath:cropClip}:{})}}>
-          <video src={art.src} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"cover"}} muted loop playsInline autoPlay/>
-          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-            <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
-          </div>
-        </div>
-      );
+      return art.crop
+        ? <CroppedVideo src={art.src} crop={art.crop} onClick={onClick} wrapStyle={{borderRadius:br,border:bd,cursor:"pointer"}}/>
+        : <div onClick={onClick} style={{height:h,borderRadius:br,overflow:"hidden",border:bd,cursor:"pointer",background:"#000"}}>
+            <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:art.align==="left"?"left center":"center"}} muted loop playsInline autoPlay/>
+          </div>;
     }
     if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
@@ -155,20 +173,17 @@ function Thumb({art,h=220,onClick,darkMode}){
       </div>
     );
     return (
-      <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#000",position:"relative"}}>
-        <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}} muted loop playsInline autoPlay/>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-          <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
-        </div>
+      <div onClick={onClick} style={{height:h,borderRadius:br,overflow:"hidden",border:bd,cursor:"pointer",background:"#000"}}>
+        <video src={art.src} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:art.align==="left"?"left center":"center"}} muted loop playsInline autoPlay/>
       </div>
     );
   }
   if(art.type==="pdf"&&art.src){
-    return (<div onClick={onClick} style={{height:h,borderRadius:12,border:`1px solid ${BD}`,cursor:"pointer",background:"#F8F8F8",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}><span style={{fontSize:40}}>&#x1F4C4;</span><span style={{fontSize:12,color:T2,fontFamily:FF,maxWidth:"90%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span></div>);
+    return (<div onClick={onClick} style={{height:h,borderRadius:br,border:bd,cursor:"pointer",background:"#F8F8F8",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}><span style={{fontSize:40}}>&#x1F4C4;</span><span style={{fontSize:12,color:T2,fontFamily:FF,maxWidth:"90%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span></div>);
   }
   if(art.type==="figma"&&art.src){
     return (
-      <div style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,position:"relative",background:"#F5F5F5"}}>
+      <div style={{height:h,borderRadius:br,overflow:"hidden",border:bd,position:"relative",background:"#F5F5F5"}}>
         {!fl&&(<div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,background:"#F5F5F5",zIndex:1}}><span style={{fontSize:28,opacity:.5}}>&#x2736;</span><span style={{fontSize:12,color:T2,fontFamily:FF}}>Loading Figma...</span></div>)}
         <iframe src={art.src} title={art.name} style={{width:"100%",height:"100%",border:"none"}} onLoad={()=>setFl(true)} allowFullScreen/>
       </div>
@@ -205,19 +220,25 @@ function Thumb({art,h=220,onClick,darkMode}){
   );
 }
 
-function LBox({art,onClose}){
+function LBox({art,onClose,onTagClick}){
   useEffect(()=>{
     const fn=e=>{if(e.key==="Escape")onClose();};
     window.addEventListener("keydown",fn);
     return ()=>window.removeEventListener("keydown",fn);
   },[onClose]);
   const ds=art.deviceShell||"auto";
-  const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile);
+  const hasCrop=art.type==="video"&&!!art.crop;
+  const showMobile=((ds==="mobile")||(ds==="auto"&&art.isMobile))&&!hasCrop;
   const showNoDevice=ds==="none";
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
-      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"90vw",height:"90vh"}}>
+      <div onClick={onClose} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"90vw",height:"90vh"}}>
+        {hasCrop&&art.src&&(
+          <div style={{width:"min(90vw, 70vh)"}} onClick={e=>e.stopPropagation()}>
+            <CroppedVideo src={art.src} crop={art.crop} wrapStyle={{borderRadius:23}}/>
+          </div>
+        )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showMobile&&(
           <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <PhoneShell bg={art.mobileBg||"#000"} noBackground={true}>
@@ -225,36 +246,43 @@ function LBox({art,onClose}){
                 <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
               )}
               {art.type==="video" && (
-                <video src={art.src} controls autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                <video src={art.src} muted loop playsInline autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
               )}
             </PhoneShell>
           </div>
         )}
-        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&(
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",maxWidth:"90vw",maxHeight:"90vh",aspectRatio:art.crop?`${(art.crop.r-art.crop.l)/(art.crop.b-art.crop.t)}`:"16/9"}}>
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&!hasCrop&&(
+          <div style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:23,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
             {(art.type==="image"||art.type==="gif") && (
-              <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+              <img src={art.src} alt={art.name} style={{width:"100%",height:"100%",objectFit:"contain",display:"block"}}/>
             )}
             {art.type==="video" && (
-              <video src={art.src} controls autoPlay style={{width:"100%",height:"100%",objectFit:art.crop?"fill":"contain",display:"block",...(art.crop?{clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}/>
+              <video src={art.src} muted loop playsInline autoPlay style={{width:"100%",display:"block"}}/>
             )}
           </div>
         )}
-        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&!showMobile&&!showNoDevice&&(
-          <div style={{maxWidth:"90vw",maxHeight:"90vh",overflow:"hidden"}}>
+        {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&!hasCrop&&!showMobile&&!showNoDevice&&(
+          <div style={{maxWidth:"90vw",maxHeight:"90vh",borderRadius:23,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
             {(art.type==="image"||art.type==="gif") && (
               <img src={art.src} alt={art.name} style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",display:"block"}}/>
             )}
             {art.type==="video" && (
-              <video src={art.src} controls autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",display:"block"}}/>
+              <video src={art.src} muted loop playsInline autoPlay style={{maxWidth:"90vw",maxHeight:"90vh",display:"block"}}/>
             )}
           </div>
         )}
-        {(art.type==="pdf"||art.type==="figma"||art.type==="website")&&art.src&&(<iframe src={art.src} title={art.name} allowFullScreen style={{width:"80vw",height:"85vh",border:"none",display:"block"}}/>)}
+        {(art.type==="pdf"||art.type==="figma"||art.type==="website")&&art.src&&(<iframe src={art.src} title={art.name} allowFullScreen onClick={e=>e.stopPropagation()} style={{width:"80vw",height:"85vh",border:"none",display:"block",borderRadius:23}}/>)}
         {!art.src&&(<div style={{width:560,height:340,background:art.thumb||GR[0],display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,.4)",fontSize:13,fontFamily:FF}}>Seed data placeholder - upload a real file</span></div>)}
       </div>
-      <div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)"}}>
-        <span style={{color:"rgba(255,255,255,.55)",fontSize:13,fontFamily:FF}}>{art.name}</span>
+      <div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:10}} onClick={e=>e.stopPropagation()}>
+        {art.tags&&art.tags.length>0&&(
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
+            {art.tags.map(t=>(
+              <button key={t} onClick={()=>{onTagClick&&onTagClick(t);onClose();}} style={{background:"rgba(255,255,255,.12)",border:"1px solid rgba(255,255,255,.22)",borderRadius:100,padding:"4px 13px",color:"rgba(255,255,255,.85)",fontSize:12,fontFamily:FF,cursor:"pointer",fontWeight:500}}>#{t}</button>
+            ))}
+          </div>
+        )}
+        <span style={{color:"rgba(255,255,255,.45)",fontSize:12,fontFamily:FF}}>{art.name}</span>
       </div>
     </div>
   );
@@ -486,7 +514,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
       else if(isVid(f)) t="video";
       else if(isPdf(f)) t="pdf";
       const fileIsMobile=f._iw&&f._ih?(f._ih/f._iw>1.3):false;
-      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile:fileIsMobile,deviceShell:"auto",crop:null,mobileBg:"#000"});
+      arts.push({id:uid(),name:f.name.replace(/\.[^.]+$/,""),type:t,src:f._prev||null,_file:f,thumb:GR[Math.floor(Math.random()*GR.length)],viewport:null,isMobile:fileIsMobile,deviceShell:"auto",crop:null,mobileBg:"#000",align:"center"});
     }
     setUpl(false);
     setPreview(arts);
@@ -553,6 +581,17 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
                 <button onClick={()=>setCropMode({artIndex:i})} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
                   {art.crop?"Adjust Crop":"Add Crop Tool"}
                 </button>
+              )}
+              {!(art.deviceShell==="mobile"||(art.deviceShell==="auto"&&art.isMobile))&&!art.crop&&(art.type==="image"||art.type==="gif"||art.type==="video")&&(
+                <Fld label="Alignment">
+                  <div style={{display:"flex",gap:8}}>
+                    {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>(
+                      <button key={o.v} onClick={()=>{art.align=o.v;setPreview([...preview]);}} style={{flex:1,background:(art.align||"center")===o.v?BK:"#FFF",border:`1px solid ${(art.align||"center")===o.v?"transparent":BD}`,color:(art.align||"center")===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                </Fld>
               )}
               <Fld label="Name"><TIn value={art.name} set={v=>{art.name=v;setPreview([...preview]);}} ph="Artifact name"/></Fld>
               <Fld label="Description (optional)"><TIn value={art.desc||""} set={v=>{art.desc=v;setPreview([...preview]);}} ph="Add a description..." multi/></Fld>
@@ -643,7 +682,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
   );
 }
 
-function EditArtMdl({art,onClose,onSave,onDelete,projects=[],isMobile=false}){
+function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,projects=[],isMobile=false}){
   const [name,setName]=useState(art.name||"");
   const [desc,setDesc]=useState(art.desc||"");
   const [tags,setTags]=useState(art.tags||[]);
@@ -651,13 +690,17 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[],isMobile=false}){
   const [mobileBg,setMobileBg]=useState(art.mobileBg||"#000");
   const [cropMode,setCropMode]=useState(false);
   const [crop,setCrop]=useState(art.crop||null);
+  const [align,setAlign]=useState(art.align||"center");
+  const [linkedProj,setLinkedProj]=useState(null);
+  const [linkedPage,setLinkedPage]=useState("p1");
   const [saving,setSaving]=useState(false);
 
   const save=async()=>{
     setSaving(true);
-    const updated={...art,name,desc,tags,deviceShell,crop,mobileBg};
+    const updated={...art,name,desc,tags,deviceShell,crop,mobileBg,align};
     console.log("Saving artifact:",{id:updated.id,deviceShell:updated.deviceShell,name:updated.name});
     await onSave(updated);
+    if(linkedProj&&onSaveToProject) await onSaveToProject(updated,linkedProj,linkedPage);
     setSaving(false);
     onClose();
   };
@@ -704,6 +747,17 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[],isMobile=false}){
             {crop?"Adjust Crop":"Add Crop Tool"}
           </button>
         )}
+        {!(deviceShell==="mobile"||(deviceShell==="auto"&&art.isMobile))&&!crop&&(art.type==="image"||art.type==="gif"||art.type==="video")&&(
+          <Fld label="Alignment">
+            <div style={{display:"flex",gap:8}}>
+              {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>(
+                <button key={o.v} onClick={()=>setAlign(o.v)} style={{flex:1,background:align===o.v?BK:"#FFF",border:`1px solid ${align===o.v?"transparent":BD}`,color:align===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
+                  {o.l}
+                </button>
+              ))}
+            </div>
+          </Fld>
+        )}
         {art.src&&(art.type==="image"||art.type==="gif")&&(
           <div style={{borderRadius:10,overflow:"hidden",border:`1px solid ${BD}`,maxHeight:200}}>
             <img src={art.src} alt={art.name} style={{width:"100%",objectFit:"cover",display:"block",maxHeight:200}}/>
@@ -720,10 +774,21 @@ function EditArtMdl({art,onClose,onSave,onDelete,projects=[],isMobile=false}){
             Figma embed
           </div>
         )}
+        {projects.length>0&&(
+          <div style={{borderTop:`1px solid ${BD}`,paddingTop:16,display:"flex",flexDirection:"column",gap:12}}>
+            <span style={{fontSize:12,fontWeight:700,color:T3,letterSpacing:".04em",textTransform:"uppercase"}}>Save to Project</span>
+            <ProjectPicker projects={projects} selected={linkedProj} onSelect={p=>{setLinkedProj(p);if(p)setLinkedPage(p.pages?.[0]?.id||"p1");}}/>
+            {linkedProj&&(
+              <Fld label="Page">
+                <TSel val={linkedPage} set={setLinkedPage} opts={(linkedProj.pages||[]).map(p=>({v:p.id,l:p.name}))}/>
+              </Fld>
+            )}
+          </div>
+        )}
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"space-between"}}>
         {onDelete&&(
-          <button onClick={()=>{if(confirm("Delete this artifact?")){onDelete(art.id);onClose();}}} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:8,padding:"8px 14px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete</button>
+          <button onClick={()=>{if(confirm("Delete this artifact?")){onDelete(art.id);onClose();}}} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:100,padding:"8px 18px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete</button>
         )}
         <div style={{display:"flex",gap:10}}>
           <GBtn sm onClick={onClose}>Cancel</GBtn>
@@ -832,7 +897,7 @@ function PubMdl({art,onClose,isMobile=false}){
   );
 }
 
-function SaveMdl({art,projects,onClose,isMobile=false}){
+function SaveMdl({art,projects,onClose,onSave,isMobile=false}){
   const [pj,setPj]=useState(projects[0]?projects[0].id:1); const [pg,setPg]=useState("p1");
   const proj=projects.find(x=>x.id===pj)||projects[0];
   return (
@@ -843,7 +908,7 @@ function SaveMdl({art,projects,onClose,isMobile=false}){
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
         <GBtn onClick={onClose}>Cancel</GBtn>
-        <BBtn onClick={onClose}>Save</BBtn>
+        <BBtn onClick={()=>{onSave&&onSave();onClose();}}>Save</BBtn>
       </div>
     </Mdl>
   );
@@ -856,7 +921,7 @@ function ArtTile({art,onPublish,onSave,onOpen,darkMode}){
       <Thumb art={art} onClick={()=>onOpen(art)} darkMode={darkMode}/>
       {hov&&(
         <div style={{position:"absolute",top:10,right:10,display:"flex",gap:6}}>
-          <button onClick={e=>{e.stopPropagation();onSave(art);}} style={{background:"rgba(255,255,255,.94)",border:`1px solid ${BM}`,borderRadius:8,padding:"6px 12px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
+          <button onClick={e=>{e.stopPropagation();onSave(art);}} style={{background:"rgba(255,255,255,.94)",border:`1px solid ${BM}`,borderRadius:100,padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
           <button onClick={e=>{e.stopPropagation();setMenu(!menu);}} style={{background:"rgba(255,255,255,.94)",border:`1px solid ${BM}`,borderRadius:8,width:30,height:30,cursor:"pointer",color:T1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x22EF;</button>
         </div>
       )}
@@ -1331,7 +1396,11 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   const showMobile=(ds==="mobile")||(ds==="auto"&&item.isMobile===true);
   const showNoDevice=ds==="none";
   const isMobileWebsite=item.type==="website"&&item.src&&showMobile;
-  const isMobileMedia=(item.type==="image"||item.type==="gif"||item.type==="video")&&item.src&&showMobile&&!showNoDevice;
+  const hasCrop=item.type==="video"&&!!item.crop;
+  const isMobileMedia=(item.type==="image"||item.type==="gif"||(item.type==="video"&&!hasCrop))&&item.src&&showMobile&&!showNoDevice;
+  const showCroppedVideo=hasCrop&&item.src;
+  const vidCropW=item.crop?item.crop.r-item.crop.l:null;
+  const vidCropH=item.crop?item.crop.b-item.crop.t:null;
 
   // Timeout to detect iframe load failure (X-Frame-Options blocking)
   const ifRef=useRef();
@@ -1345,7 +1414,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   return (
     <div
       style={{breakInside:"avoid",marginBottom:16,borderRadius:32,overflow:"hidden",
-              position:"relative",cursor:"pointer",background:"#EBEBEB"}}
+              position:"relative",cursor:"pointer",background:"#EBEBEB",transform:"translateZ(0)"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
       onClick={()=>onOpen(item)}
@@ -1399,21 +1468,21 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
         <>
           {(item.type==="image"||item.type==="gif") && (
             <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
-              <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",display:"block"}}/>
+              <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",objectPosition:!item.crop&&item.align==="left"?"left center":"center",display:"block"}}/>
             </div>
           )}
-          {item.type==="video" && (
-            <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#000",position:"relative",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
-              <video src={item.src} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",display:"block"}} muted loop playsInline autoPlay/>
-              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-                <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>&#x25B6;</div>
-              </div>
+          {item.type==="video" && !hasCrop && (
+            <div style={{width:"100%",overflow:"hidden",background:"#000"}}>
+              <video src={item.src} style={{width:"100%",display:"block"}} muted loop playsInline autoPlay/>
             </div>
           )}
         </>
       )}
-      {!isMock&&!isMobileMedia&&!isMobileWebsite&&!showNoDevice && (
-        <Thumb art={item} h={320} darkMode={darkMode}/>
+      {showCroppedVideo && (
+        <CroppedVideo src={item.src} crop={item.crop}/>
+      )}
+      {!isMock&&!isMobileMedia&&!isMobileWebsite&&!showNoDevice&&!showCroppedVideo && (
+        <Thumb art={item} h={320} darkMode={darkMode} bare/>
       )}
       {hov&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.1)",
@@ -1421,14 +1490,14 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
           {onEdit&&item.type!=="mockup"&&(
             <button
               onClick={e=>{e.stopPropagation();onEdit(item);}}
-              style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
-                      padding:"6px 12px",color:T1,fontSize:12,fontWeight:600,
+              style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,
+                      padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,
                       cursor:"pointer",fontFamily:FF}}
             >Edit</button>
           )}
           <button
             onClick={e=>{e.stopPropagation();onSave(item);}}
-            style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,
+            style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,
                     padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,
                     cursor:"pointer",fontFamily:FF}}
           >Save</button>
@@ -1438,17 +1507,17 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   );
 }
 
-function Explore({feed,projects,onSave,onEdit,onDelete,darkMode}){
+function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode}){
   const [lb,setLb]=useState(null);
   const realItems=feed.filter(item=>item.type!=="mockup");
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{columns:"4 270px",gap:16}}>
+      <div style={{columns:"3",gap:16}}>
         {realItems.map(item=>(
           <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
         ))}
       </div>
-      {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
+      {lb&&(<LBox art={lb} onClose={()=>setLb(null)} onTagClick={t=>{onSearch&&onSearch(t);}}/>)}
     </div>
   );
 }
@@ -1617,6 +1686,18 @@ function Profile({user,feed,darkMode}){
   );
 }
 
+function Toaster({toasts}){
+  return (
+    <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",zIndex:4000,display:"flex",flexDirection:"column",gap:8,alignItems:"center",pointerEvents:"none"}}>
+      {toasts.map(t=>(
+        <div key={t.id} style={{background:"#0D0D0D",color:"#FFF",padding:"10px 22px",borderRadius:100,fontSize:14,fontFamily:FF,boxShadow:"0 4px 20px rgba(0,0,0,.25)",whiteSpace:"nowrap",letterSpacing:".01em"}}>
+          {t.msg}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function App(){
   const [view,setView]=useState("explore");
   const [proj,setProj]=useState(null);
@@ -1634,10 +1715,17 @@ export default function App(){
   const [darkMode,setDarkMode]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [uplError,setUplError]=useState(null);
+  const [toasts,setToasts]=useState([]);
   const searchRef=useRef(null);
   const logoRef=useRef(null);
+  const toast=useCallback(msg=>{
+    const id=Date.now()+Math.random();
+    setToasts(p=>[...p,{id,msg}]);
+    setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),2500);
+  },[]);
 
   useEffect(()=>{
+    if(!configured){setProjects(SPROJ);setFeed(SFEED);setLoading(false);return;}
     Promise.all([fetchProjects(),fetchFeed()])
       .then(([projs,feedItems])=>{
         setProjects(projs.length?projs:SPROJ);
@@ -1706,6 +1794,7 @@ export default function App(){
     try{
       const saved=await createProject(p);
       setProjects(prev=>[saved,...prev]);
+      toast("Project created");
       if(p._navigate!==false) open(saved);
       return saved;
     }catch(e){
@@ -1734,6 +1823,7 @@ export default function App(){
     }
     setFeed(prev=>[...saved,...prev]);
     setUplFeed(false);
+    toast("Published to Explore");
   };
 
   const saveEdit=async updated=>{
@@ -1744,6 +1834,7 @@ export default function App(){
         const r=await updateFeedItem(updated.id,updated);
         console.log("Supabase update succeeded, new item:",{id:r.id,deviceShell:r.deviceShell,mobileBg:r.mobileBg});
         setFeed(prev=>prev.map(f=>f.id===r.id?r:f));
+        toast("Changes saved");
         return;
       }catch(e){
         console.error("Supabase update failed, using local state",e);
@@ -1776,6 +1867,20 @@ export default function App(){
       }
     }
     setFeed(prev=>prev.filter(f=>f.id!==artId));
+  };
+  const addArtToProject=async(art,proj,pageId)=>{
+    const isUuid=typeof proj.id==="string"&&proj.id.includes("-");
+    let saved=art;
+    if(isUuid){
+      try{saved=await insertArtifact(proj.id,pageId,art);}
+      catch(e){console.error("insertArtifact failed",e);}
+    }
+    setProjects(prev=>prev.map(p=>{
+      if(p.id!==proj.id)return p;
+      const page=p.artifacts||{};
+      return{...p,artifacts:{...page,[pageId]:[...(page[pageId]||[]),saved]},artifactCount:(p.artifactCount||0)+1};
+    }));
+    toast(`Saved to ${proj.name}`);
   };
 
   const allTags=Array.from(new Set(projects.flatMap(p=>p.tags||[])));
@@ -1863,7 +1968,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} darkMode={darkMode}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed} darkMode={darkMode}/>)}
       </main>
@@ -1878,8 +1983,8 @@ export default function App(){
           </div>
         </div>
       )}
-      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} isMobile={isMobile}/>)}
-      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} projects={projects} isMobile={isMobile}/>)}
+      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} onSave={()=>toast("Saved to project")} isMobile={isMobile}/>)}
+      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} onSaveToProject={addArtToProject} projects={projects} isMobile={isMobile}/>)}
       {isMobile&&!searchExp&&(
         <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:32,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
       )}
@@ -1932,6 +2037,7 @@ export default function App(){
           </div>
         </div>
       )}
+      <Toaster toasts={toasts}/>
     </div>
   );
 }
