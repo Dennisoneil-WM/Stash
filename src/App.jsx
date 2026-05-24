@@ -1507,12 +1507,12 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   );
 }
 
-function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode}){
+function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}){
   const [lb,setLb]=useState(null);
   const realItems=feed.filter(item=>item.type!=="mockup");
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{columns:"3",gap:16}}>
+      <div style={{columns:cols,gap:16}}>
         {realItems.map(item=>(
           <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
         ))}
@@ -1709,6 +1709,7 @@ export default function App(){
   const [uplFeed,setUplFeed]=useState(false);
   const [saveIt,setSaveIt]=useState(null);
   const [isMobile,setIsMobile]=useState(()=>window.innerWidth<=640);
+  const [winW,setWinW]=useState(()=>window.innerWidth);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [searchExp,setSearchExp]=useState(false);
   const [showTags,setShowTags]=useState(false);
@@ -1737,7 +1738,7 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    const onResize=()=>setIsMobile(window.innerWidth<=640);
+    const onResize=()=>{const w=window.innerWidth;setIsMobile(w<=640);setWinW(w);};
     window.addEventListener("resize",onResize);
     return()=>window.removeEventListener("resize",onResize);
   },[]);
@@ -1968,7 +1969,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj}/>)}
         {view==="profile"&&(<Profile user={ME} feed={feed} darkMode={darkMode}/>)}
       </main>
