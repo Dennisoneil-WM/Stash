@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, configured, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile } from "./supabase.js";
+import { supabase, configured, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile, signInWithGoogle, signOutUser, fetchProfile, upsertProfile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -976,7 +976,7 @@ function SaveMdl({art,projects,onClose,onSave,isMobile=false}){
   );
 }
 
-function ArtTile({art,onPublish,onSave,onOpen,darkMode}){
+function ArtTile({art,onPublish,onSave,onOpen,onDelete,darkMode,canDelete}){
   const [hov,setHov]=useState(false); const [menu,setMenu]=useState(false);
   return (
     <div style={{position:"relative"}} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>{setHov(false);setMenu(false);}}>
@@ -994,7 +994,9 @@ function ArtTile({art,onPublish,onSave,onOpen,darkMode}){
           ))}
           <div style={{height:1,background:BD,margin:"4px 0"}}/>
           <button onClick={()=>{onPublish(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Publish</button>
-          <button onClick={()=>setMenu(false)} onMouseEnter={e=>e.currentTarget.style.background="#FEF2F2"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:"#DC2626",fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Delete</button>
+          {canDelete&&(
+            <button onClick={()=>{onDelete&&onDelete(art.id);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#FEF2F2"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:"#DC2626",fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Delete</button>
+          )}
         </div>
       )}
     </div>
@@ -1664,7 +1666,7 @@ function Projects({projects,onOpen,onDelete}){
   );
 }
 
-function ProjDetail({project,projects,onBack,onDelete,darkMode}){
+function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,currentUser,canDeleteItem,onRequireAuth}){
   const [ap,setAp]=useState(project.pages[0].id);
   const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
@@ -1717,10 +1719,10 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode}){
         try{
           let src=art.src;
           if(art._file){try{src=await uploadFile(art._file);}catch(e){console.error(e);}}
-          const r=await insertArtifact(project.id,pageId,{...art,src});
+          const r=await insertArtifact(project.id,pageId,{...art,src,user:currentUser||art.user},authUser?.id);
           saved.push(r);
-        }catch(e){saved.push(art);}
-      }else{saved.push(art);}
+        }catch(e){saved.push({...art,user_id:authUser?.id||null});}
+      }else{saved.push({...art,user_id:authUser?.id||null});}
     }
     setArts(prev=>({...prev,[pageId]:[...(prev[pageId]||[]),...saved]}));
   };
@@ -1767,10 +1769,12 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode}){
           <button onClick={()=>{setPresIdx(0);setPresMode(true);}} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"6px 14px",color:T1,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,display:"flex",alignItems:"center",gap:5,transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="#EBEBEB"} onMouseLeave={e=>e.currentTarget.style.background="#F5F5F5"}>
             <MI name="play_arrow" size={18} style={{color:T1}}/>Present
           </button>
-          <BBtn sm onClick={()=>setShowNew(true)}>+ New Artifact</BBtn>
-          <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,display:"flex",alignItems:"center"}} title="Delete project">
-            <MI name="delete_outline" size={22} style={{color:T3}}/>
-          </button>
+          <BBtn sm onClick={()=>{if(onRequireAuth){onRequireAuth(()=>setShowNew(true),`new_artifact_in_project:${project.id}`);}else{setShowNew(true);}}}>+ New Artifact</BBtn>
+          {(isAdmin||(authUser&&project.user_id===authUser?.id))&&(
+            <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,display:"flex",alignItems:"center"}} title="Delete project">
+              <MI name="delete_outline" size={22} style={{color:T3}}/>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1814,7 +1818,7 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode}){
                   <span style={{fontSize:12,color:T3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
                   <Bdg type={art.type}/>
                 </div>
-                <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} darkMode={darkMode}/>
+                <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} onDelete={artId=>{const pageId=pages[0]?.id||"p1";setArts(prev=>({...prev,[pageId]:(prev[pageId]||[]).filter(a=>a.id!==artId)}));}} darkMode={darkMode} canDelete={canDeleteItem?canDeleteItem(art):false}/>
               </div>
             ))}
           </div>
@@ -1931,6 +1935,39 @@ function Profile({user,feed,darkMode}){
   );
 }
 
+function LoginModal({onClose}){
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState("");
+  const handle=async()=>{
+    setLoading(true); setErr("");
+    try{ await signInWithGoogle(); }
+    catch(e){ setErr("Sign-in failed — please try again."); setLoading(false); }
+  };
+  return (
+    <Mdl title="" onClose={onClose} w={380}>
+      <div style={{textAlign:"center",padding:"4px 0 8px"}}>
+        <div style={{width:56,height:56,background:BK,borderRadius:18,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
+          <MI name="diamond" size={28} style={{color:"#FFF"}}/>
+        </div>
+        <p style={{margin:"0 0 8px",fontSize:17,fontWeight:700,color:T1,fontFamily:FF}}>Sign in to contribute</p>
+        <p style={{margin:"0 0 28px",fontSize:13,color:T2,fontFamily:FF,lineHeight:1.65}}>Use your Weedmaps Google account to upload artifacts and manage projects.<br/>Viewing is available to everyone.</p>
+        {err&&(<p style={{margin:"0 0 16px",fontSize:13,color:"#DC2626",fontFamily:FF}}>{err}</p>)}
+        <button onClick={handle} disabled={loading} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:loading?"#F5F5F5":"#FFF",border:`1px solid ${BD}`,borderRadius:100,padding:"13px 20px",cursor:loading?"default":"pointer",fontFamily:FF,fontSize:14,fontWeight:600,color:T1,transition:"background .15s"}} onMouseEnter={e=>{if(!loading)e.currentTarget.style.background="#F5F5F5";}} onMouseLeave={e=>{e.currentTarget.style.background=loading?"#F5F5F5":"#FFF";}}>
+          {/* Google G icon */}
+          <svg width="18" height="18" viewBox="0 0 18 18" style={{flexShrink:0}}>
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908C16.657 12.015 17.64 10.23 17.64 9.2z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          {loading ? "Opening Google…" : "Continue with Google"}
+        </button>
+        <p style={{margin:"16px 0 0",fontSize:11,color:T3,fontFamily:FF}}>Only @weedmaps.com accounts can contribute.</p>
+      </div>
+    </Mdl>
+  );
+}
+
 function Toaster({toasts}){
   return (
     <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",zIndex:4000,display:"flex",flexDirection:"column",gap:8,alignItems:"center",pointerEvents:"none"}}>
@@ -1962,6 +1999,10 @@ export default function App(){
   const [editItem,setEditItem]=useState(null);
   const [uplError,setUplError]=useState(null);
   const [toasts,setToasts]=useState([]);
+  // ── Auth state ────────────────────────────────────────────────────────────
+  const [authUser,setAuthUser]=useState(null);
+  const [profile,setProfile]=useState(null);
+  const [showLogin,setShowLogin]=useState(false);
   const searchRef=useRef(null);
   const logoRef=useRef(null);
   const toast=useCallback(msg=>{
@@ -2006,6 +2047,111 @@ export default function App(){
     };
   },[searchExp]);
 
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+  // Close auth-callback popup (when this window IS the popup)
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    if(params.get("auth_callback")==="1"&&window.opener){
+      setTimeout(()=>window.close(),400);
+    }
+  },[]);
+
+  // Load profile from an auth user object
+  const loadProfile=useCallback(async(user)=>{
+    setAuthUser(user);
+    try{
+      let prof=await fetchProfile(user.id);
+      if(!prof){
+        const name=user.user_metadata?.full_name||user.email?.split("@")[0]||"Designer";
+        const words=name.trim().split(" ");
+        const initials=((words.length>=2?words[0][0]+words[words.length-1][0]:name.slice(0,2)).toUpperCase());
+        prof=await upsertProfile({
+          id:user.id,
+          email:user.email,
+          name,
+          initials,
+          title:"Designer",
+          avatar_url:user.user_metadata?.avatar_url||null,
+          is_admin:user.email==="doneil@weedmaps.com",
+        });
+      }
+      setProfile(prof);
+    }catch(e){
+      // Profiles table may not exist yet — build a local profile from auth metadata
+      setProfile({
+        id:user.id,
+        email:user.email,
+        name:user.user_metadata?.full_name||user.email?.split("@")[0]||"Designer",
+        initials:((user.user_metadata?.full_name||"D").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()),
+        title:"Designer",
+        avatar_url:user.user_metadata?.avatar_url||null,
+        is_admin:user.email==="doneil@weedmaps.com",
+      });
+    }
+  },[]);
+
+  // Subscribe to Supabase auth state
+  useEffect(()=>{
+    if(!configured)return;
+    // Check for existing session (e.g. on page load)
+    supabase.auth.getSession().then(({data:{session}})=>{
+      if(session?.user)loadProfile(session.user);
+    });
+    const{data:{subscription}}=supabase.auth.onAuthStateChange(async(event,session)=>{
+      if(event==="SIGNED_IN"&&session?.user){
+        await loadProfile(session.user);
+        setShowLogin(false);
+      }else if(event==="SIGNED_OUT"){
+        setAuthUser(null);setProfile(null);
+      }
+    });
+    return()=>subscription.unsubscribe();
+  },[loadProfile]);
+
+  // After auth, execute any pending action stored before the login popup
+  useEffect(()=>{
+    if(!authUser||loading)return;
+    const pending=sessionStorage.getItem("stash_auth_pending");
+    if(!pending)return;
+    sessionStorage.removeItem("stash_auth_pending");
+    if(pending==="new_project")setTimeout(()=>setNewP(true),200);
+    else if(pending==="new_artifact")setTimeout(()=>setUplFeed(true),200);
+    else if(pending.startsWith("new_artifact_in_project:")){
+      const pId=pending.split(":")[1];
+      const p=projects.find(x=>String(x.id)===pId);
+      if(p)setTimeout(()=>{setProj(p);setView("project");},200);
+    }
+  },[authUser,loading,projects]);
+
+  // Require auth before executing a write action.
+  // actionKey is stored in sessionStorage as a fallback across popup sessions.
+  const requireAuth=useCallback((fn,actionKey)=>{
+    if(!configured||authUser){fn();return;}
+    if(actionKey)sessionStorage.setItem("stash_auth_pending",actionKey);
+    setShowLogin(true);
+  },[authUser]);
+
+  const handleSignOut=useCallback(async()=>{
+    try{await signOutUser();}catch(e){console.error(e);}
+    setAuthUser(null);setProfile(null);
+    toast("Signed out");
+  },[]);
+
+  // Dynamic current-user object (for artifact attribution)
+  const currentUser=profile
+    ?{id:profile.id,name:profile.name,initials:profile.initials,title:profile.title||"Designer",image:profile.avatar_url}
+    :ME;
+
+  // Super-admin check
+  const isAdmin=!!authUser&&(authUser.email==="doneil@weedmaps.com"||profile?.is_admin===true);
+
+  // Permission helpers
+  const canDeleteItem=useCallback(item=>{
+    if(!authUser)return false;
+    if(isAdmin)return true;
+    return item?.user_id&&item.user_id===authUser.id;
+  },[authUser,isAdmin]);
+
   const open=p=>{setProj(p);setView("project");};
   const deleteProj=async projId=>{
     try{
@@ -2022,7 +2168,7 @@ export default function App(){
   };
 
   if(view==="project"&&proj){
-    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} darkMode={darkMode}/>);
+    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth}/>);
   }
 
   const toggleDarkMode=()=>{
@@ -2042,14 +2188,14 @@ export default function App(){
 
   const create=async p=>{
     try{
-      const saved=await createProject(p);
+      const saved=await createProject(p,authUser?.id);
       setProjects(prev=>[saved,...prev]);
       toast("Project created");
       if(p._navigate!==false) open(saved);
       return saved;
     }catch(e){
       console.error("createProject failed",e);
-      const n={...p,id:Date.now(),thumbs:[],artifacts:{}};
+      const n={...p,id:Date.now(),thumbs:[],artifacts:{},user_id:authUser?.id||null};
       setProjects(prev=>[n,...prev]);
       if(p._navigate!==false) open(n);
       return n;
@@ -2067,9 +2213,9 @@ export default function App(){
           return;
         }
       }
-      const item={...art,src,user:ME};
-      try{const r=await insertFeedItem(item);saved.push(r);}
-      catch(e){saved.push({...item,id:"upl"+uid()});}
+      const item={...art,src,user:currentUser};
+      try{const r=await insertFeedItem(item,authUser?.id);saved.push(r);}
+      catch(e){saved.push({...item,id:"upl"+uid(),user_id:authUser?.id||null});}
     }
     setFeed(prev=>[...saved,...prev]);
     setUplFeed(false);
@@ -2183,9 +2329,21 @@ export default function App(){
           </div>
           <div style={{flex:1}}/>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-            {view==="projects"&&(<BBtn sm onClick={()=>setNewP(true)}>+ Project</BBtn>)}
-            {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
-            <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
+            {view==="projects"&&(<BBtn sm onClick={()=>requireAuth(()=>setNewP(true),"new_project")}>+ Project</BBtn>)}
+            {view==="explore"&&(<BBtn sm onClick={()=>requireAuth(()=>setUplFeed(true),"new_artifact")}>+ Artifact</BBtn>)}
+            {/* Auth user section */}
+            {authUser&&profile?(
+              <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:4}}>
+                <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0,display:"flex",alignItems:"center"}}><Av user={currentUser} size={32} src={profile.avatar_url}/></button>
+                <button onClick={handleSignOut} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:T3,fontFamily:FF,padding:"4px 2px",whiteSpace:"nowrap"}} onMouseEnter={e=>e.currentTarget.style.color=T2} onMouseLeave={e=>e.currentTarget.style.color=T3}>Sign out</button>
+              </div>
+            ):(
+              configured?(
+                <button onClick={()=>setShowLogin(true)} style={{background:"transparent",color:T2,border:`1px solid ${BD}`,borderRadius:100,padding:"7px 16px",fontWeight:500,fontSize:13,cursor:"pointer",fontFamily:FF,marginLeft:4}} onMouseEnter={e=>e.currentTarget.style.borderColor=BM} onMouseLeave={e=>e.currentTarget.style.borderColor=BD}>Sign in</button>
+              ):(
+                <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
+              )
+            )}
           </div>
         </>)}
         {isMobile&&(<>
@@ -2200,8 +2358,8 @@ export default function App(){
               ))}
             </div>
             <div style={{flex:1}}/>
-            {view==="explore"&&(<button onClick={()=>setUplFeed(true)} style={{background:BK,border:"none",borderRadius:100,cursor:"pointer",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center"}}><MI name="add" size={24} style={{color:"#FFF"}}/></button>)}
-            <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={ME} size={28} src={ME.image}/></button>
+            {view==="explore"&&(<button onClick={()=>requireAuth(()=>setUplFeed(true),"new_artifact")} style={{background:BK,border:"none",borderRadius:100,cursor:"pointer",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center"}}><MI name="add" size={24} style={{color:"#FFF"}}/></button>)}
+            <button onClick={()=>authUser?setView("profile"):setShowLogin(true)} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={currentUser} size={28} src={profile?.avatar_url}/></button>
           </>)}
           {searchExp&&(<>
             <div style={{flex:1,position:"relative"}}>
@@ -2215,8 +2373,9 @@ export default function App(){
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj}/>)}
-        {view==="profile"&&(<Profile user={ME} feed={feed} darkMode={darkMode}/>)}
+        {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode}/>)}
       </main>
+      {showLogin&&(<LoginModal onClose={()=>setShowLogin(false)}/>)}
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create} isMobile={isMobile}/>)}
       {newF&&(<NewFolderMdl onClose={()=>setNewF(false)} projects={projects} isMobile={isMobile}/>)}
       {uplFeed&&(<NewArtMdl onClose={()=>setUplFeed(false)} onAdd={addToFeed} projects={projects} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})} isMobile={isMobile}/>)}
