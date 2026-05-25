@@ -252,7 +252,17 @@ export async function updateFeedItem(id, updates) {
     throw error;
   }
 
-  console.log("Updated feed item in Supabase:", { id, updates: updateObj });
+  // Keep localStorage in sync so display settings survive even across
+  // browsers/sessions where only Supabase is the source of truth
+  try {
+    const devicesKey = `device_${id}`;
+    localStorage.setItem(devicesKey, JSON.stringify({
+      deviceShell: updates.deviceShell,
+      mobileBg: updates.mobileBg,
+      crop: updates.crop,
+      align: updates.align || "center",
+    }));
+  } catch(e) {}
   return dbToFeedItem(data);
 }
 

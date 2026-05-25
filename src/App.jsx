@@ -221,15 +221,22 @@ function Thumb({art,h=220,onClick,darkMode,bare=false}){
 }
 
 function LBox({art,onClose,onTagClick}){
+  const [winH,setWinH]=useState(window.innerHeight);
+  const [winW,setWinW]=useState(window.innerWidth);
   useEffect(()=>{
-    const fn=e=>{if(e.key==="Escape")onClose();};
-    window.addEventListener("keydown",fn);
-    return ()=>window.removeEventListener("keydown",fn);
+    const onKey=e=>{if(e.key==="Escape")onClose();};
+    const onResize=()=>{setWinH(window.innerHeight);setWinW(window.innerWidth);};
+    window.addEventListener("keydown",onKey);
+    window.addEventListener("resize",onResize);
+    return ()=>{window.removeEventListener("keydown",onKey);window.removeEventListener("resize",onResize);};
   },[onClose]);
   const ds=art.deviceShell||"auto";
   const hasCrop=art.type==="video"&&!!art.crop;
   const showMobile=((ds==="mobile")||(ds==="auto"&&art.isMobile))&&!hasCrop;
   const showNoDevice=ds==="none";
+  // PhoneShell natural dimensions with noBackground=true (padding:0)
+  const PHONE_W=307, PHONE_H=649;
+  const phoneScale=Math.min(2.2,Math.min((winH*0.82)/PHONE_H,(winW*0.48)/PHONE_W));
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
@@ -240,15 +247,18 @@ function LBox({art,onClose,onTagClick}){
           </div>
         )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showMobile&&(
-          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <PhoneShell bg={art.mobileBg||"#000"} noBackground={true}>
-              {(art.type==="image"||art.type==="gif") && (
-                <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-              )}
-              {art.type==="video" && (
-                <video src={art.src} muted loop playsInline autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-              )}
-            </PhoneShell>
+          // Outer div reserves the scaled space so flex centering works correctly
+          <div onClick={e=>e.stopPropagation()} style={{width:PHONE_W*phoneScale,height:PHONE_H*phoneScale,position:"relative",flexShrink:0}}>
+            <div style={{position:"absolute",top:"50%",left:"50%",transform:`translate(-50%,-50%) scale(${phoneScale})`,transformOrigin:"center center"}}>
+              <PhoneShell bg={art.mobileBg||"#000"} noBackground={true}>
+                {(art.type==="image"||art.type==="gif") && (
+                  <img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                )}
+                {art.type==="video" && (
+                  <video src={art.src} muted loop playsInline autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                )}
+              </PhoneShell>
+            </div>
           </div>
         )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&showNoDevice&&!hasCrop&&(
@@ -1727,9 +1737,11 @@ export default function App(){
 
   useEffect(()=>{
     if(!configured){setProjects(SPROJ);setFeed(SFEED);setLoading(false);return;}
+    const deletedProjIds=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
     Promise.all([fetchProjects(),fetchFeed()])
       .then(([projs,feedItems])=>{
-        setProjects(projs.length?projs:SPROJ);
+        const filteredProjs=projs.filter(p=>!deletedProjIds.includes(String(p.id)));
+        setProjects(filteredProjs.length?filteredProjs:SPROJ);
         const realItems=feedItems.filter(f=>f.type!=="mockup");
         setFeed(realItems.length?[...realItems,...SFEED]:SFEED);
       })
@@ -1780,13 +1792,18 @@ export default function App(){
 
   const open=p=>{setProj(p);setView("project");};
   const deleteProj=async projId=>{
+    // Always record the deletion in localStorage so it survives reload even if Supabase fails
+    try{
+      const deleted=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
+      if(!deleted.includes(String(projId)))deleted.push(String(projId));
+      localStorage.setItem("stash_deleted_projects",JSON.stringify(deleted));
+    }catch(e){}
     const isUuid=typeof projId==="string"&&projId.includes("-");
     if(isUuid){
       try{
         await deleteProject(projId);
-        console.log("Deleted project from Supabase:",projId);
       }catch(e){
-        console.error("Failed to delete from Supabase:",e);
+        console.error("Failed to delete from Supabase (will stay deleted via localStorage):",e);
       }
     }
     setProjects(prev=>prev.filter(p=>p.id!==projId));
@@ -1828,34 +1845,29 @@ export default function App(){
   };
 
   const saveEdit=async updated=>{
-    console.log("saveEdit called with:",{id:updated.id,deviceShell:updated.deviceShell,mobileBg:updated.mobileBg});
+    // Always persist display settings to localStorage so they survive reload
+    // regardless of whether Supabase succeeds (belt-and-suspenders)
+    try{
+      localStorage.setItem(`device_${updated.id}`,JSON.stringify({
+        deviceShell:updated.deviceShell,
+        mobileBg:updated.mobileBg,
+        crop:updated.crop,
+        align:updated.align||"center",
+      }));
+    }catch(e){}
     const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
     if(isUuid){
       try{
         const r=await updateFeedItem(updated.id,updated);
-        console.log("Supabase update succeeded, new item:",{id:r.id,deviceShell:r.deviceShell,mobileBg:r.mobileBg});
         setFeed(prev=>prev.map(f=>f.id===r.id?r:f));
         toast("Changes saved");
         return;
       }catch(e){
-        console.error("Supabase update failed, using local state",e);
+        console.error("Supabase update failed, change persisted via localStorage",e);
       }
     }
-    setFeed(prev=>{
-      let found=false;
-      const newFeed=prev.map(f=>{
-        if(String(f.id)===String(updated.id)){
-          found=true;
-          console.log("Found matching artifact, updating from",{ds:f.deviceShell,bg:f.mobileBg},"to",{ds:updated.deviceShell,bg:updated.mobileBg});
-          return {...f,...updated};
-        }
-        return f;
-      });
-      if(!found){
-        console.warn("Artifact not found in feed with id",updated.id,"current feed size:",prev.length);
-      }
-      return newFeed;
-    });
+    setFeed(prev=>prev.map(f=>String(f.id)===String(updated.id)?{...f,...updated}:f));
+    toast("Changes saved");
   };
   const deleteArt=async artId=>{
     const isUuid=typeof artId==="string"&&artId.includes("-");
