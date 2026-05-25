@@ -1477,8 +1477,9 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
 
   return (
     <div
-      style={{breakInside:"avoid",marginBottom:16,borderRadius:24,overflow:"hidden",
-              position:"relative",cursor:"pointer",background:"#EBEBEB",transform:"translateZ(0)"}}
+      style={{breakInside:"avoid",marginBottom:24,borderRadius:24,overflow:"hidden",
+              position:"relative",cursor:"pointer",background:"#EBEBEB",transform:hov?"scale(1.03)":"scale(1)",
+              boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",transition:"box-shadow .2s, transform .2s"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
       onClick={()=>onOpen(item)}
@@ -1576,7 +1577,7 @@ function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}
   const realItems=feed.filter(item=>item.type!=="mockup");
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{columns:cols,gap:16}}>
+      <div style={{columns:cols,gap:24}}>
         {realItems.map(item=>(
           <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
         ))}
@@ -1594,7 +1595,7 @@ function ProjCard({project,onOpen,onDelete}){
   const stackCount=Math.min(thumbs.length,3);
   const stackCards=thumbs.slice(0,stackCount);
   return (
-    <div style={{borderRadius:20,overflow:"visible",background:BG,border:`1px solid ${BD}`,cursor:"pointer",transition:"box-shadow .2s, transform .2s",boxShadow:hov?"0 12px 40px rgba(0,0,0,.13)":"0 2px 8px rgba(0,0,0,.06)",transform:hov?"translateY(-2px)":"none",display:"flex",flexDirection:"column"}}
+    <div style={{borderRadius:20,overflow:"visible",background:BG,border:`1px solid ${hov?BM:BD}`,cursor:"pointer",transition:"box-shadow .2s, transform .2s, border-color .2s",boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",transform:hov?"scale(1.03)":"scale(1)",display:"flex",flexDirection:"column"}}
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onOpen(project)}>
       {/* Preview area */}
       <div style={{height:220,background:"#F2F2F2",borderRadius:"20px 20px 0 0",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
