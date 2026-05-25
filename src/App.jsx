@@ -603,18 +603,6 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
                   </div>
                 </Fld>
               )}
-              {(art.deviceShell==="mobile"||art.deviceShell==="auto")&&(art.type==="image"||art.type==="video"||art.type==="gif")&&(
-                <Fld label="Mobile Background">
-                  <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                    {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
-                      <button key={o.v} onClick={()=>{art.mobileBg=o.v;setPreview([...preview]);}} style={{flex:1,minWidth:70,display:"flex",flexDirection:"column",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:FF}}>
-                        <div style={{width:"100%",height:50,background:o.v,borderRadius:8,border:`2px solid ${(art.mobileBg||"#000")===o.v?BK:BD}`,boxSizing:"border-box"}}/>
-                        <span style={{fontSize:11,fontWeight:500,color:T2}}>{o.l}</span>
-                      </button>
-                    ))}
-                  </div>
-                </Fld>
-              )}
               {art.deviceShell==="none"&&(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&(
                 <button onClick={()=>setCropMode({artIndex:i})} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
                   {art.crop?"Adjust Crop":"Add Crop Tool"}
@@ -766,18 +754,6 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,projects=[],isM
               {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
                 <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:"#FFF",border:`${deviceShell===o.v?2:1}px solid ${deviceShell===o.v?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:deviceShell===o.v?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                   {o.l}{deviceShell===o.v&&<MI name="check" size={13} style={{color:BK}}/>}
-                </button>
-              ))}
-            </div>
-          </Fld>
-        )}
-        {(art.type==="image"||art.type==="video"||art.type==="gif")&&(deviceShell==="mobile"||deviceShell==="auto")&&(
-          <Fld label="Mobile Background">
-            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-              {[{v:"#000",l:"Black"},{v:"#FFF",l:"White"},{v:"#1A1A1A",l:"Dark"},{v:"#E8E8E8",l:"Light"}].map(o=>(
-                <button key={o.v} onClick={()=>setMobileBg(o.v)} style={{flex:1,minWidth:70,display:"flex",flexDirection:"column",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:FF}}>
-                  <div style={{width:"100%",height:50,background:o.v,borderRadius:8,border:`2px solid ${mobileBg===o.v?BK:BD}`,boxSizing:"border-box"}}/>
-                  <span style={{fontSize:11,fontWeight:500,color:T2}}>{o.l}</span>
                 </button>
               ))}
             </div>
@@ -1402,7 +1378,7 @@ function PhoneShell({children,bg="#000",darkMode,noBackground=false}){
   const edgeGrad="linear-gradient(175deg,#E0E0E2 0%,#C0C0C4 40%,#D0D0D4 100%)";
   return (
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",
-                 background:noBackground?"transparent":darkMode?"#1A1A1A":"#BFC9D4",padding:noBackground?"0":"24px 18px 28px",transition:"background 0.3s"}}>
+                 background:noBackground?"transparent":darkMode?"#1A1A1A":"#EFEFEF",padding:noBackground?"0":"24px 18px 28px",transition:"background 0.3s"}}>
       <div style={{position:"relative",width:307}}>
         {/* Aluminum frame — single band, uniform 3px all around */}
         <div style={{
@@ -1452,9 +1428,36 @@ function PhoneShell({children,bg="#000",darkMode,noBackground=false}){
   );
 }
 
+function LiveBar(){
+  const [pulse,setPulse]=useState(true);
+  useEffect(()=>{const t=setInterval(()=>setPulse(p=>!p),900);return ()=>clearInterval(t);},[]);
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:16,padding:"10px 0",marginBottom:24}}>
+      <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
+        <div style={{width:7,height:7,borderRadius:"50%",background:"#22C55E",opacity:pulse?1:0.35,transition:"opacity 0.7s ease",flexShrink:0}}/>
+        <span style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T1,fontFamily:FF,textTransform:"uppercase"}}>Live</span>
+      </div>
+      <div style={{flex:1,height:1,background:BD}}/>
+      <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+        <span style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T2,fontFamily:FF,textTransform:"uppercase"}}>From The Stash</span>
+        <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:26,height:26,borderRadius:8,objectFit:"cover",display:"block",flexShrink:0}}/>
+      </div>
+    </div>
+  );
+}
+
 function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
+  const [visible,setVisible]=useState(false);
+  const cardRef=useRef(null);
+  useEffect(()=>{
+    const el=cardRef.current;
+    if(!el) return;
+    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVisible(true);obs.disconnect();}},{threshold:0.05});
+    obs.observe(el);
+    return ()=>obs.disconnect();
+  },[]);
   const isMock=item.type==="mockup"&&item.mock;
   const ds=item.deviceShell||"auto";
   const showMobile=(ds==="mobile")||(ds==="auto"&&item.isMobile===true);
@@ -1477,9 +1480,13 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
 
   return (
     <div
+      ref={cardRef}
       style={{breakInside:"avoid",marginBottom:24,borderRadius:24,overflow:"hidden",
-              position:"relative",cursor:"pointer",background:"#EBEBEB",transform:hov?"scale(1.03)":"scale(1)",
-              boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",transition:"box-shadow .2s, transform .2s"}}
+              position:"relative",cursor:"pointer",background:"#EBEBEB",
+              opacity:visible?1:0,
+              transform:visible?(hov?"scale(1.03)":"translateY(0)"):"translateY(24px)",
+              boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",
+              transition:"opacity 0.45s ease, transform 0.45s ease, box-shadow .2s"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
       onClick={()=>onOpen(item)}
@@ -1577,6 +1584,7 @@ function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}
   const realItems=feed.filter(item=>item.type!=="mockup");
   return (
     <div style={{padding:"16px 0"}}>
+      <LiveBar/>
       <div style={{columns:cols,gap:24}}>
         {realItems.map(item=>(
           <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
