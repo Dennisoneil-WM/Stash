@@ -20,22 +20,48 @@ export async function fetchProjects() {
 }
 
 export async function createProject(p) {
-  const { data, error } = await supabase
+  const insertObj = {
+    name: p.name,
+    description: p.desc || "",
+    folder: p.folder,
+    tags: p.tags || [],
+    artifact_count: 0,
+    thumbs: [],
+    pages: p.pages || [{ id: "p1", label: "1", name: "Page 1" }],
+    rows: p.rows || ["R1"],
+    members: p.members || [],
+  };
+
+  let { data, error } = await supabase
     .from("projects")
-    .insert({
-      name: p.name,
-      description: p.desc || "",
-      folder: p.folder,
-      tags: p.tags || [],
-      artifact_count: 0,
-      thumbs: [],
-      pages: p.pages || [{ id: "p1", label: "1", name: "Page 1" }],
-      rows: p.rows || ["R1"],
-    })
+    .insert(insertObj)
     .select()
     .single();
-  if (error) throw error;
-  return dbToProject(data);
+
+  // If members column doesn't exist yet, retry without it
+  if (error && error.message.includes("members")) {
+    const { members: _m, ...withoutMembers } = insertObj;
+    const result = await supabase
+      .from("projects")
+      .insert(withoutMembers)
+      .select()
+      .single();
+    if (result.error) throw result.error;
+    data = result.data;
+    // Persist members in localStorage
+    try {
+      localStorage.setItem(`members_${data.id}`, JSON.stringify(p.members || []));
+    } catch(e) {}
+  } else if (error) {
+    throw error;
+  }
+
+  // Always keep localStorage in sync for members
+  try {
+    localStorage.setItem(`members_${data.id}`, JSON.stringify(p.members || []));
+  } catch(e) {}
+
+  return dbToProject(data, p.members);
 }
 
 export async function updateProject(id, updates) {
@@ -53,7 +79,14 @@ export async function deleteProject(id) {
   if (error) throw error;
 }
 
-function dbToProject(r) {
+function dbToProject(r, membersOverride) {
+  let members = membersOverride || r.members || [];
+  if (!membersOverride) {
+    try {
+      const stored = localStorage.getItem(`members_${r.id}`);
+      if (stored) members = JSON.parse(stored);
+    } catch(e) {}
+  }
   return {
     id: r.id,
     name: r.name,
@@ -64,6 +97,7 @@ function dbToProject(r) {
     thumbs: r.thumbs || [],
     pages: r.pages || [{ id: "p1", label: "1", name: "Page 1" }],
     rows: r.rows || ["R1"],
+    members,
     artifacts: {},
   };
 }

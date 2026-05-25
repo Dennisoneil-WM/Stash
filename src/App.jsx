@@ -17,6 +17,8 @@ import { supabase, configured, fetchProjects, createProject, deleteProject, fetc
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
 const FF="'Geist','DM Sans',-apple-system,sans-serif";
+// Material Symbols Rounded icon helper
+const MI=({name,size=24,style={}})=>(<span className="material-symbols-rounded" style={{fontSize:size,lineHeight:1,userSelect:"none",display:"inline-flex",alignItems:"center",justifyContent:"center",...style}}>{name}</span>);
 const GR=["linear-gradient(135deg,#0d1117,#1a472a)","linear-gradient(135deg,#1a0030,#6b21a8)","linear-gradient(135deg,#1c1c1c,#f97316)","linear-gradient(160deg,#0f172a,#1e40af)","linear-gradient(135deg,#0a0a0a,#dc2626)","linear-gradient(135deg,#111827,#059669)","linear-gradient(135deg,#1c1917,#d97706)","linear-gradient(160deg,#0f0f23,#7c3aed)","linear-gradient(135deg,#0c1a0c,#16a34a)","linear-gradient(135deg,#1e1b4b,#a78bfa)"];
 const USERS=[{id:1,name:"Dennis O'Neil",title:"Senior Product Designer",initials:"DO",image:"https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F8d0ed44f84aa42ffb662bd68b4c40eb8?format=webp&width=800&height=1200"},{id:2,name:"Maria Chen",title:"Lead UX Designer",initials:"MC"},{id:3,name:"Jake Torres",title:"Principal Designer",initials:"JT"}];
 const ME=USERS[0];
@@ -24,14 +26,29 @@ const VPS={"Desktop (1512x900)":{w:1512,h:900},"Laptop (1280x800)":{w:1280,h:800
 const FOLDERS=[{id:1,name:"Product Design",count:8},{id:2,name:"Brand & Marketing",count:5},{id:3,name:"Research",count:3},{id:4,name:"Documentation",count:6},{id:5,name:"Archive",count:15}];
 const a=(id,n,t,g)=>({id,name:n,type:t,thumb:g,src:null,viewport:null});
 const SPROJ=[
-  {id:1,name:"Website Redesign",folder:1,artifactCount:4,thumbs:[GR[0],GR[1],GR[2],GR[3]],tags:["web","redesign","core"],
+  {id:1,name:"Website Redesign",folder:1,artifactCount:4,thumbs:[GR[0],GR[1],GR[2],GR[3]],
+   desc:"Full redesign of the consumer web experience with focus on discovery and checkout flows.",
+   members:[USERS[0],USERS[1]],
+   tags:["web","redesign","core"],
    pages:[{id:"p1",label:"2",name:"Discovery"},{id:"p2",label:"3",name:"Concepts"},{id:"p3",label:"4",name:"Visual"},{id:"p4",label:"5",name:"Prototype"},{id:"p5",label:"6",name:"Handoff"}],
    rows:["R1","PDP","R2","R3"],
    artifacts:{p1:[a("a1","Logo Animation","image",GR[0]),a("a2","Promo Video","image",GR[1]),a("a3","Hero Banner","image",GR[2]),a("a4","Mobile Mockup","image",GR[3])],p2:[a("a5","shop-routing","figma",GR[4]),a("a6","type-to-image","image",GR[5]),a("a7","Home Z Index B","image",GR[6]),a("a8","shop-search","figma",GR[7])],p3:[a("a9","UI Kit v1","figma",GR[8]),a("a10","Color System","image",GR[9])],p4:[a("a11","Prototype v1","website",GR[0])],p5:[a("a12","Handoff Doc","file",GR[1])]}},
-  {id:2,name:"Mobile App",folder:1,artifactCount:2,thumbs:[GR[4],GR[5]],tags:["mobile","app"],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"}],rows:["R1","R2"],artifacts:{p1:[a("b1","User Flows","figma",GR[4])],p2:[a("b2","Hi-fi Screens","image",GR[5])]}},
-  {id:3,name:"Brand Refresh",folder:2,artifactCount:1,thumbs:[GR[6]],tags:["brand","refresh"],pages:[{id:"p1",label:"1",name:"Assets"}],rows:["Brand"],artifacts:{p1:[a("c1","Logo System","image",GR[6])]}},
-  {id:4,name:"API Integration",folder:1,artifactCount:2,thumbs:[GR[7],GR[8]],tags:["api","backend"],pages:[{id:"p1",label:"1",name:"Specs"},{id:"p2",label:"2",name:"Docs"}],rows:["R1"],artifacts:{p1:[a("d1","Flow Diagram","figma",GR[7])],p2:[a("d2","API Docs","website",GR[8])]}},
-  {id:5,name:"User Portal",folder:1,artifactCount:5,thumbs:[GR[9],GR[0],GR[1],GR[2]],tags:["portal","user"],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"},{id:"p3",label:"3",name:"Dev"}],rows:["R1","R2","R3"],artifacts:{p1:[a("e1","Research Deck","file",GR[9]),a("e2","Interview Clips","image",GR[0])],p2:[a("e3","Wireframes","figma",GR[1]),a("e4","Visual Design","figma",GR[2])],p3:[a("e5","Spec Sheet","file",GR[3])]}},
+  {id:2,name:"Mobile App",folder:1,artifactCount:2,thumbs:[GR[4],GR[5]],
+   desc:"Native iOS and Android app redesign covering onboarding, search, and dispensary detail pages.",
+   members:[USERS[0],USERS[2]],
+   tags:["mobile","app"],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"}],rows:["R1","R2"],artifacts:{p1:[a("b1","User Flows","figma",GR[4])],p2:[a("b2","Hi-fi Screens","image",GR[5])]}},
+  {id:3,name:"Brand Refresh",folder:2,artifactCount:1,thumbs:[GR[6]],
+   desc:"Updated brand guidelines including typography, color system, and logo variants.",
+   members:[USERS[1]],
+   tags:["brand","refresh"],pages:[{id:"p1",label:"1",name:"Assets"}],rows:["Brand"],artifacts:{p1:[a("c1","Logo System","image",GR[6])]}},
+  {id:4,name:"API Integration",folder:1,artifactCount:2,thumbs:[GR[7],GR[8]],
+   desc:"Design specs and documentation for the new partner API integration endpoints.",
+   members:[USERS[0]],
+   tags:["api","backend"],pages:[{id:"p1",label:"1",name:"Specs"},{id:"p2",label:"2",name:"Docs"}],rows:["R1"],artifacts:{p1:[a("d1","Flow Diagram","figma",GR[7])],p2:[a("d2","API Docs","website",GR[8])]}},
+  {id:5,name:"User Portal",folder:1,artifactCount:5,thumbs:[GR[9],GR[0],GR[1],GR[2]],
+   desc:"Self-service portal for dispensary owners to manage listings, hours, and promotions.",
+   members:[USERS[0],USERS[1],USERS[2]],
+   tags:["portal","user"],pages:[{id:"p1",label:"1",name:"Research"},{id:"p2",label:"2",name:"Design"},{id:"p3",label:"3",name:"Dev"}],rows:["R1","R2","R3"],artifacts:{p1:[a("e1","Research Deck","file",GR[9]),a("e2","Interview Clips","image",GR[0])],p2:[a("e3","Wireframes","figma",GR[1]),a("e4","Visual Design","figma",GR[2])],p3:[a("e5","Spec Sheet","file",GR[3])]}},
 ];
 // Device mockup types and screen color themes for each feed card
 const DMOCKS=[
@@ -82,10 +99,10 @@ function Bdg({type}){
   return (<span style={{fontSize:10,fontWeight:600,color:T2,background:"#F0F0F0",padding:"2px 7px",borderRadius:4,letterSpacing:"0.04em",textTransform:"uppercase"}}>{L[type]||"Media"}</span>);
 }
 function BBtn({children,onClick,disabled,fw,sm}){
-  return (<button onClick={onClick} disabled={disabled} style={{background:disabled?"#E0E0E0":BK,color:disabled?T3:"#FFF",border:"none",borderRadius:16,padding:sm?"9px 20px":"13px 24px",fontWeight:600,fontSize:sm?13:15,cursor:disabled?"default":"pointer",width:fw?"100%":"auto",fontFamily:FF}}>{children}</button>);
+  return (<button onClick={onClick} disabled={disabled} style={{background:disabled?"#E0E0E0":BK,color:disabled?T3:"#FFF",border:"none",borderRadius:100,padding:sm?"9px 20px":"13px 24px",fontWeight:600,fontSize:sm?13:15,cursor:disabled?"default":"pointer",width:fw?"100%":"auto",fontFamily:FF}}>{children}</button>);
 }
 function GBtn({children,onClick,sm}){
-  return (<button onClick={onClick} style={{background:"transparent",color:T1,border:`1px solid ${BM}`,borderRadius:16,padding:sm?"8px 18px":"12px 22px",fontWeight:500,fontSize:sm?13:15,cursor:"pointer",fontFamily:FF}}>{children}</button>);
+  return (<button onClick={onClick} style={{background:"transparent",color:T1,border:`1px solid ${BM}`,borderRadius:100,padding:sm?"8px 18px":"12px 22px",fontWeight:500,fontSize:sm?13:15,cursor:"pointer",fontFamily:FF}}>{children}</button>);
 }
 function TIn({ph,val,set,multi,af}){
   const s={background:"#FAFAFA",border:`1px solid ${BD}`,borderRadius:10,padding:"11px 14px",color:T1,fontSize:14,width:"100%",outline:"none",fontFamily:FF,boxSizing:"border-box"};
@@ -429,7 +446,7 @@ function TagInput({tags,setTags}){
       )}
       <div style={{display:"flex",gap:8}}>
         <input value={tg} onChange={e=>setTg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();add();}}} placeholder="e.g. mobile, checkout, v2" style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF,transition:"border .15s"}} onFocus={e=>e.target.style.borderColor=BM} onBlur={e=>e.target.style.borderColor=BD}/>
-        <button onClick={add} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 14px",color:T1,cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
+        <button onClick={add} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:100,padding:"8px 14px",color:T1,cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
       </div>
     </div>
   );
@@ -442,32 +459,43 @@ function ProjectPicker({projects,selected,onSelect,onNewProject}){
     <div>
       {mode==="none"&&(
         <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>setMode("existing")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>Link to existing project</button>
-          <button onClick={()=>setMode("new")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>+ Create new project</button>
+          <button onClick={()=>setMode("existing")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>Link to existing project</button>
+          <button onClick={()=>setMode("new")} style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"9px 14px",fontSize:13,color:T1,cursor:"pointer",fontFamily:FF,fontWeight:500,textAlign:"left"}}>+ Create new project</button>
         </div>
       )}
       {mode==="existing"&&(
-        <div style={{border:`1px solid ${BD}`,borderRadius:10,overflow:"hidden",maxHeight:180,overflowY:"auto"}}>
-          {projects.map(p=>(
-            <button key={p.id} onClick={()=>{onSelect(p);setMode("selected");}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:selected?.id===p.id?"#F5F5F5":"#FFF",border:"none",borderBottom:`1px solid ${BD}`,padding:"10px 14px",cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
-              <div style={{display:"flex",gap:3,flexShrink:0}}>
-                {(p.thumbs||[]).slice(0,2).map((t,i)=>(<div key={i} style={{width:20,height:20,borderRadius:4,background:t}}/>))}
-              </div>
-              <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{p.name}</span>
-              {selected?.id===p.id&&<span style={{color:T3,fontSize:16}}>&#x2713;</span>}
-            </button>
-          ))}
+        <div style={{border:`1px solid ${BD}`,borderRadius:12,overflow:"hidden"}}>
+          {/* Header row */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderBottom:`1px solid ${BD}`,background:"#FAFAFA"}}>
+            <span style={{fontSize:12,fontWeight:600,color:T2,fontFamily:FF}}>Select a project</span>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setMode("new")} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:T2,fontFamily:FF,fontWeight:500,padding:"2px 6px"}}>+ Create new</button>
+              <button onClick={()=>setMode("none")} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:18,lineHeight:1,padding:"0 2px"}}>&#x2715;</button>
+            </div>
+          </div>
+          {/* Project list */}
+          <div style={{maxHeight:160,overflowY:"auto"}}>
+            {projects.map(p=>(
+              <button key={p.id} onClick={()=>{onSelect(p);setMode("selected");}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:selected?.id===p.id?"#F5F5F5":"#FFF",border:"none",borderBottom:`1px solid ${BD}`,padding:"10px 14px",cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <div style={{display:"flex",gap:3,flexShrink:0}}>
+                  {(p.thumbs||[]).slice(0,2).map((t,i)=>(<div key={i} style={{width:20,height:20,borderRadius:4,background:t}}/>))}
+                </div>
+                <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{p.name}</span>
+                {selected?.id===p.id&&<MI name="check" size={16} style={{color:BK,flexShrink:0}}/>}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {mode==="new"&&(
         <div style={{display:"flex",gap:8}}>
           <input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newName.trim()){onNewProject(newName.trim());setMode("none");setNewName("");}}} placeholder="New project name..." autoFocus style={{flex:1,background:"#F5F5F5",border:`1px solid ${BM}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
-          <button onClick={()=>{if(newName.trim()){onNewProject(newName.trim());setMode("none");setNewName("");}}} style={{background:BK,border:"none",borderRadius:8,padding:"8px 14px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Create</button>
-          <button onClick={()=>{setMode("none");setNewName("");}} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 14px",color:T2,cursor:"pointer",fontSize:13,fontFamily:FF}}>Cancel</button>
+          <button onClick={()=>{if(newName.trim()){onNewProject(newName.trim());setMode("none");setNewName("");}}} style={{background:BK,border:"none",borderRadius:100,padding:"8px 14px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Create</button>
+          <button onClick={()=>{setMode("none");setNewName("");}} style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:100,padding:"8px 14px",color:T2,cursor:"pointer",fontSize:13,fontFamily:FF}}>Cancel</button>
         </div>
       )}
       {mode==="selected"&&selected&&(
-        <div style={{display:"flex",alignItems:"center",gap:10,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:12,padding:"10px 14px"}}>
           <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{selected.name}</span>
           <button onClick={()=>{onSelect(null);setMode("existing");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:13,fontFamily:FF}}>Change</button>
           <button onClick={()=>{onSelect(null);setMode("none");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:16,padding:0}}>&#x2715;</button>
@@ -568,8 +596,8 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
                 <Fld label="Device Shell">
                   <div style={{display:"flex",gap:8}}>
                     {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
-                      <button key={o.v} onClick={()=>{art.deviceShell=o.v;setPreview([...preview]);}} style={{flex:1,background:art.deviceShell===o.v?BK:"#FFF",border:`1px solid ${art.deviceShell===o.v?"transparent":BD}`,color:art.deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
-                        {o.l}
+                      <button key={o.v} onClick={()=>{art.deviceShell=o.v;setPreview([...preview]);}} style={{flex:1,background:"#FFF",border:`${art.deviceShell===o.v?2:1}px solid ${art.deviceShell===o.v?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:art.deviceShell===o.v?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        {o.l}{art.deviceShell===o.v&&<MI name="check" size={13} style={{color:BK}}/>}
                       </button>
                     ))}
                   </div>
@@ -588,18 +616,21 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
                 </Fld>
               )}
               {art.deviceShell==="none"&&(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&(
-                <button onClick={()=>setCropMode({artIndex:i})} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
+                <button onClick={()=>setCropMode({artIndex:i})} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
                   {art.crop?"Adjust Crop":"Add Crop Tool"}
                 </button>
               )}
               {!(art.deviceShell==="mobile"||(art.deviceShell==="auto"&&art.isMobile))&&!art.crop&&(art.type==="image"||art.type==="gif"||art.type==="video")&&(
                 <Fld label="Alignment">
                   <div style={{display:"flex",gap:8}}>
-                    {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>(
-                      <button key={o.v} onClick={()=>{art.align=o.v;setPreview([...preview]);}} style={{flex:1,background:(art.align||"center")===o.v?BK:"#FFF",border:`1px solid ${(art.align||"center")===o.v?"transparent":BD}`,color:(art.align||"center")===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
-                        {o.l}
-                      </button>
-                    ))}
+                    {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>{
+                      const sel=(art.align||"center")===o.v;
+                      return (
+                        <button key={o.v} onClick={()=>{art.align=o.v;setPreview([...preview]);}} style={{flex:1,background:"#FFF",border:`${sel?2:1}px solid ${sel?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                          {o.l}{sel&&<MI name="check" size={13} style={{color:BK}}/>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </Fld>
               )}
@@ -733,8 +764,8 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,projects=[],isM
           <Fld label="Device Shell">
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
-                <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:deviceShell===o.v?BK:"#FFF",border:`1px solid ${deviceShell===o.v?"transparent":BD}`,color:deviceShell===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
-                  {o.l}
+                <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:"#FFF",border:`${deviceShell===o.v?2:1}px solid ${deviceShell===o.v?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:deviceShell===o.v?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                  {o.l}{deviceShell===o.v&&<MI name="check" size={13} style={{color:BK}}/>}
                 </button>
               ))}
             </div>
@@ -753,18 +784,21 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,projects=[],isM
           </Fld>
         )}
         {(art.type==="image"||art.type==="gif"||art.type==="video")&&(deviceShell==="none"||deviceShell==="desktop")&&art.src&&(
-          <button onClick={()=>setCropMode(true)} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
+          <button onClick={()=>setCropMode(true)} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"10px 14px",textAlign:"center",color:T2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,transition:"all .15s"}} onMouseOver={e=>e.target.style.borderColor=BM} onMouseOut={e=>e.target.style.borderColor=BD}>
             {crop?"Adjust Crop":"Add Crop Tool"}
           </button>
         )}
         {!(deviceShell==="mobile"||(deviceShell==="auto"&&art.isMobile))&&!crop&&(art.type==="image"||art.type==="gif"||art.type==="video")&&(
           <Fld label="Alignment">
             <div style={{display:"flex",gap:8}}>
-              {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>(
-                <button key={o.v} onClick={()=>setAlign(o.v)} style={{flex:1,background:align===o.v?BK:"#FFF",border:`1px solid ${align===o.v?"transparent":BD}`,color:align===o.v?"#FFF":T1,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF,transition:"all .15s"}}>
-                  {o.l}
-                </button>
-              ))}
+              {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>{
+                const sel=align===o.v;
+                return (
+                  <button key={o.v} onClick={()=>setAlign(o.v)} style={{flex:1,background:"#FFF",border:`${sel?2:1}px solid ${sel?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                    {o.l}{sel&&<MI name="check" size={13} style={{color:BK}}/>}
+                  </button>
+                );
+              })}
             </div>
           </Fld>
         )}
@@ -811,6 +845,8 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,projects=[],isM
 
 function NewProjMdl({onClose,onCreate,isMobile=false}){
   const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [fl,setFl]=useState(1); const [tg,setTg]=useState(""); const [tags,setTags]=useState([]);
+  const [members,setMembers]=useState([ME]);
+  const toggleMember=u=>setMembers(prev=>prev.some(m=>m.id===u.id)?prev.filter(m=>m.id!==u.id):[...prev,u]);
   const addTag=()=>{
     if(tg.trim()&&!tags.includes(tg.trim().toLowerCase())){
       setTags([...tags,tg.trim().toLowerCase()]);
@@ -820,9 +856,25 @@ function NewProjMdl({onClose,onCreate,isMobile=false}){
   return (
     <Mdl title="New Project" onClose={onClose} w={480} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
-        <Fld label="Project Name"><TIn ph="e.g. Search Redesign" val={nm} set={setNm}/></Fld>
+        <Fld label="Project Name"><TIn ph="e.g. Search Redesign" val={nm} set={setNm} af/></Fld>
         <Fld label="Description (optional)"><TIn ph="What is this project about?" val={ds} set={setDs} multi/></Fld>
-        <Fld label="Folder"><TSel val={fl} set={v=>setFl(Number(v))} opts={FOLDERS.map(f=>({v:f.id,l:f.name}))}/></Fld>
+        <Fld label="Designers">
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {USERS.map(u=>{
+              const sel=members.some(m=>m.id===u.id);
+              return (
+                <button key={u.id} onClick={()=>toggleMember(u)} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",border:`${sel?2:1}px solid ${sel?BK:BD}`,borderRadius:12,background:"#FAFAFA",cursor:"pointer",textAlign:"left",transition:"all .15s",fontFamily:FF}}>
+                  <Av user={u} size={32} src={u.image}/>
+                  <div style={{flex:1}}>
+                    <p style={{margin:0,fontSize:13,fontWeight:sel?700:500,color:T1}}>{u.name}</p>
+                    <p style={{margin:0,fontSize:11,color:T3}}>{u.title}</p>
+                  </div>
+                  {sel&&(<MI name="check_circle" size={20} style={{color:BK,flexShrink:0}}/>)}
+                </button>
+              );
+            })}
+          </div>
+        </Fld>
         <Fld label="Tags (optional)">
           <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
             {tags.map(t=>(
@@ -834,13 +886,13 @@ function NewProjMdl({onClose,onCreate,isMobile=false}){
           </div>
           <div style={{display:"flex",gap:8}}>
             <input value={tg} onChange={e=>setTg(e.target.value)} onKeyPress={e=>{if(e.key==="Enter"){e.preventDefault();addTag();}}} placeholder="Add a tag..." style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:8,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
-            <button onClick={addTag} style={{background:BK,border:"none",borderRadius:8,padding:"8px 14px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
+            <button onClick={addTag} style={{background:BK,border:"none",borderRadius:100,padding:"8px 14px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
           </div>
         </Fld>
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
         <GBtn sm onClick={onClose}>Cancel</GBtn>
-        <BBtn disabled={!nm.trim()} onClick={()=>{onCreate({name:nm.trim(),desc:ds,folder:fl,tags,artifactCount:0,pages:[{id:"p1",label:"1",name:"Page 1"}],thumbs:[],artifacts:{p1:[]},rows:["R1"]});onClose();}}>Create Project</BBtn>
+        <BBtn disabled={!nm.trim()||members.length===0} onClick={()=>{onCreate({name:nm.trim(),desc:ds,folder:fl,tags,members,artifactCount:0,pages:[{id:"p1",label:"1",name:"Page 1"}],thumbs:[],artifacts:{p1:[]},rows:["R1"]});onClose();}}>Create Project</BBtn>
       </div>
     </Mdl>
   );
@@ -860,7 +912,7 @@ function NewFolderMdl({onClose,projects,isMobile=false}){
           <label style={{fontSize:13,color:T2,display:"block",marginBottom:8,fontWeight:500}}>Add Projects</label>
           <div style={{border:`1px solid ${BD}`,borderRadius:10,overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",padding:"0 12px",borderBottom:`1px solid ${BD}`}}>
-              <span style={{color:T3,fontSize:14}}>&#x2315;</span>
+              <MI name="search" size={32} style={{color:T3}}/>
               <input placeholder="Search" value={srch} onChange={e=>setSrch(e.target.value)} style={{flex:1,background:"transparent",border:"none",outline:"none",padding:"10px 8px",fontSize:13,color:T1,fontFamily:FF}}/>
             </div>
             <div style={{maxHeight:172,overflowY:"auto"}}>
@@ -1423,7 +1475,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
 
   return (
     <div
-      style={{breakInside:"avoid",marginBottom:16,borderRadius:32,overflow:"hidden",
+      style={{breakInside:"avoid",marginBottom:16,borderRadius:24,overflow:"hidden",
               position:"relative",cursor:"pointer",background:"#EBEBEB",transform:"translateZ(0)"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
@@ -1534,26 +1586,70 @@ function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}
 
 function ProjCard({project,onOpen,onDelete}){
   const [hov,setHov]=useState(false);
-  const mock=DMOCKS[(project.id-1)%DMOCKS.length];
-  const pad=mock.device==="iphone"?"20px 28px 20px":mock.device==="ipad"?"14px 12px":"10px 8px";
-  const bg=mock.device==="iphone"?"#F0F0F0":mock.device==="ipad"?"#EAEAEA":"#E6E6E6";
+  const thumbs=project.thumbs||[];
+  const members=project.members||[];
+  // Build stacked card positions: up to 3 cards, back-most first
+  const stackCount=Math.min(thumbs.length,3);
+  const stackCards=thumbs.slice(0,stackCount);
   return (
-    <div style={{breakInside:"avoid",marginBottom:16,borderRadius:12,overflow:"hidden",position:"relative",cursor:"pointer",background:"#EBEBEB"}}
+    <div style={{borderRadius:20,overflow:"visible",background:BG,border:`1px solid ${BD}`,cursor:"pointer",transition:"box-shadow .2s, transform .2s",boxShadow:hov?"0 12px 40px rgba(0,0,0,.13)":"0 2px 8px rgba(0,0,0,.06)",transform:hov?"translateY(-2px)":"none",display:"flex",flexDirection:"column"}}
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onOpen(project)}>
-      <div style={{padding:pad,background:bg}}>
-        <MockSVG mock={mock}/>
-      </div>
-      {hov&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:14}}>
-          <div style={{display:"flex",justifyContent:"flex-end"}}>
-            <button onClick={e=>{e.stopPropagation();onDelete(project.id);}} style={{background:"rgba(255,0,0,.8)",border:"none",color:"#FFF",width:32,height:32,borderRadius:"50%",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700}}>×</button>
+      {/* Preview area */}
+      <div style={{height:220,background:"#F2F2F2",borderRadius:"20px 20px 0 0",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        {stackCount===0&&(
+          <div style={{width:"72%",height:160,borderRadius:14,background:"linear-gradient(135deg,#E8E8E8,#D0D0D0)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:32,opacity:.3}}>&#x1F4C2;</span>
           </div>
-          <div>
-            <p style={{margin:"0 0 2px",fontWeight:700,fontSize:14,color:"#FFF",fontFamily:FF}}>{project.name}</p>
-            <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,.7)",fontFamily:FF}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</p>
-          </div>
+        )}
+        {stackCount>0&&stackCards.map((t,idx)=>{
+          const isBack=idx<stackCount-1;
+          const isFront=idx===stackCount-1;
+          // Back cards peek out rotated behind front card
+          const rotations=stackCount===3?[-5,4,0]:stackCount===2?[-4,0]:([0]);
+          const yOffsets=stackCount===3?[10,6,0]:stackCount===2?[8,0]:([0]);
+          const rot=rotations[idx]||0;
+          const yOff=yOffsets[idx]||0;
+          return (
+            <div key={idx} style={{
+              position:"absolute",
+              width:"68%",height:152,
+              borderRadius:14,
+              background:t,
+              transform:`rotate(${rot}deg) translateY(${yOff}px)`,
+              transformOrigin:"center center",
+              boxShadow:isFront?"0 6px 20px rgba(0,0,0,.18)":"0 3px 10px rgba(0,0,0,.12)",
+              zIndex:idx,
+            }}/>
+          );
+        })}
+        {/* Artifact count badge */}
+        <div style={{position:"absolute",bottom:12,right:14,background:"rgba(0,0,0,.45)",borderRadius:20,padding:"3px 10px",display:"flex",alignItems:"center",gap:5,backdropFilter:"blur(6px)"}}>
+          <span style={{fontSize:11,color:"rgba(255,255,255,.9)",fontFamily:FF,fontWeight:600}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</span>
         </div>
-      )}
+      </div>
+      {/* Info section */}
+      <div style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column",gap:6}}>
+        <p style={{margin:0,fontSize:15,fontWeight:700,color:T1,fontFamily:FF,lineHeight:1.2}}>{project.name}</p>
+        {project.desc&&(<p style={{margin:0,fontSize:13,color:T2,fontFamily:FF,lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{project.desc}</p>)}
+        {members.length>0&&(
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
+            <div style={{display:"flex",alignItems:"center"}}>
+              {members.slice(0,4).map((m,i)=>(
+                <div key={m.id} style={{marginLeft:i>0?-7:0,border:"2px solid #FFF",borderRadius:"50%",zIndex:members.length-i,position:"relative",flexShrink:0}}>
+                  <Av user={m} size={24} src={m.image}/>
+                </div>
+              ))}
+            </div>
+            <span style={{fontSize:12,color:T2,fontFamily:FF,lineHeight:1.3}}>
+              {members.length===1
+                ? members[0].name
+                : members.length===2
+                  ? `${members[0].name} & ${members[1].name}`
+                  : `${members[0].name} +${members.length-1} more`}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1561,25 +1657,14 @@ function ProjCard({project,onOpen,onDelete}){
 function Projects({projects,onOpen,onDelete}){
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{display:"flex",gap:12,flexWrap:"nowrap",overflowX:"auto",marginBottom:24,paddingBottom:4}}>
-        {FOLDERS.map(f=>(
-          <div key={f.id} style={{background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"14px 20px",minWidth:140,flexShrink:0,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.background="#F0F0F0";e.currentTarget.style.borderColor=BM;}} onMouseLeave={e=>{e.currentTarget.style.background="#FFF";e.currentTarget.style.borderColor=BD;}}>
-            <div>
-              <p style={{margin:"0 0 2px",fontWeight:600,fontSize:13,color:T1,fontFamily:FF}}>{f.name}</p>
-              <p style={{margin:0,fontSize:11,color:T3,fontFamily:FF}}>{f.count} projects</p>
-            </div>
-            <span style={{color:T3,fontSize:16}}>&#x2192;</span>
-          </div>
-        ))}
-      </div>
-      <div style={{columns:"5 200px",gap:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20}}>
         {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete}/>))}
       </div>
     </div>
   );
 }
 
-function ProjDetail({project,projects,onBack,darkMode}){
+function ProjDetail({project,projects,onBack,onDelete,darkMode}){
   const [ap,setAp]=useState(project.pages[0].id);
   const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
@@ -1588,8 +1673,14 @@ function ProjDetail({project,projects,onBack,darkMode}){
   const [save,setSave]=useState(null);
   const [lb,setLb]=useState(null);
   const [artsLoaded,setArtsLoaded]=useState(false);
+  const [cardSize,setCardSize]=useState(260);
+  const [sizePhase,setSizePhase]=useState(0); // toggles to re-trigger bounce animation
+  const [presMode,setPresMode]=useState(false);
+  const [presIdx,setPresIdx]=useState(0);
+  const [dragFrom,setDragFrom]=useState(null);
+  const [dragOver,setDragOver]=useState(null);
+  const [confirmDel,setConfirmDel]=useState(false);
 
-  // Load artifacts from Supabase if the project has a UUID id
   useEffect(()=>{
     const isUuid=typeof project.id==="string"&&project.id.includes("-");
     if(!isUuid){setArtsLoaded(true);return;}
@@ -1598,22 +1689,40 @@ function ProjDetail({project,projects,onBack,darkMode}){
       .catch(()=>setArtsLoaded(true));
   },[project.id]);
 
-  const pa=arts[ap]||[];
+  // Keyboard nav for presentation mode
+  useEffect(()=>{
+    if(!presMode)return;
+    const pa=arts[ap]||[];
+    const total=pa.length+1;
+    const onKey=e=>{
+      if(e.key==="ArrowRight"||e.key==="ArrowDown")setPresIdx(i=>Math.min(i+1,total-1));
+      else if(e.key==="ArrowLeft"||e.key==="ArrowUp")setPresIdx(i=>Math.max(i-1,0));
+      else if(e.key==="Escape"){setPresMode(false);setPresIdx(0);}
+    };
+    window.addEventListener("keydown",onKey);
+    return ()=>window.removeEventListener("keydown",onKey);
+  },[presMode,arts,ap]);
+
+  // Flatten all artifacts across all pages into one list
+  const pa=Object.values(arts).flat();
+  const total=pa.length+1; // title slide + artifacts
+  const members=project.members||[];
 
   const addArts=async list=>{
     const isUuid=typeof project.id==="string"&&project.id.includes("-");
+    const pageId=pages[0]?.id||"p1";
     const saved=[];
     for(const art of list){
       if(isUuid){
         try{
           let src=art.src;
           if(art._file){try{src=await uploadFile(art._file);}catch(e){console.error(e);}}
-          const r=await insertArtifact(project.id,ap,{...art,src});
+          const r=await insertArtifact(project.id,pageId,{...art,src});
           saved.push(r);
         }catch(e){saved.push(art);}
       }else{saved.push(art);}
     }
-    setArts(prev=>({...prev,[ap]:[...(prev[ap]||[]),...saved]}));
+    setArts(prev=>({...prev,[pageId]:[...(prev[pageId]||[]),...saved]}));
   };
 
   const addPage=()=>{
@@ -1625,54 +1734,180 @@ function ProjDetail({project,projects,onBack,darkMode}){
     setAp(id);
   };
 
+  const reorder=(from,to)=>{
+    if(from===null||from===to)return;
+    // Reorder within the flat all-pages list, then redistribute back
+    const flat=[...Object.values(arts).flat()];
+    const [item]=flat.splice(from,1);
+    flat.splice(to,0,item);
+    // Write all back to first page
+    const pageId=pages[0]?.id||"p1";
+    setArts({[pageId]:flat});
+  };
+
   return (
     <div style={{height:"100vh",display:"flex",flexDirection:"column",background:PG,fontFamily:FF}}>
-      <div style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",padding:"0 24px",height:54,flexShrink:0,position:"relative"}}>
-        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",color:T2,fontSize:22,marginRight:12,padding:0}}>&#x2190;</button>
-        <span style={{fontSize:16,fontWeight:700,color:T1}}>{project.name}</span>
-        <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",display:"flex",alignItems:"center",gap:6}}>
-          {pages.map(pg=>(
-            <button key={pg.id} onClick={()=>setAp(pg.id)} style={{background:ap===pg.id?BK:"transparent",border:`1px solid ${ap===pg.id?BK:BM}`,borderRadius:20,cursor:"pointer",fontFamily:FF,padding:ap===pg.id?"5px 14px":"0",width:ap===pg.id?"auto":28,height:28,color:ap===pg.id?"#FFF":T2,fontWeight:ap===pg.id?700:500,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
-              {ap===pg.id?`${pg.label}  ${pg.name}`:pg.label}
-            </button>
-          ))}
-          <button onClick={addPage} style={{width:28,height:28,borderRadius:"50%",background:BK,border:"none",color:"#FFF",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>+</button>
+
+      {/* ── Top header ─────────────────────────────────────────────────── */}
+      <div style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",padding:"0 20px",height:54,flexShrink:0,gap:10}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex",alignItems:"center",borderRadius:8,marginRight:2}}>
+          <MI name="arrow_back" size={22} style={{color:T2}}/>
+        </button>
+        <span style={{fontSize:15,fontWeight:700,color:T1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220}}>{project.name}</span>
+
+        {/* Card size slider */}
+        <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <MI name="grid_view" size={16} style={{color:T3}}/>
+          <input type="range" min={160} max={480} step={40} value={cardSize} onChange={e=>{setCardSize(Number(e.target.value));setSizePhase(p=>p+1);}} style={{width:120,accentColor:BK,cursor:"pointer"}}/>
+          <MI name="crop_square" size={18} style={{color:T3}}/>
         </div>
-        <div style={{marginLeft:"auto",display:"flex",gap:8}}>
-          <GBtn sm onClick={()=>{}}>Share</GBtn>
+
+        {/* Action buttons */}
+        <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+          <button onClick={()=>{setPresIdx(0);setPresMode(true);}} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"6px 14px",color:T1,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,display:"flex",alignItems:"center",gap:5,transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="#EBEBEB"} onMouseLeave={e=>e.currentTarget.style.background="#F5F5F5"}>
+            <MI name="play_arrow" size={18} style={{color:T1}}/>Present
+          </button>
           <BBtn sm onClick={()=>setShowNew(true)}>+ New Artifact</BBtn>
+          <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,display:"flex",alignItems:"center"}} title="Delete project">
+            <MI name="delete_outline" size={22} style={{color:T3}}/>
+          </button>
         </div>
       </div>
-      <div style={{flex:1,display:"flex",overflow:"hidden"}}>
-        <div style={{width:88,padding:"20px 0 20px 20px",borderRight:`1px solid ${BD}`,background:"#FFF",flexShrink:0,display:"flex",flexDirection:"column",gap:4}}>
-          {project.rows.map(r=>(
-            <div key={r} style={{fontSize:13,color:T3,fontWeight:600,padding:"8px 10px 8px 0",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.color=T1} onMouseLeave={e=>e.currentTarget.style.color=T3}>{r}</div>
-          ))}
-        </div>
-        <div style={{flex:1,overflowX:"auto",padding:"20px 28px"}}>
-          {pa.length===0 ? (
-            <div style={{height:"100%",minHeight:260,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
-              <div style={{fontSize:48,color:BM}}>&#x25FB;</div>
-              <p style={{margin:0,fontSize:15,color:T3,fontFamily:FF}}>No artifacts yet on this page</p>
-              <BBtn onClick={()=>setShowNew(true)}>+ Add First Artifact</BBtn>
-            </div>
-          ) : (
-            <div style={{display:"flex",gap:20,minWidth:"max-content"}}>
-              {pa.map(art=>(
-                <div key={art.id} style={{width:280,flexShrink:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,minHeight:22}}>
-                    <span style={{fontSize:12,color:T3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
-                    <Bdg type={art.type}/>
-                  </div>
-                  <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} darkMode={darkMode}/>
+
+      {/* ── Artifact grid ─────────────────────────────────────────────── */}
+      <style>{`
+        @keyframes cardBounceA{0%{transform:scale(.97)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
+        @keyframes cardBounceB{0%{transform:scale(.97)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
+      `}</style>
+      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"24px 28px"}}>
+        {pa.length===0?(
+          <div style={{height:"100%",minHeight:300,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
+            <div style={{fontSize:48,color:BM}}>&#x25FB;</div>
+            <p style={{margin:0,fontSize:15,color:T3,fontFamily:FF}}>No artifacts yet in this project</p>
+            <BBtn onClick={()=>setShowNew(true)}>+ Add First Artifact</BBtn>
+          </div>
+        ):(
+          <div style={{display:"flex",flexWrap:"wrap",gap:20,alignContent:"flex-start"}}>
+            {pa.map((art,idx)=>(
+              <div key={art.id}
+                draggable
+                onDragStart={e=>{e.dataTransfer.effectAllowed="move";setDragFrom(idx);}}
+                onDragEnd={()=>{setDragFrom(null);setDragOver(null);}}
+                onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDragOver(idx);}}
+                onDragLeave={()=>{if(dragOver===idx)setDragOver(null);}}
+                onDrop={e=>{e.preventDefault();reorder(dragFrom,idx);setDragFrom(null);setDragOver(null);}}
+                style={{
+                  flexBasis:cardSize,
+                  flexGrow:1,
+                  flexShrink:0,
+                  minWidth:0,
+                  opacity:dragFrom===idx?0.35:1,
+                  borderRadius:16,
+                  outline:dragOver===idx&&dragFrom!==idx?`2px dashed ${BM}`:"2px solid transparent",
+                  cursor:"grab",
+                  transition:"flex-basis 0.42s cubic-bezier(0.34,1.56,0.64,1), opacity .15s",
+                  animation:`${sizePhase%2===0?"cardBounceA":"cardBounceB"} 0.42s cubic-bezier(0.34,1.56,0.64,1)`,
+                  willChange:"flex-basis, transform",
+                }}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,paddingLeft:2}}>
+                  <MI name="drag_indicator" size={16} style={{color:T3,flexShrink:0}}/>
+                  <span style={{fontSize:12,color:T3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
+                  <Bdg type={art.type}/>
                 </div>
+                <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} darkMode={darkMode}/>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Delete confirmation ───────────────────────────────────────── */}
+      {confirmDel&&(
+        <div onClick={e=>{if(e.target===e.currentTarget)setConfirmDel(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100,padding:24}}>
+          <div style={{background:"#FFF",borderRadius:20,padding:28,width:"100%",maxWidth:360,boxShadow:"0 20px 60px rgba(0,0,0,.18)"}}>
+            <p style={{margin:"0 0 8px",fontSize:17,fontWeight:700,color:T1,fontFamily:FF}}>Delete &#x201C;{project.name}&#x201D;?</p>
+            <p style={{margin:"0 0 24px",fontSize:14,color:T2,fontFamily:FF,lineHeight:1.5}}>This will permanently delete this project. Artifacts published to the feed won&#x2019;t be removed.</p>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <GBtn sm onClick={()=>setConfirmDel(false)}>Cancel</GBtn>
+              <button onClick={()=>{onDelete&&onDelete(project.id);onBack();}} style={{background:"#DC2626",border:"none",color:"#FFF",borderRadius:100,padding:"9px 20px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:FF}}>Delete Project</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Presentation mode ─────────────────────────────────────────── */}
+      {presMode&&(
+        <div style={{position:"fixed",inset:0,background:"#080808",zIndex:2000,display:"flex",flexDirection:"column",fontFamily:FF}}>
+          <style>{`@keyframes pdFadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
+
+          {/* Slide area */}
+          <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",padding:"48px 80px",overflow:"hidden"}}>
+
+            {/* Title slide */}
+            {presIdx===0&&(
+              <div key="title" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:22,maxWidth:620,width:"100%",textAlign:"center",animation:"pdFadeUp .35s ease-out"}}>
+                <div style={{width:40,height:3,background:"rgba(255,255,255,.12)",borderRadius:2}}/>
+                <h1 style={{margin:0,fontSize:"clamp(28px,4.5vw,54px)",fontWeight:800,color:"#FFF",lineHeight:1.1,letterSpacing:"-0.03em"}}>{project.name}</h1>
+                {project.desc&&(<p style={{margin:0,fontSize:17,color:"rgba(255,255,255,.42)",lineHeight:1.65,maxWidth:460}}>{project.desc}</p>)}
+                {members.length>0&&(
+                  <div style={{display:"flex",gap:28,marginTop:8,flexWrap:"wrap",justifyContent:"center"}}>
+                    {members.map(m=>(
+                      <div key={m.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+                        <div style={{padding:2,background:"rgba(255,255,255,.08)",borderRadius:"50%",border:"1px solid rgba(255,255,255,.1)"}}>
+                          <Av user={m} size={58} src={m.image}/>
+                        </div>
+                        <div style={{textAlign:"center"}}>
+                          <p style={{margin:"0 0 2px",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.82)"}}>{m.name}</p>
+                          <p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.32)"}}>{m.title}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{display:"inline-flex",alignItems:"center",gap:10,marginTop:4,background:"rgba(255,255,255,.05)",borderRadius:100,padding:"8px 20px",border:"1px solid rgba(255,255,255,.07)"}}>
+                  <span style={{fontSize:13,color:"rgba(255,255,255,.32)"}}>{pa.length} artifact{pa.length!==1?"s":""}</span>
+                  <span style={{color:"rgba(255,255,255,.14)",fontSize:18,lineHeight:1}}>&#xB7;</span>
+                  <span style={{fontSize:13,color:"rgba(255,255,255,.32)"}}>Press &#x2192; to begin</span>
+                </div>
+              </div>
+            )}
+
+            {/* Artifact slides */}
+            {presIdx>0&&presIdx<=pa.length&&(
+              <div key={presIdx} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,maxWidth:"90vw",animation:"pdFadeUp .25s ease-out"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",maxHeight:"72vh"}}>
+                  <Thumb art={pa[presIdx-1]} h={Math.round(window.innerHeight*0.62)} onClick={()=>setLb(pa[presIdx-1])} darkMode/>
+                </div>
+                <p style={{margin:0,fontSize:14,color:"rgba(255,255,255,.45)",fontWeight:500,letterSpacing:".01em"}}>{pa[presIdx-1].name}</p>
+              </div>
+            )}
+
+            {/* Prev / next buttons */}
+            <button onClick={()=>setPresIdx(i=>Math.max(0,i-1))} disabled={presIdx===0} style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,.08)",border:"none",borderRadius:"50%",width:48,height:48,cursor:presIdx===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:presIdx===0?.2:0.75,transition:"opacity .2s"}}>
+              <MI name="arrow_back" size={22} style={{color:"#FFF"}}/>
+            </button>
+            <button onClick={()=>setPresIdx(i=>Math.min(total-1,i+1))} disabled={presIdx===total-1} style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,.08)",border:"none",borderRadius:"50%",width:48,height:48,cursor:presIdx===total-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:presIdx===total-1?.2:0.75,transition:"opacity .2s"}}>
+              <MI name="arrow_forward" size={22} style={{color:"#FFF"}}/>
+            </button>
+          </div>
+
+          {/* Footer bar */}
+          <div style={{height:52,borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",alignItems:"center",padding:"0 24px",flexShrink:0,gap:16}}>
+            <button onClick={()=>{setPresMode(false);setPresIdx(0);}} style={{background:"rgba(255,255,255,.08)",border:"none",borderRadius:100,padding:"6px 14px",color:"rgba(255,255,255,.55)",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,display:"flex",alignItems:"center",gap:6}}>
+              <MI name="close" size={15} style={{color:"rgba(255,255,255,.5)"}}/>Exit
+            </button>
+            <div style={{flex:1,display:"flex",justifyContent:"center",alignItems:"center",gap:5,overflow:"hidden"}}>
+              {Array.from({length:total}).map((_,i)=>(
+                <button key={i} onClick={()=>setPresIdx(i)} style={{width:presIdx===i?18:6,height:6,borderRadius:3,background:presIdx===i?"#FFF":"rgba(255,255,255,.18)",border:"none",cursor:"pointer",transition:"width .2s,background .2s",padding:0,flexShrink:0}}/>
               ))}
             </div>
-          )}
+            <span style={{fontSize:13,color:"rgba(255,255,255,.28)",fontFamily:FF,minWidth:40,textAlign:"right"}}>{presIdx+1} / {total}</span>
+          </div>
         </div>
-      </div>
+      )}
+
       {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode}/>)}
-      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)} isMobile={isMobile}/>)}
+      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
       {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
     </div>
@@ -1771,8 +2006,23 @@ export default function App(){
     };
   },[searchExp]);
 
+  const open=p=>{setProj(p);setView("project");};
+  const deleteProj=async projId=>{
+    try{
+      const deleted=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
+      if(!deleted.includes(String(projId)))deleted.push(String(projId));
+      localStorage.setItem("stash_deleted_projects",JSON.stringify(deleted));
+    }catch(e){}
+    const isUuid=typeof projId==="string"&&projId.includes("-");
+    if(isUuid){
+      try{ await deleteProject(projId); }
+      catch(e){ console.error("Failed to delete from Supabase (will stay deleted via localStorage):",e); }
+    }
+    setProjects(prev=>prev.filter(p=>p.id!==projId));
+  };
+
   if(view==="project"&&proj){
-    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} darkMode={darkMode}/>);
+    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} darkMode={darkMode}/>);
   }
 
   const toggleDarkMode=()=>{
@@ -1790,24 +2040,6 @@ export default function App(){
     setDarkMode(v=>!v);
   };
 
-  const open=p=>{setProj(p);setView("project");};
-  const deleteProj=async projId=>{
-    // Always record the deletion in localStorage so it survives reload even if Supabase fails
-    try{
-      const deleted=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
-      if(!deleted.includes(String(projId)))deleted.push(String(projId));
-      localStorage.setItem("stash_deleted_projects",JSON.stringify(deleted));
-    }catch(e){}
-    const isUuid=typeof projId==="string"&&projId.includes("-");
-    if(isUuid){
-      try{
-        await deleteProject(projId);
-      }catch(e){
-        console.error("Failed to delete from Supabase (will stay deleted via localStorage):",e);
-      }
-    }
-    setProjects(prev=>prev.filter(p=>p.id!==projId));
-  };
   const create=async p=>{
     try{
       const saved=await createProject(p);
@@ -1930,8 +2162,8 @@ export default function App(){
           </div>
           <div style={{flex:1}}/>
           <div style={{width:520,position:"relative"}}>
-            <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:18,pointerEvents:"none"}}>&#x2315;</span>
-            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?(darkMode?"#2A2A2A":"#FFF"):(darkMode?"#1A1A1A":"#F5F5F5"),border:`1px solid ${sf?(darkMode?"#444":BM):"transparent"}`,borderRadius:22,padding:"7px 16px 7px 44px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
+            <MI name="search" size={32} style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,pointerEvents:"none"}}/>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?(darkMode?"#2A2A2A":"#FFF"):(darkMode?"#1A1A1A":"#F5F5F5"),border:`1px solid ${sf?(darkMode?"#444":BM):"transparent"}`,borderRadius:22,padding:"7px 16px 7px 52px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
             {sf&&showTags&&(
               <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:darkMode?"#1A1A1A":"#FFF",border:`1px solid ${darkMode?"#333":BD}`,borderRadius:12,boxShadow:darkMode?"0 4px 20px rgba(0,0,0,.5)":"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto",transition:"all 0.3s"}}>
                 {matchingTags.length>0?(
@@ -1951,7 +2183,7 @@ export default function App(){
           </div>
           <div style={{flex:1}}/>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-            {view==="projects"&&(<><GBtn sm onClick={()=>setNewF(true)}>New Folder</GBtn><BBtn sm onClick={()=>setNewP(true)}>+ New Project</BBtn></>)}
+            {view==="projects"&&(<BBtn sm onClick={()=>setNewP(true)}>+ Project</BBtn>)}
             {view==="explore"&&(<BBtn sm onClick={()=>setUplFeed(true)}>+ Artifact</BBtn>)}
             <button onClick={()=>setView("profile")} style={{background:"none",border:"none",cursor:"pointer",borderRadius:"50%",padding:0}}><Av user={ME} size={32} src={ME.image}/></button>
           </div>
@@ -1968,13 +2200,13 @@ export default function App(){
               ))}
             </div>
             <div style={{flex:1}}/>
-            {view==="explore"&&(<button onClick={()=>setUplFeed(true)} style={{background:BK,color:"#FFF",border:"none",borderRadius:100,padding:"1px 12px",fontWeight:600,fontSize:24,cursor:"pointer",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>+</button>)}
+            {view==="explore"&&(<button onClick={()=>setUplFeed(true)} style={{background:BK,border:"none",borderRadius:100,cursor:"pointer",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center"}}><MI name="add" size={24} style={{color:"#FFF"}}/></button>)}
             <button onClick={()=>setView("profile")} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={ME} size={28} src={ME.image}/></button>
           </>)}
           {searchExp&&(<>
             <div style={{flex:1,position:"relative"}}>
-              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BM}`,borderRadius:22,padding:"7px 16px 7px 36px",color:T1,fontSize:14,outline:"none",fontFamily:FF}}/>
+              <MI name="search" size={32} style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,pointerEvents:"none"}}/>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search" style={{width:"100%",boxSizing:"border-box",background:"#F5F5F5",border:`1px solid ${BM}`,borderRadius:22,padding:"7px 16px 7px 52px",color:T1,fontSize:14,outline:"none",fontFamily:FF}}/>
             </div>
             <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{width:34,height:34,borderRadius:"50%",background:"#F0F0F0",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:T1,fontSize:16,flexShrink:0}}>&#x2715;</button>
           </>)}
@@ -1999,7 +2231,7 @@ export default function App(){
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} onSave={()=>toast("Saved to project")} isMobile={isMobile}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} onSaveToProject={addArtToProject} projects={projects} isMobile={isMobile}/>)}
       {isMobile&&!searchExp&&(
-        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",fontSize:32,fontWeight:600,fontFamily:FF,boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}>&#x2315;</button>
+        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}><MI name="search" size={28} style={{color:"#FFF"}}/></button>
       )}
       {isMobile&&searchExp&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#0D0D0D",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
@@ -2007,8 +2239,8 @@ export default function App(){
           <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid #333",background:"#1A1A1A",transition:"all 0.3s",flexShrink:0}}>
             <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#999",fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
             <div style={{flex:1,position:"relative"}}>
-              <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"#666",fontSize:16,pointerEvents:"none"}}>&#x2315;</span>
-              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 16px 8px 36px",fontSize:16,color:"#E8E8E8",outline:"none",fontFamily:FF,placeholder:"#999"}}/>
+              <MI name="search" size={32} style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"#666",pointerEvents:"none"}}/>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 16px 8px 50px",fontSize:16,color:"#E8E8E8",outline:"none",fontFamily:FF,placeholder:"#999"}}/>
             </div>
           </div>
           <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 20px"}}>
@@ -2040,8 +2272,8 @@ export default function App(){
                 <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   {["web","mobile","redesign","v2","checkout"].map(s=>(
-                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"#262626",border:"1px solid #333",borderRadius:8,padding:"12px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF}}>
-                      &#x2315; {s}
+                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",textAlign:"left",background:"#262626",border:"1px solid #333",borderRadius:100,padding:"12px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF}}>
+                      <MI name="search" size={18} style={{color:"#666",flexShrink:0}}/>{s}
                     </button>
                   ))}
                 </div>
