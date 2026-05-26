@@ -2236,23 +2236,33 @@ export default function App(){
   },[searchExp]);
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
-  // Close auth-callback popup (when this window IS the popup).
-  // Listen for SIGNED_IN via onAuthStateChange — more reliable than polling.
+  // Detect if this window is the OAuth popup (auth_callback=1 in URL + has opener).
+  const isAuthPopup=typeof window!=="undefined"&&
+    new URLSearchParams(window.location.search).get("auth_callback")==="1"&&
+    !!window.opener;
+
+  // Close auth-callback popup. Use postMessage to reliably notify the opener,
+  // then also check immediately in case Supabase already processed the hash.
   useEffect(()=>{
-    const params=new URLSearchParams(window.location.search);
-    if(params.get("auth_callback")==="1"&&window.opener){
+    if(!isAuthPopup)return;
+    const done=()=>{
+      try{window.opener.postMessage({type:"stash_auth_done"},window.location.origin);}catch(e){}
+      setTimeout(()=>window.close(),300);
+    };
+    // Check if Supabase already has the session (hash processed before effect ran)
+    supabase.auth.getSession().then(({data:{session}})=>{
+      if(session){done();return;}
+      // Otherwise wait for it
       const{data:{subscription}}=supabase.auth.onAuthStateChange((event)=>{
         if(event==="SIGNED_IN"||event==="TOKEN_REFRESHED"){
-          subscription.unsubscribe();
-          // Wait a beat so BroadcastChannel reaches the main window before we vanish
-          setTimeout(()=>window.close(),800);
+          subscription.unsubscribe();done();
         }
       });
-      // Hard fallback — close after 10s no matter what
-      const t=setTimeout(()=>window.close(),10000);
-      return ()=>{subscription.unsubscribe();clearTimeout(t);};
-    }
-  },[]);
+      const t=setTimeout(()=>window.close(),12000);
+      // cleanup captured in outer scope via closure — React only runs cleanup on unmount
+      return()=>{subscription.unsubscribe();clearTimeout(t);};
+    });
+  },[isAuthPopup]);
 
   // Load profile from an auth user object
   const loadProfile=useCallback(async(user)=>{
@@ -2288,20 +2298,27 @@ export default function App(){
     }
   },[]);
 
-  // Fallback auth sync: listen for localStorage writes from the OAuth popup.
-  // BroadcastChannel can be unreliable across popup windows; the storage event
-  // is guaranteed to fire whenever the popup writes the Supabase session key.
+  // Main window: listen for postMessage from the OAuth popup, then pick up the session.
+  // Also keep storage-event as belt-and-suspenders fallback.
   useEffect(()=>{
-    if(!configured)return;
+    if(!configured||isAuthPopup)return;
+    const onMsg=async e=>{
+      if(e.origin!==window.location.origin)return;
+      if(e.data?.type!=="stash_auth_done")return;
+      const{data:{session}}=await supabase.auth.getSession();
+      if(session?.user&&!authUser){await loadProfile(session.user);}
+      setShowLogin(false);
+    };
     const onStorage=async e=>{
       if(!e.key||!e.key.includes("supabase"))return;
       const{data:{session}}=await supabase.auth.getSession();
-      if(session?.user&&!authUser) await loadProfile(session.user);
+      if(session?.user&&!authUser){await loadProfile(session.user);}
       setShowLogin(false);
     };
+    window.addEventListener("message",onMsg);
     window.addEventListener("storage",onStorage);
-    return ()=>window.removeEventListener("storage",onStorage);
-  },[authUser,loadProfile]);
+    return()=>{window.removeEventListener("message",onMsg);window.removeEventListener("storage",onStorage);};
+  },[authUser,loadProfile,isAuthPopup]);
 
   // Subscribe to Supabase auth state
   useEffect(()=>{
@@ -2494,6 +2511,17 @@ export default function App(){
         );
       })
     :feed;
+
+  // Popup window — render nothing but a spinner; the useEffect above will close it
+  if(isAuthPopup) return (
+    <div style={{minHeight:"100vh",background:"#FFF",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{width:28,height:28,border:`3px solid ${BD}`,borderTopColor:BK,borderRadius:"50%",animation:"spin 0.7s linear infinite",margin:"0 auto 12px"}}/>
+        <p style={{color:T3,fontSize:13,margin:0}}>Signing you in&#x2026;</p>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
   if(loading) return (
     <div style={{minHeight:"100vh",background:PG,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>
