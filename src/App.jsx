@@ -2074,7 +2074,10 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
   );
 }
 
-function Profile({user,feed,darkMode}){
+function Profile({user,feed,darkMode,onEdit,onDelete,canDeleteItem,onSave,cols=3}){
+  const [editingTitle,setEditingTitle]=useState(false);
+  const [titleVal,setTitleVal]=useState(user.title||"Designer");
+  const [lb,setLb]=useState(null);
   // Match by auth UUID (future items) OR by name (existing items with legacy integer user_id)
   const uf=feed.filter(i=>
     (i.user_id&&user.id&&String(i.user_id)===String(user.id))||
@@ -2082,17 +2085,51 @@ function Profile({user,feed,darkMode}){
   ).filter(i=>i.type!=="mockup");
   const tc=darkMode?"#FFF":T1;
   const sc=darkMode?"rgba(255,255,255,0.5)":T2;
+  const saveTitle=()=>{
+    setEditingTitle(false);
+    if(user.onTitleSave) user.onTitleSave(titleVal.trim()||"Designer");
+  };
   return (
-    <div style={{maxWidth:1100,margin:"0 auto",padding:"48px 32px"}}>
+    <div style={{maxWidth:1200,margin:"0 auto",padding:"48px 32px 32px"}}>
+      {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:48}}>
         <Av user={user} size={80} src={user.image}/>
         <h1 style={{margin:"16px 0 4px",fontSize:22,fontWeight:700,color:tc,fontFamily:FF}}>{user.name}</h1>
-        <p style={{margin:"0 0 16px",fontSize:14,color:sc,fontFamily:FF}}>{user.title}</p>
-        <button style={{background:darkMode?"#2A2A2A":"#F0F0F0",border:`1px solid ${darkMode?"#444":BD}`,borderRadius:20,padding:"6px 16px",fontSize:13,color:sc,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,fontFamily:FF}}>&#x1F4AC; Slack</button>
+        {editingTitle?(
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+            <input
+              autoFocus
+              value={titleVal}
+              onChange={e=>setTitleVal(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter")saveTitle();if(e.key==="Escape")setEditingTitle(false);}}
+              style={{fontSize:14,color:tc,fontFamily:FF,background:"none",border:`1px solid ${BM}`,borderRadius:6,padding:"2px 8px",outline:"none",width:220,textAlign:"center"}}
+            />
+            <button onClick={saveTitle} style={{background:BK,border:"none",borderRadius:6,padding:"3px 10px",color:"#FFF",fontSize:12,cursor:"pointer",fontFamily:FF}}>Save</button>
+            <button onClick={()=>setEditingTitle(false)} style={{background:"none",border:"none",borderRadius:6,padding:"3px 8px",color:sc,fontSize:12,cursor:"pointer",fontFamily:FF}}>Cancel</button>
+          </div>
+        ):(
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+            <p style={{margin:0,fontSize:14,color:sc,fontFamily:FF}}>{titleVal}</p>
+            {user.id&&(
+              <button onClick={()=>setEditingTitle(true)} title="Edit title" style={{background:"none",border:"none",cursor:"pointer",padding:2,display:"flex",alignItems:"center",opacity:0.45}} onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0.45}>
+                <MI name="edit" size={14} style={{color:sc}}/>
+              </button>
+            )}
+          </div>
+        )}
       </div>
       {uf.length>0?(
-        <div style={{columns:"4 220px",gap:20}}>
-          {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}} darkMode={darkMode} currentUser={user}/>))}
+        <div style={{columns:cols,gap:24}}>
+          {uf.map(item=>(
+            <ExploreCard key={item.id} item={item}
+              onSave={onSave||(() =>{})}
+              onOpen={setLb}
+              onEdit={onEdit}
+              onDelete={canDeleteItem&&canDeleteItem(item)?onDelete:null}
+              darkMode={darkMode}
+              currentUser={user}
+            />
+          ))}
         </div>
       ):(
         <div style={{textAlign:"center",padding:"48px 0"}}>
@@ -2375,9 +2412,18 @@ export default function App(){
     toast("Signed out");
   },[]);
 
+  // Save profile title update
+  const saveProfileTitle=useCallback(async(newTitle)=>{
+    if(!profile)return;
+    const updated={...profile,title:newTitle};
+    setProfile(updated);
+    try{await upsertProfile({id:profile.id,email:profile.email,name:profile.name,initials:profile.initials,title:newTitle,avatar_url:profile.avatar_url,is_admin:profile.is_admin});}
+    catch(e){console.warn("Profile title save failed",e);}
+  },[profile]);
+
   // Dynamic current-user object (for artifact attribution)
   const currentUser=profile
-    ?{id:profile.id,name:profile.name,initials:profile.initials,title:profile.title||"Designer",image:profile.avatar_url}
+    ?{id:profile.id,name:profile.name,initials:profile.initials,title:profile.title||"Designer",image:profile.avatar_url,onTitleSave:saveProfileTitle}
     :ME;
 
   // Super-admin check
@@ -2649,7 +2695,7 @@ export default function App(){
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode}/>)}
-        {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode}/>)}
+        {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode} onEdit={setEditItem} onDelete={deleteArt} canDeleteItem={canDeleteItem} onSave={setSaveIt} cols={winW<=640?1:winW<=1024?2:3}/>)}
       </main>
       {showLogin&&(<LoginModal onClose={()=>setShowLogin(false)}/>)}
       {newP&&(<NewProjMdl onClose={()=>setNewP(false)} onCreate={create} isMobile={isMobile}/>)}
