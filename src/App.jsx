@@ -2272,21 +2272,6 @@ export default function App(){
     }
   },[]);
 
-  // Fallback auth sync: listen for localStorage writes from the OAuth popup.
-  // BroadcastChannel can be unreliable across popup windows; the storage event
-  // is guaranteed to fire whenever the popup writes the Supabase session key.
-  useEffect(()=>{
-    if(!configured)return;
-    const onStorage=async e=>{
-      if(!e.key||!e.key.includes("supabase"))return;
-      const{data:{session}}=await supabase.auth.getSession();
-      if(session?.user&&!authUser) await loadProfile(session.user);
-      setShowLogin(false);
-    };
-    window.addEventListener("storage",onStorage);
-    return ()=>window.removeEventListener("storage",onStorage);
-  },[authUser,loadProfile]);
-
   // Load profile from an auth user object
   const loadProfile=useCallback(async(user)=>{
     setAuthUser(user);
@@ -2320,6 +2305,21 @@ export default function App(){
       });
     }
   },[]);
+
+  // Fallback auth sync: listen for localStorage writes from the OAuth popup.
+  // BroadcastChannel can be unreliable across popup windows; the storage event
+  // is guaranteed to fire whenever the popup writes the Supabase session key.
+  useEffect(()=>{
+    if(!configured)return;
+    const onStorage=async e=>{
+      if(!e.key||!e.key.includes("supabase"))return;
+      const{data:{session}}=await supabase.auth.getSession();
+      if(session?.user&&!authUser) await loadProfile(session.user);
+      setShowLogin(false);
+    };
+    window.addEventListener("storage",onStorage);
+    return ()=>window.removeEventListener("storage",onStorage);
+  },[authUser,loadProfile]);
 
   // Subscribe to Supabase auth state
   useEffect(()=>{
