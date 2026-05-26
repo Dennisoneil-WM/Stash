@@ -1714,7 +1714,9 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
 function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,cols=3}){
   const [lb,setLb]=useState(null);
   const savedDark=useRef(false);
-  const realItems=feed.filter(item=>item.type!=="mockup");
+  const nonMockItems=feed.filter(item=>item.type!=="mockup");
+  // Show real items when available; fall back to seed mockups when the feed is empty
+  const realItems=nonMockItems.length>0?nonMockItems:feed;
   const isFiltered=!!srch.trim();
   const h1c=darkMode?"#FFFFFF":T1;
   const subc=darkMode?"rgba(255,255,255,0.5)":T2;
