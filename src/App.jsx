@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, configured, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile, signInWithGoogle, signOutUser, fetchProfile, upsertProfile } from "./supabase.js";
+import { supabase, configured, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, updateArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile, signInWithGoogle, signOutUser, fetchProfile, upsertProfile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -596,7 +596,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
                 <Fld label="Device Shell">
                   <div style={{display:"flex",gap:8}}>
                     {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
-                      <button key={o.v} onClick={()=>{art.deviceShell=o.v;setPreview([...preview]);}} style={{flex:1,background:"#FFF",border:`${art.deviceShell===o.v?2:1}px solid ${art.deviceShell===o.v?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:art.deviceShell===o.v?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                      <button key={o.v} onClick={()=>{art.deviceShell=o.v;setPreview([...preview]);}} style={{flex:1,background:"#FFF",border:`${art.deviceShell===o.v?2:1}px solid ${art.deviceShell===o.v?BK:BD}`,color:T1,borderRadius:100,padding:"8px 12px",fontSize:12,fontWeight:art.deviceShell===o.v?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                         {o.l}{art.deviceShell===o.v&&<MI name="check" size={13} style={{color:BK}}/>}
                       </button>
                     ))}
@@ -614,7 +614,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
                     {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>{
                       const sel=(art.align||"center")===o.v;
                       return (
-                        <button key={o.v} onClick={()=>{art.align=o.v;setPreview([...preview]);}} style={{flex:1,background:"#FFF",border:`${sel?2:1}px solid ${sel?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        <button key={o.v} onClick={()=>{art.align=o.v;setPreview([...preview]);}} style={{flex:1,background:"#FFF",border:`${sel?2:1}px solid ${sel?BK:BD}`,color:T1,borderRadius:100,padding:"8px 12px",fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                           {o.l}{sel&&<MI name="check" size={13} style={{color:BK}}/>}
                         </button>
                       );
@@ -752,7 +752,7 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,projects=[],isM
           <Fld label="Device Shell">
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {[{v:"auto",l:"Auto Detect"},{v:"mobile",l:"Mobile"},{v:"desktop",l:"Desktop"},{v:"none",l:"No Device"}].map(o=>(
-                <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:"#FFF",border:`${deviceShell===o.v?2:1}px solid ${deviceShell===o.v?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:deviceShell===o.v?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                <button key={o.v} onClick={()=>setDeviceShell(o.v)} style={{flex:1,minWidth:100,background:"#FFF",border:`${deviceShell===o.v?2:1}px solid ${deviceShell===o.v?BK:BD}`,color:T1,borderRadius:100,padding:"8px 12px",fontSize:12,fontWeight:deviceShell===o.v?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                   {o.l}{deviceShell===o.v&&<MI name="check" size={13} style={{color:BK}}/>}
                 </button>
               ))}
@@ -770,7 +770,7 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,projects=[],isM
               {[{v:"center",l:"Center"},{v:"left",l:"Left"}].map(o=>{
                 const sel=align===o.v;
                 return (
-                  <button key={o.v} onClick={()=>setAlign(o.v)} style={{flex:1,background:"#FFF",border:`${sel?2:1}px solid ${sel?BK:BD}`,color:T1,borderRadius:12,padding:"8px 12px",fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                  <button key={o.v} onClick={()=>setAlign(o.v)} style={{flex:1,background:"#FFF",border:`${sel?2:1}px solid ${sel?BK:BD}`,color:T1,borderRadius:100,padding:"8px 12px",fontSize:12,fontWeight:sel?700:500,cursor:"pointer",fontFamily:FF,transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                     {o.l}{sel&&<MI name="check" size={13} style={{color:BK}}/>}
                   </button>
                 );
@@ -1428,6 +1428,40 @@ function PhoneShell({children,bg="#000",darkMode,noBackground=false}){
   );
 }
 
+function JarLogo({size=28,dark=false}){
+  const ink=dark?"#FFFFFF":"#0D0D0D";
+  const fill=dark?"#0D0D0D":"#FFFFFF";
+  return (
+    <svg width={size} height={Math.round(size*1.18)} viewBox="0 0 60 71" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Lid */}
+      <rect x="15" y="1" width="30" height="14" rx="4" fill={ink}/>
+      {/* Jar body */}
+      <rect x="4" y="13" width="52" height="56" rx="13" fill={fill} stroke={ink} strokeWidth="3.5"/>
+      {/* Label band */}
+      <rect x="4" y="30" width="52" height="23" fill={ink}/>
+      {/* Cannabis leaf — white on label */}
+      <g transform="translate(30,41)" fill={fill}>
+        {/* Center leaf */}
+        <path d="M0,-10 L2,-4 L0,-5 L-2,-4 Z"/>
+        {/* Upper-left */}
+        <path d="M-1,-4 L-8,-8 L-5,-3 L-1,-4 Z"/>
+        {/* Upper-right */}
+        <path d="M1,-4 L8,-8 L5,-3 L1,-4 Z"/>
+        {/* Mid-left */}
+        <path d="M-2,-2 L-10,-4 L-6,-1 L-2,-2 Z"/>
+        {/* Mid-right */}
+        <path d="M2,-2 L10,-4 L6,-1 L2,-2 Z"/>
+        {/* Lower-left */}
+        <path d="M-2,0 L-9,2 L-5,3 L-2,0 Z"/>
+        {/* Lower-right */}
+        <path d="M2,0 L9,2 L5,3 L2,0 Z"/>
+        {/* Stem */}
+        <rect x="-1" y="1" width="2" height="6" rx="1"/>
+      </g>
+    </svg>
+  );
+}
+
 function LiveBar(){
   const [pulse,setPulse]=useState(true);
   useEffect(()=>{const t=setInterval(()=>setPulse(p=>!p),900);return ()=>clearInterval(t);},[]);
@@ -1440,7 +1474,7 @@ function LiveBar(){
       <div style={{flex:1,height:1,background:BD}}/>
       <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
         <span style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T2,fontFamily:FF,textTransform:"uppercase"}}>From The Stash</span>
-        <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:26,height:26,borderRadius:8,objectFit:"cover",display:"block",flexShrink:0}}/>
+        <JarLogo size={26}/>
       </div>
     </div>
   );
@@ -1582,8 +1616,15 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
 function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}){
   const [lb,setLb]=useState(null);
   const realItems=feed.filter(item=>item.type!=="mockup");
+  const h1c=darkMode?"#FFFFFF":T1;
+  const subc=darkMode?"rgba(255,255,255,0.5)":T2;
+  const divc=darkMode?"rgba(255,255,255,0.1)":BD;
   return (
     <div style={{padding:"16px 0"}}>
+      <div style={{padding:"64px 0 72px",marginBottom:32,textAlign:"center"}}>
+        <h1 style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:0.95,letterSpacing:"-0.03em",color:h1c,fontFamily:FF}}>Design the<br/>new standard.</h1>
+        <p style={{margin:"0 auto",fontSize:16,color:subc,fontFamily:FF,fontWeight:400,maxWidth:520,lineHeight:1.6}}>A shared space for explorations, shipped work, and everything worth stashing from the Weedmaps design team.</p>
+      </div>
       <LiveBar/>
       <div style={{columns:cols,gap:24}}>
         {realItems.map(item=>(
@@ -1603,10 +1644,10 @@ function ProjCard({project,onOpen,onDelete}){
   const stackCount=Math.min(thumbs.length,3);
   const stackCards=thumbs.slice(0,stackCount);
   return (
-    <div style={{borderRadius:20,overflow:"visible",background:BG,border:`1px solid ${hov?BM:BD}`,cursor:"pointer",transition:"box-shadow .2s, transform .2s, border-color .2s",boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",transform:hov?"scale(1.03)":"scale(1)",display:"flex",flexDirection:"column"}}
+    <div style={{borderRadius:20,overflow:"visible",background:BG,cursor:"pointer",transition:"box-shadow .2s, transform .2s",boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",transform:hov?"scale(1.03)":"scale(1)",display:"flex",flexDirection:"column"}}
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onOpen(project)}>
       {/* Preview area */}
-      <div style={{height:220,background:"#F2F2F2",borderRadius:"20px 20px 0 0",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{height:220,background:"#EFEFEF",borderRadius:"20px 20px 0 0",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
         {stackCount===0&&(
           <div style={{width:"72%",height:160,borderRadius:14,background:"linear-gradient(135deg,#E8E8E8,#D0D0D0)",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <span style={{fontSize:32,opacity:.3}}>&#x1F4C2;</span>
@@ -1665,7 +1706,7 @@ function ProjCard({project,onOpen,onDelete}){
   );
 }
 
-function Projects({projects,onOpen,onDelete}){
+function Projects({projects,onOpen,onDelete,darkMode}){
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20}}>
@@ -1955,9 +1996,7 @@ function LoginModal({onClose}){
   return (
     <Mdl title="" onClose={onClose} w={380}>
       <div style={{textAlign:"center",padding:"4px 0 8px"}}>
-        <div style={{width:56,height:56,background:BK,borderRadius:18,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
-          <MI name="diamond" size={28} style={{color:"#FFF"}}/>
-        </div>
+        <div style={{margin:"0 auto 20px",display:"flex",alignItems:"center",justifyContent:"center"}}><JarLogo size={56}/></div>
         <p style={{margin:"0 0 8px",fontSize:17,fontWeight:700,color:T1,fontFamily:FF}}>Sign in to contribute</p>
         <p style={{margin:"0 0 28px",fontSize:13,color:T2,fontFamily:FF,lineHeight:1.65}}>Use your Weedmaps Google account to upload artifacts and manage projects.<br/>Viewing is available to everyone.</p>
         {err&&(<p style={{margin:"0 0 16px",fontSize:13,color:"#DC2626",fontFamily:FF}}>{err}</p>)}
@@ -2020,19 +2059,37 @@ export default function App(){
     setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),2500);
   },[]);
 
+  // Apply any localStorage-saved display settings (crop/device/align) to an item.
+  // Used for seed data which never goes through dbToFeedItem.
+  const applyStoredSettings=useCallback(item=>{
+    try{
+      const stored=localStorage.getItem(`device_${item.id}`);
+      if(!stored) return item;
+      const p=JSON.parse(stored);
+      return {
+        ...item,
+        ...(p.deviceShell!==undefined&&{deviceShell:p.deviceShell||item.deviceShell}),
+        ...(p.mobileBg!==undefined&&{mobileBg:p.mobileBg||item.mobileBg}),
+        ...('crop' in p&&{crop:p.crop}),
+        ...(p.align!==undefined&&{align:p.align||item.align}),
+      };
+    }catch(e){return item;}
+  },[]);
+
   useEffect(()=>{
-    if(!configured){setProjects(SPROJ);setFeed(SFEED);setLoading(false);return;}
+    if(!configured){setProjects(SPROJ);setFeed(SFEED.map(applyStoredSettings));setLoading(false);return;}
     const deletedProjIds=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
     Promise.all([fetchProjects(),fetchFeed()])
       .then(([projs,feedItems])=>{
         const filteredProjs=projs.filter(p=>!deletedProjIds.includes(String(p.id)));
         setProjects(filteredProjs.length?filteredProjs:SPROJ);
         const realItems=feedItems.filter(f=>f.type!=="mockup");
-        setFeed(realItems.length?[...realItems,...SFEED]:SFEED);
+        // SFEED items go through applyStoredSettings so saved edits survive reload
+        setFeed(realItems.length?[...realItems,...SFEED.map(applyStoredSettings)]:SFEED.map(applyStoredSettings));
       })
-      .catch(()=>{setProjects(SPROJ);setFeed(SFEED);})
+      .catch(()=>{setProjects(SPROJ);setFeed(SFEED.map(applyStoredSettings));})
       .finally(()=>setLoading(false));
-  },[]);
+  },[applyStoredSettings]);
 
   useEffect(()=>{
     const onResize=()=>{const w=window.innerWidth;setIsMobile(w<=640);setWinW(w);};
@@ -2232,21 +2289,24 @@ export default function App(){
   };
 
   const saveEdit=async updated=>{
-    // Always persist display settings to localStorage so they survive reload
-    // regardless of whether Supabase succeeds (belt-and-suspenders)
+    // Always persist to localStorage first — this is the reliable source of truth
+    // for display settings (crop/device/align) regardless of DB schema state
     try{
       localStorage.setItem(`device_${updated.id}`,JSON.stringify({
         deviceShell:updated.deviceShell,
         mobileBg:updated.mobileBg,
-        crop:updated.crop,
+        crop:updated.crop,        // can be null (clearing a crop)
         align:updated.align||"center",
       }));
     }catch(e){}
+    // Always update in-memory state immediately so UI reflects changes now
+    setFeed(prev=>prev.map(f=>String(f.id)===String(updated.id)?{...f,...updated}:f));
     const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
     if(isUuid){
       try{
         const r=await updateFeedItem(updated.id,updated);
-        setFeed(prev=>prev.map(f=>f.id===r.id?r:f));
+        // Replace with DB-confirmed version (has canonical field names)
+        setFeed(prev=>prev.map(f=>f.id===r.id?{...r,crop:updated.crop,deviceShell:updated.deviceShell,align:updated.align,mobileBg:updated.mobileBg}:f));
         toast("Changes saved");
         return;
       }catch(e){
@@ -2307,7 +2367,7 @@ export default function App(){
       <nav style={{background:darkMode?"#1A1A1A":"#FFF",borderBottom:`1px solid ${darkMode?"#333":"#E8E8E8"}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100,transition:"background 0.3s, border-color 0.3s"}}>
         {!isMobile&&(<>
           <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,background:"none",border:"none",cursor:"pointer",padding:0}}>
-            <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+            <JarLogo size={26} dark={darkMode}/>
             <span style={{fontFamily:FF,fontWeight:800,fontSize:15,letterSpacing:".04em",color:darkMode?"#FFF":T1,textTransform:"uppercase",transition:"color 0.3s"}}>The Stash</span>
           </button>
           <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,transition:"background 0.3s"}}>
@@ -2357,8 +2417,8 @@ export default function App(){
         </>)}
         {isMobile&&(<>
           {!searchExp&&(<>
-            <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",justifyContent:"center",width:isMobile?42:28,height:isMobile?42:28,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0,transition:"width 0.3s, height 0.3s"}}>
-              <img src="https://cdn.builder.io/api/v1/image/assets%2Fc65332bdb1b641359feb3e4d8ecc47de%2F74e1336a6c56406e884d27bcf1b26ce4?format=webp&width=800&height=1200" alt="The Stash" style={{width:isMobile?42:28,height:isMobile?42:28,borderRadius:"50%",objectFit:"cover",display:"block",transition:"width 0.3s, height 0.3s"}}/>
+            <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",justifyContent:"center",background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
+              <JarLogo size={isMobile?36:26} dark={darkMode}/>
             </button>
             <div style={{flex:1}}/>
             <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,flexShrink:0,transition:"background 0.3s"}}>
@@ -2381,7 +2441,7 @@ export default function App(){
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
-        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj}/>)}
+        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode}/>)}
       </main>
       {showLogin&&(<LoginModal onClose={()=>setShowLogin(false)}/>)}

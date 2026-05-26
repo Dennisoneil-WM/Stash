@@ -183,7 +183,67 @@ export async function insertArtifact(projectId, pageId, art, userId) {
   return dbToArtifact(data);
 }
 
-function dbToArtifact(r) {
+export async function updateArtifact(id, updates) {
+  // Try to update DB columns; fall back to localStorage if columns don't exist yet
+  const updateObj = {
+    name: updates.name,
+    device_shell: updates.deviceShell || "auto",
+    crop: updates.crop !== undefined ? updates.crop : null,
+    align: updates.align || "center",
+    is_mobile: updates.isMobile || false,
+  };
+
+  let { data, error } = await supabase
+    .from("artifacts")
+    .update(updateObj)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error && (error.message.includes("device_shell") || error.message.includes("crop") || error.message.includes("align"))) {
+    const basicUpdate = { name: updates.name };
+    const result = await supabase.from("artifacts").update(basicUpdate).eq("id", id).select().single();
+    if (result.error) throw result.error;
+    data = result.data;
+  } else if (error) {
+    throw error;
+  }
+
+  // Always persist display settings to localStorage
+  try {
+    localStorage.setItem(`art_${id}`, JSON.stringify({
+      deviceShell: updates.deviceShell,
+      crop: updates.crop,
+      align: updates.align || "center",
+    }));
+  } catch(e) {}
+
+  return dbToArtifact(data, updates);
+}
+
+function dbToArtifact(r, overrides) {
+  let deviceShell = r.device_shell || "auto";
+  let crop = r.crop !== undefined ? r.crop : null;
+  let align = r.align || "center";
+
+  // Read from localStorage as fallback (survives DB column gaps)
+  try {
+    const stored = localStorage.getItem(`art_${r.id}`);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.deviceShell !== undefined) deviceShell = parsed.deviceShell;
+      if ('crop' in parsed) crop = parsed.crop;
+      if (parsed.align !== undefined) align = parsed.align;
+    }
+  } catch(e) {}
+
+  // In-memory overrides take top priority (right after a save)
+  if (overrides) {
+    if (overrides.deviceShell !== undefined) deviceShell = overrides.deviceShell;
+    if ('crop' in overrides) crop = overrides.crop;
+    if (overrides.align !== undefined) align = overrides.align;
+  }
+
   return {
     id: r.id,
     name: r.name,
@@ -192,6 +252,9 @@ function dbToArtifact(r) {
     thumb: r.thumb,
     viewport: r.viewport,
     isMobile: r.is_mobile,
+    deviceShell,
+    crop,
+    align,
     user_id: r.user_id || null,
     user: { name: r.user_name, initials: r.user_initials },
   };
@@ -309,10 +372,10 @@ function dbToFeedItem(r) {
     const stored = localStorage.getItem(`device_${r.id}`);
     if (stored) {
       const parsed = JSON.parse(stored);
-      deviceShell = parsed.deviceShell || deviceShell;
-      mobileBg = parsed.mobileBg || mobileBg;
-      crop = parsed.crop || crop;
-      align = parsed.align || align;
+      if (parsed.deviceShell !== undefined) deviceShell = parsed.deviceShell || deviceShell;
+      if (parsed.mobileBg !== undefined) mobileBg = parsed.mobileBg || mobileBg;
+      if ('crop' in parsed) crop = parsed.crop; // allow null to clear a crop
+      if (parsed.align !== undefined) align = parsed.align || align;
     }
   } catch(e) {}
 
