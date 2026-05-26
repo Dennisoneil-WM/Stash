@@ -2197,7 +2197,9 @@ export default function App(){
   useEffect(()=>{
     if(!configured){setProjects(SPROJ);setFeed(SFEED.map(applyStoredSettings));setLoading(false);return;}
     const deletedProjIds=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
-    Promise.all([fetchProjects(),fetchFeed()])
+    // Race against a 6-second timeout so a hung Supabase connection never blocks the UI
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),6000));
+    Promise.race([Promise.all([fetchProjects(),fetchFeed()]),timeout])
       .then(([projs,feedItems])=>{
         const filteredProjs=projs.filter(p=>!deletedProjIds.includes(String(p.id)));
         setProjects(filteredProjs.length?filteredProjs:SPROJ);
