@@ -2241,27 +2241,28 @@ export default function App(){
     new URLSearchParams(window.location.search).get("auth_callback")==="1"&&
     !!window.opener;
 
-  // Close auth-callback popup. Use postMessage to reliably notify the opener,
-  // then also check immediately in case Supabase already processed the hash.
+  // Close auth-callback popup and notify the main window.
   useEffect(()=>{
     if(!isAuthPopup)return;
+    let fired=false;
     const done=()=>{
+      if(fired)return; fired=true;
       try{window.opener.postMessage({type:"stash_auth_done"},window.location.origin);}catch(e){}
       setTimeout(()=>window.close(),300);
     };
-    // Check if Supabase already has the session (hash processed before effect ran)
-    supabase.auth.getSession().then(({data:{session}})=>{
-      if(session){done();return;}
-      // Otherwise wait for it
-      const{data:{subscription}}=supabase.auth.onAuthStateChange((event)=>{
-        if(event==="SIGNED_IN"||event==="TOKEN_REFRESHED"){
-          subscription.unsubscribe();done();
-        }
-      });
-      const t=setTimeout(()=>window.close(),12000);
-      // cleanup captured in outer scope via closure — React only runs cleanup on unmount
-      return()=>{subscription.unsubscribe();clearTimeout(t);};
+    // Register listener FIRST so we never miss the SIGNED_IN event.
+    const{data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
+      if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&session){
+        subscription.unsubscribe(); done();
+      }
     });
+    // Also check immediately — session may already be set if hash was processed
+    // before this effect ran, or if the user was already logged in.
+    supabase.auth.getSession().then(({data:{session}})=>{
+      if(session) done();
+    });
+    const t=setTimeout(()=>window.close(),12000);
+    return()=>{subscription.unsubscribe();clearTimeout(t);};
   },[isAuthPopup]);
 
   // Load profile from an auth user object
