@@ -1711,29 +1711,45 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   );
 }
 
-function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,cols=3}){
+function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,cols=3}){
   const [lb,setLb]=useState(null);
   const savedDark=useRef(false);
   const realItems=feed.filter(item=>item.type!=="mockup");
+  const isFiltered=!!srch.trim();
   const h1c=darkMode?"#FFFFFF":T1;
   const subc=darkMode?"rgba(255,255,255,0.5)":T2;
-  const divc=darkMode?"rgba(255,255,255,0.1)":BD;
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{padding:"64px 0 72px",marginBottom:32,textAlign:"center"}}>
-        <h1
-          onMouseEnter={()=>{savedDark.current=darkMode;onDarkMode&&onDarkMode(true);}}
-          onMouseLeave={()=>{onDarkMode&&onDarkMode(savedDark.current);}}
-          style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:0.95,letterSpacing:"-0.03em",color:h1c,fontFamily:FF,cursor:"default",transition:"color 0.3s"}}
-        >Design the<br/>new standard.</h1>
-        <p style={{margin:"0 auto",fontSize:16,color:subc,fontFamily:FF,fontWeight:400,maxWidth:520,lineHeight:1.6}}>A shared space for explorations, shipped work, and everything worth stashing from the Weedmaps design team.</p>
-      </div>
-      <LiveBar darkMode={darkMode}/>
-      <div style={{columns:cols,gap:24}}>
-        {realItems.map(item=>(
-          <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
-        ))}
-      </div>
+      {!isFiltered&&(
+        <div style={{padding:"64px 0 72px",marginBottom:32,textAlign:"center"}}>
+          <h1
+            onMouseEnter={()=>{savedDark.current=darkMode;onDarkMode&&onDarkMode(true);}}
+            onMouseLeave={()=>{onDarkMode&&onDarkMode(savedDark.current);}}
+            style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:0.95,letterSpacing:"-0.03em",color:h1c,fontFamily:FF,cursor:"default",transition:"color 0.3s"}}
+          >Design the<br/>new standard.</h1>
+          <p style={{margin:"0 auto",fontSize:16,color:subc,fontFamily:FF,fontWeight:400,maxWidth:520,lineHeight:1.6}}>A shared space for explorations, shipped work, and everything worth stashing from the Weedmaps design team.</p>
+        </div>
+      )}
+      {isFiltered&&(
+        <div style={{padding:"28px 0 20px"}}>
+          <p style={{margin:0,fontSize:14,color:subc,fontFamily:FF}}>
+            <span style={{fontWeight:600,color:h1c}}>{realItems.length}</span> result{realItems.length!==1?"s":""} for <span style={{fontWeight:600,color:h1c}}>&#x201C;{srch}&#x201D;</span>
+          </p>
+        </div>
+      )}
+      {!isFiltered&&(<LiveBar darkMode={darkMode}/>)}
+      {isFiltered&&realItems.length===0?(
+        <div style={{textAlign:"center",padding:"80px 0"}}>
+          <p style={{margin:"0 0 10px",fontSize:22,fontWeight:700,color:h1c,fontFamily:FF}}>No results</p>
+          <p style={{margin:0,fontSize:14,color:subc,fontFamily:FF}}>Nothing found for &#x201C;{srch}&#x201D;</p>
+        </div>
+      ):(
+        <div style={{columns:cols,gap:24}}>
+          {realItems.map(item=>(
+            <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
+          ))}
+        </div>
+      )}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)} onTagClick={t=>{onSearch&&onSearch(t);}}/>)}
     </div>
   );
@@ -2439,6 +2455,16 @@ export default function App(){
     const matchTag=!srch||(p.tags||[]).some(t=>t.includes(srch.toLowerCase()));
     return matchName||matchTag;
   });
+  const filtFeed=srch.trim()
+    ?feed.filter(item=>{
+        const q=srch.toLowerCase();
+        return (
+          (item.name||"").toLowerCase().includes(q)||
+          (item.tags||[]).some(t=>t.includes(q))||
+          (item.desc||"").toLowerCase().includes(q)
+        );
+      })
+    :feed;
 
   if(loading) return (
     <div style={{minHeight:"100vh",background:PG,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FF}}>
@@ -2469,12 +2495,13 @@ export default function App(){
           {!deskSearch ? (
             <button
               onClick={()=>{setDeskSearch(true);setTimeout(()=>deskSearchRef.current&&deskSearchRef.current.focus(),60);}}
-              style={{display:"flex",alignItems:"center",gap:6,background:darkMode?"#2A2A2A":"#F0F0F0",border:"1px solid transparent",borderRadius:20,padding:"6px 14px",color:darkMode?"#AAA":T2,fontSize:14,cursor:"pointer",fontFamily:FF,flexShrink:0,transition:"background 0.2s, color 0.2s"}}
+              style={{display:"flex",alignItems:"center",gap:6,background:srch?(darkMode?"#333":"#E8E8E8"):(darkMode?"#2A2A2A":"#F0F0F0"),border:srch?`1px solid ${darkMode?"#666":BM}`:"1px solid transparent",borderRadius:20,padding:"6px 14px",color:srch?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontSize:14,cursor:"pointer",fontFamily:FF,flexShrink:0,transition:"background 0.2s, color 0.2s, border-color 0.2s"}}
               onMouseEnter={e=>{e.currentTarget.style.background=darkMode?"#333":"#E8E8E8";e.currentTarget.style.color=darkMode?"#FFF":T1;}}
-              onMouseLeave={e=>{e.currentTarget.style.background=darkMode?"#2A2A2A":"#F0F0F0";e.currentTarget.style.color=darkMode?"#AAA":T2;}}
+              onMouseLeave={e=>{e.currentTarget.style.background=srch?(darkMode?"#333":"#E8E8E8"):(darkMode?"#2A2A2A":"#F0F0F0");e.currentTarget.style.color=srch?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2);}}
             >
               <MI name="search" size={18} style={{color:"inherit"}}/>
-              <span>Search</span>
+              <span>{srch?`"${srch}"` : "Search"}</span>
+              {srch&&(<button onMouseDown={e=>{e.preventDefault();e.stopPropagation();setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"inherit",fontSize:14,lineHeight:1,padding:"0 0 0 4px",display:"flex",alignItems:"center"}}>&#x2715;</button>)}
             </button>
           ) : (
             <div style={{width:460,position:"relative",flexShrink:0}}>
@@ -2555,7 +2582,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
+        {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode}/>)}
       </main>
