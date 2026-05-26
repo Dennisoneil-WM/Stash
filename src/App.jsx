@@ -2241,25 +2241,32 @@ export default function App(){
     new URLSearchParams(window.location.search).get("auth_callback")==="1"&&
     !!window.opener;
 
-  // Close auth-callback popup and notify the main window.
+  // Close auth-callback popup and send tokens to main window via postMessage.
+  // Sending the actual tokens avoids any localStorage sync timing issues.
   useEffect(()=>{
     if(!isAuthPopup)return;
     let fired=false;
-    const done=()=>{
+    const done=(session)=>{
       if(fired)return; fired=true;
-      try{window.opener.postMessage({type:"stash_auth_done"},window.location.origin);}catch(e){}
+      try{
+        window.opener.postMessage({
+          type:"stash_auth_done",
+          access_token:session.access_token,
+          refresh_token:session.refresh_token,
+        },window.location.origin);
+      }catch(e){}
       setTimeout(()=>window.close(),300);
     };
     // Register listener FIRST so we never miss the SIGNED_IN event.
     const{data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
       if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&session){
-        subscription.unsubscribe(); done();
+        subscription.unsubscribe(); done(session);
       }
     });
     // Also check immediately — session may already be set if hash was processed
-    // before this effect ran, or if the user was already logged in.
+    // before this effect ran.
     supabase.auth.getSession().then(({data:{session}})=>{
-      if(session) done();
+      if(session) done(session);
     });
     const t=setTimeout(()=>window.close(),12000);
     return()=>{subscription.unsubscribe();clearTimeout(t);};
@@ -2299,26 +2306,32 @@ export default function App(){
     }
   },[]);
 
-  // Main window: listen for postMessage from the OAuth popup, then pick up the session.
-  // Also keep storage-event as belt-and-suspenders fallback.
+  // Main window: receive tokens from OAuth popup via postMessage and set session directly.
+  // Using setSession() avoids any localStorage sync timing issues between windows.
   useEffect(()=>{
     if(!configured||isAuthPopup)return;
     const onMsg=async e=>{
       if(e.origin!==window.location.origin)return;
       if(e.data?.type!=="stash_auth_done")return;
-      const{data:{session}}=await supabase.auth.getSession();
-      if(session?.user&&!authUser){await loadProfile(session.user);}
       setShowLogin(false);
-    };
-    const onStorage=async e=>{
-      if(!e.key||!e.key.includes("supabase"))return;
-      const{data:{session}}=await supabase.auth.getSession();
-      if(session?.user&&!authUser){await loadProfile(session.user);}
-      setShowLogin(false);
+      try{
+        if(e.data.access_token&&e.data.refresh_token){
+          const{data,error}=await supabase.auth.setSession({
+            access_token:e.data.access_token,
+            refresh_token:e.data.refresh_token,
+          });
+          if(!error&&data?.session?.user&&!authUser){
+            await loadProfile(data.session.user);
+          }
+        }else{
+          // Fallback: try reading from storage
+          const{data:{session}}=await supabase.auth.getSession();
+          if(session?.user&&!authUser) await loadProfile(session.user);
+        }
+      }catch(err){console.warn("Auth sync error:",err);}
     };
     window.addEventListener("message",onMsg);
-    window.addEventListener("storage",onStorage);
-    return()=>{window.removeEventListener("message",onMsg);window.removeEventListener("storage",onStorage);};
+    return()=>window.removeEventListener("message",onMsg);
   },[authUser,loadProfile,isAuthPopup]);
 
   // Subscribe to Supabase auth state
