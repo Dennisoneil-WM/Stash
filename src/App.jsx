@@ -2254,11 +2254,19 @@ export default function App(){
   },[searchExp]);
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
-  // Close auth-callback popup (when this window IS the popup)
+  // Close auth-callback popup (when this window IS the popup).
+  // Poll for the session instead of a fixed timeout — the OAuth code exchange
+  // can take 1-3s and closing too early drops the BroadcastChannel message.
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     if(params.get("auth_callback")==="1"&&window.opener){
-      setTimeout(()=>window.close(),400);
+      let tries=0;
+      const iv=setInterval(async()=>{
+        tries++;
+        const {data:{session}}=await supabase.auth.getSession();
+        if(session||tries>25){clearInterval(iv);setTimeout(()=>window.close(),300);}
+      },200);
+      return ()=>clearInterval(iv);
     }
   },[]);
 
