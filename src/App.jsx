@@ -1578,7 +1578,7 @@ function LiveBar({darkMode=false}){
   );
 }
 
-function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
+function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
   const [hov,setHov]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const [visible,setVisible]=useState(false);
@@ -1598,10 +1598,6 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   const hasCrop=item.type==="video"&&!!item.crop;
   const isMobileMedia=(item.type==="image"||item.type==="gif"||(item.type==="video"&&!hasCrop))&&item.src&&showMobile&&!showNoDevice;
   const showCroppedVideo=hasCrop&&item.src;
-  const vidCropW=item.crop?item.crop.r-item.crop.l:null;
-  const vidCropH=item.crop?item.crop.b-item.crop.t:null;
-
-  // Timeout to detect iframe load failure (X-Frame-Options blocking)
   const ifRef=useRef();
   useEffect(()=>{
     if(isMobileWebsite&&ifRef.current&&!ifErr){
@@ -1610,108 +1606,118 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
     }
   },[isMobileWebsite,ifErr]);
 
+  // Resolve avatar: if this item belongs to the signed-in user, use their Google photo
+  const userImage=item.user?.name===currentUser?.name?currentUser?.image:null;
+  const footerBg=darkMode?"#111118":"#FFF";
+  const showFooter=item.type!=="mockup";
+
   return (
     <div
       ref={cardRef}
       style={{breakInside:"avoid",marginBottom:24,borderRadius:24,overflow:"hidden",
-              position:"relative",cursor:"pointer",background:darkMode?"#1A1A22":"#EBEBEB",
+              position:"relative",background:darkMode?"#1A1A22":"#EBEBEB",
               opacity:visible?1:0,
               transform:visible?(hov?"scale(1.03)":"translateY(0)"):"translateY(24px)",
               boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
               transition:"opacity 0.45s ease, transform 0.45s ease, box-shadow .2s"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
-      onClick={()=>onOpen(item)}
     >
-      {isMock && (
-        <div style={{padding:item.mock.device==="iphone"?"20px 28px 20px":item.mock.device==="ipad"?"14px 12px":"10px 8px",background:darkMode?(item.mock.device==="iphone"?"#14141C":item.mock.device==="ipad"?"#111119":"#0F0F17"):(item.mock.device==="iphone"?"#F0F0F0":item.mock.device==="ipad"?"#EAEAEA":"#E6E6E6")}}>
-          <MockSVG mock={item.mock}/>
-        </div>
-      )}
-      {isMobileMedia && (
-        <PhoneShell bg={item.mobileBg||"#000"} darkMode={darkMode}>
-          {(item.type==="image"||item.type==="gif") && (
-            <img src={item.src} alt={item.name}
-              style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-          )}
-          {item.type==="video" && (
-            <video src={item.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}
-              muted loop playsInline autoPlay/>
-          )}
-        </PhoneShell>
-      )}
-      {isMobileWebsite && (
-        <PhoneShell bg={item.mobileBg||"#FFF"} darkMode={darkMode}>
-          {ifErr ? (
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:445,padding:20,textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:12,color:T3}}>&#x26A0;</div>
-              <p style={{margin:"0 0 8px",fontSize:13,fontWeight:600,color:T1}}>Cannot embed this site</p>
-              <p style={{margin:"0 0 14px",fontSize:12,color:T2}}>This website blocks iframe embedding</p>
-              <a href={item.src} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:"#0066CC",textDecoration:"none",fontWeight:500,cursor:"pointer"}} onClick={e=>e.stopPropagation()}>Open in new tab &#x2192;</a>
-            </div>
-          ) : (
-            <div style={{position:"relative",height:445,overflow:"hidden"}}>
-              <div style={{
-                position:"absolute",top:0,left:0,
-                width:390,height:844,
-                transform:"scale("+220/390+")",
-                transformOrigin:"top left",
-                pointerEvents:"none",
-              }}>
-                <iframe ref={ifRef} src={item.src} title={item.name}
-                  style={{width:390,height:844,border:"none",display:"block"}}
-                  sandbox="allow-scripts allow-same-origin"
-                  onError={()=>setIfErr(true)}
-                  onLoad={()=>setIfErr(false)}/>
+      {/* ── Media area — click opens lightbox ─────────────────────── */}
+      <div style={{position:"relative",cursor:"pointer"}} onClick={()=>onOpen(item)}>
+        {isMock && (
+          <div style={{padding:item.mock.device==="iphone"?"20px 28px 20px":item.mock.device==="ipad"?"14px 12px":"10px 8px",background:darkMode?(item.mock.device==="iphone"?"#14141C":item.mock.device==="ipad"?"#111119":"#0F0F17"):(item.mock.device==="iphone"?"#F0F0F0":item.mock.device==="ipad"?"#EAEAEA":"#E6E6E6")}}>
+            <MockSVG mock={item.mock}/>
+          </div>
+        )}
+        {isMobileMedia && (
+          <PhoneShell bg={item.mobileBg||"#000"} darkMode={darkMode}>
+            {(item.type==="image"||item.type==="gif") && (
+              <img src={item.src} alt={item.name}
+                style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            )}
+            {item.type==="video" && (
+              <video src={item.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}
+                muted loop playsInline autoPlay/>
+            )}
+          </PhoneShell>
+        )}
+        {isMobileWebsite && (
+          <PhoneShell bg={item.mobileBg||"#FFF"} darkMode={darkMode}>
+            {ifErr ? (
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:445,padding:20,textAlign:"center"}}>
+                <div style={{fontSize:32,marginBottom:12,color:T3}}>&#x26A0;</div>
+                <p style={{margin:"0 0 8px",fontSize:13,fontWeight:600,color:T1}}>Cannot embed this site</p>
+                <p style={{margin:"0 0 14px",fontSize:12,color:T2}}>This website blocks iframe embedding</p>
+                <a href={item.src} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:"#0066CC",textDecoration:"none",fontWeight:500,cursor:"pointer"}} onClick={e=>e.stopPropagation()}>Open in new tab &#x2192;</a>
               </div>
-            </div>
-          )}
-        </PhoneShell>
-      )}
-      {showNoDevice && (item.type==="image"||item.type==="gif"||item.type==="video")&&item.src && (
-        <>
-          {(item.type==="image"||item.type==="gif") && (
-            <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
-              <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",objectPosition:!item.crop&&item.align==="left"?"left center":"center",display:"block"}}/>
-            </div>
-          )}
-          {item.type==="video" && !hasCrop && (
-            <div style={{width:"100%",overflow:"hidden",background:"#000"}}>
-              <video src={item.src} style={{width:"100%",display:"block"}} muted loop playsInline autoPlay/>
-            </div>
-          )}
-        </>
-      )}
-      {showCroppedVideo && (
-        <CroppedVideo src={item.src} crop={item.crop}/>
-      )}
-      {!isMock&&!isMobileMedia&&!isMobileWebsite&&!showNoDevice&&!showCroppedVideo && (
-        <Thumb art={item} h={320} darkMode={darkMode} bare/>
-      )}
-      {hov&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.1)",
-                     display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10,gap:6}}>
-          {onEdit&&item.type!=="mockup"&&(
-            <button
-              onClick={e=>{e.stopPropagation();onEdit(item);}}
+            ) : (
+              <div style={{position:"relative",height:445,overflow:"hidden"}}>
+                <div style={{position:"absolute",top:0,left:0,width:390,height:844,transform:"scale("+(220/390)+")",transformOrigin:"top left",pointerEvents:"none"}}>
+                  <iframe ref={ifRef} src={item.src} title={item.name}
+                    style={{width:390,height:844,border:"none",display:"block"}}
+                    sandbox="allow-scripts allow-same-origin"
+                    onError={()=>setIfErr(true)}
+                    onLoad={()=>setIfErr(false)}/>
+                </div>
+              </div>
+            )}
+          </PhoneShell>
+        )}
+        {showNoDevice && (item.type==="image"||item.type==="gif"||item.type==="video")&&item.src && (
+          <>
+            {(item.type==="image"||item.type==="gif") && (
+              <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
+                <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",objectPosition:!item.crop&&item.align==="left"?"left center":"center",display:"block"}}/>
+              </div>
+            )}
+            {item.type==="video" && !hasCrop && (
+              <div style={{width:"100%",overflow:"hidden",background:"#000"}}>
+                <video src={item.src} style={{width:"100%",display:"block"}} muted loop playsInline autoPlay/>
+              </div>
+            )}
+          </>
+        )}
+        {showCroppedVideo && (<CroppedVideo src={item.src} crop={item.crop}/>)}
+        {!isMock&&!isMobileMedia&&!isMobileWebsite&&!showNoDevice&&!showCroppedVideo && (
+          <Thumb art={item} h={320} darkMode={darkMode} bare/>
+        )}
+        {hov&&(
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.1)",
+                       display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10,gap:6}}>
+            {onEdit&&item.type!=="mockup"&&(
+              <button onClick={e=>{e.stopPropagation();onEdit(item);}}
+                style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,
+                        padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Edit</button>
+            )}
+            <button onClick={e=>{e.stopPropagation();onSave(item);}}
               style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,
-                      padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,
-                      cursor:"pointer",fontFamily:FF}}
-            >Edit</button>
+                      padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Metadata footer ───────────────────────────────────────── */}
+      {showFooter&&(
+        <div onClick={e=>e.stopPropagation()} style={{background:footerBg,padding:"12px 14px 14px",borderTop:`1px solid ${darkMode?"rgba(255,255,255,0.05)":BD}`}}>
+          <p style={{margin:"0 0 4px",fontSize:14,fontWeight:600,color:darkMode?"#FFF":T1,fontFamily:FF,lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.name}</p>
+          {item.desc&&(<p style={{margin:"0 0 7px",fontSize:12,color:darkMode?"rgba(255,255,255,0.5)":T2,fontFamily:FF,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.desc}</p>)}
+          {item.tags&&item.tags.length>0&&(
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:7}}>
+              {item.tags.map(t=>(<span key={t} style={{fontSize:11,color:darkMode?"rgba(255,255,255,0.4)":T3,fontFamily:FF}}>#{t}</span>))}
+            </div>
           )}
-          <button
-            onClick={e=>{e.stopPropagation();onSave(item);}}
-            style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,
-                    padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,
-                    cursor:"pointer",fontFamily:FF}}
-          >Save</button>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
+            <Av user={item.user||{name:"?",initials:"?"}} size={18} src={userImage}/>
+            <span style={{fontSize:12,color:darkMode?"rgba(255,255,255,0.35)":T3,fontFamily:FF}}>{item.user?.name||"Unknown"}</span>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,cols=3}){
+function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,currentUser,cols=3}){
   const [lb,setLb]=useState(null);
   const savedDark=useRef(false);
   const nonMockItems=feed.filter(item=>item.type!=="mockup");
@@ -1748,7 +1754,7 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
       ):(
         <div style={{columns:cols,gap:24}}>
           {realItems.map(item=>(
-            <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
+            <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode} currentUser={currentUser}/>
           ))}
         </div>
       )}
@@ -2087,18 +2093,30 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
 }
 
 function Profile({user,feed,darkMode}){
-  const uf=feed.filter(i=>i.user.id===user.id);
+  // Match by auth UUID (future items) OR by name (existing items with legacy integer user_id)
+  const uf=feed.filter(i=>
+    (i.user_id&&user.id&&String(i.user_id)===String(user.id))||
+    i.user?.name===user.name
+  ).filter(i=>i.type!=="mockup");
+  const tc=darkMode?"#FFF":T1;
+  const sc=darkMode?"rgba(255,255,255,0.5)":T2;
   return (
     <div style={{maxWidth:1100,margin:"0 auto",padding:"48px 32px"}}>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:48}}>
-        <Av user={user} size={72}/>
-        <h1 style={{margin:"16px 0 6px",fontSize:22,fontWeight:700,color:T1,fontFamily:FF}}>{user.name}</h1>
-        <p style={{margin:"0 0 16px",fontSize:14,color:T2,fontFamily:FF}}>{user.title}</p>
-        <button style={{background:"#F0F0F0",border:`1px solid ${BD}`,borderRadius:20,padding:"6px 16px",fontSize:13,color:T2,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,fontFamily:FF}}>&#x1F4AC; Slack</button>
+        <Av user={user} size={80} src={user.image}/>
+        <h1 style={{margin:"16px 0 4px",fontSize:22,fontWeight:700,color:tc,fontFamily:FF}}>{user.name}</h1>
+        <p style={{margin:"0 0 16px",fontSize:14,color:sc,fontFamily:FF}}>{user.title}</p>
+        <button style={{background:darkMode?"#2A2A2A":"#F0F0F0",border:`1px solid ${darkMode?"#444":BD}`,borderRadius:20,padding:"6px 16px",fontSize:13,color:sc,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8,fontFamily:FF}}>&#x1F4AC; Slack</button>
       </div>
-      <div style={{columns:"5 200px",gap:16}}>
-        {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}} darkMode={darkMode}/>))}
-      </div>
+      {uf.length>0?(
+        <div style={{columns:"4 220px",gap:20}}>
+          {uf.map(item=>(<ExploreCard key={item.id} item={item} onSave={()=>{}} onOpen={()=>{}} darkMode={darkMode} currentUser={user}/>))}
+        </div>
+      ):(
+        <div style={{textAlign:"center",padding:"48px 0"}}>
+          <p style={{margin:0,fontSize:15,color:sc,fontFamily:FF}}>No artifacts yet &#x2014; upload something to the feed to see it here.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -2586,7 +2604,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
+        {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode}/>)}
       </main>
