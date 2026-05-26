@@ -98,8 +98,10 @@ function Bdg({type}){
   const L={figma:"Figma",website:"URL",file:"File",image:"Image",video:"Video",pdf:"PDF",gif:"GIF"};
   return (<span style={{fontSize:10,fontWeight:600,color:T2,background:"#F0F0F0",padding:"2px 7px",borderRadius:4,letterSpacing:"0.04em",textTransform:"uppercase"}}>{L[type]||"Media"}</span>);
 }
-function BBtn({children,onClick,disabled,fw,sm}){
-  return (<button onClick={onClick} disabled={disabled} style={{background:disabled?"#E0E0E0":BK,color:disabled?T3:"#FFF",border:"none",borderRadius:100,padding:sm?"9px 20px":"13px 24px",fontWeight:600,fontSize:sm?13:15,cursor:disabled?"default":"pointer",width:fw?"100%":"auto",fontFamily:FF}}>{children}</button>);
+function BBtn({children,onClick,disabled,fw,sm,darkMode}){
+  const bg=disabled?(darkMode?"#333":"#E0E0E0"):(darkMode?"#FFFFFF":BK);
+  const fc=disabled?(darkMode?"#666":T3):(darkMode?BK:"#FFF");
+  return (<button onClick={onClick} disabled={disabled} style={{background:bg,color:fc,border:"none",borderRadius:100,padding:sm?"9px 20px":"13px 24px",fontWeight:600,fontSize:sm?13:15,cursor:disabled?"default":"pointer",width:fw?"100%":"auto",fontFamily:FF,transition:"background 0.3s, color 0.3s"}}>{children}</button>);
 }
 function GBtn({children,onClick,sm}){
   return (<button onClick={onClick} style={{background:"transparent",color:T1,border:`1px solid ${BM}`,borderRadius:100,padding:sm?"8px 18px":"12px 22px",fontWeight:500,fontSize:sm?13:15,cursor:"pointer",fontFamily:FF}}>{children}</button>);
@@ -1428,53 +1430,149 @@ function PhoneShell({children,bg="#000",darkMode,noBackground=false}){
   );
 }
 
+function StarField({show}){
+  const cvRef=useRef(null);
+  const rafRef=useRef(null);
+  const rotRef=useRef({x:0.35,y:0,dragging:false,lx:0,ly:0});
+
+  useEffect(()=>{
+    if(!show){cancelAnimationFrame(rafRef.current);return;}
+    const canvas=cvRef.current;
+    if(!canvas) return;
+    const ctx=canvas.getContext("2d");
+    const rot=rotRef.current;
+
+    // 1600 stars — uniform volumetric distribution (cbrt) in a large sphere
+    // radius 900 ensures stars project beyond screen corners at any rotation
+    const stars=Array.from({length:1600},()=>{
+      const theta=Math.random()*Math.PI*2;
+      const phi=Math.acos(2*Math.random()-1);
+      const r=Math.cbrt(Math.random())*900; // cbrt = uniform density (not concentrated at center)
+      return {
+        ox:r*Math.sin(phi)*Math.cos(theta),
+        oy:r*Math.sin(phi)*Math.sin(theta),
+        oz:r*Math.cos(phi),
+        sz:0.3+Math.random()*2.0,
+        h:28+Math.floor(Math.random()*50),  // warm yellows/oranges/whites
+        s:45+Math.floor(Math.random()*55),
+        l:76+Math.floor(Math.random()*24),
+      };
+    });
+
+    const resize=()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;};
+    resize();
+    window.addEventListener("resize",resize);
+
+    const onDown=e=>{rot.dragging=true;rot.lx=e.clientX!==undefined?e.clientX:(e.touches&&e.touches[0]?e.touches[0].clientX:0);rot.ly=e.clientY!==undefined?e.clientY:(e.touches&&e.touches[0]?e.touches[0].clientY:0);};
+    const onMove=e=>{
+      if(!rot.dragging)return;
+      const cx=e.clientX!==undefined?e.clientX:(e.touches&&e.touches[0]?e.touches[0].clientX:0);
+      const cy=e.clientY!==undefined?e.clientY:(e.touches&&e.touches[0]?e.touches[0].clientY:0);
+      rot.y+=(cx-rot.lx)*0.005;rot.lx=cx;
+      rot.x+=(cy-rot.ly)*0.005;rot.ly=cy;
+    };
+    const onUp=()=>{rot.dragging=false;};
+    window.addEventListener("mousedown",onDown);
+    window.addEventListener("mousemove",onMove);
+    window.addEventListener("mouseup",onUp);
+    window.addEventListener("touchstart",onDown,{passive:true});
+    window.addEventListener("touchmove",onMove,{passive:true});
+    window.addEventListener("touchend",onUp);
+
+    const draw=()=>{
+      const W=canvas.width,H=canvas.height;
+      // Deep space background — dark navy radial gradient
+      const bg=ctx.createRadialGradient(W*0.5,H*0.08,0,W*0.5,H*0.55,Math.max(W,H)*0.9);
+      bg.addColorStop(0,"hsl(230,100%,6%)");
+      bg.addColorStop(1,"hsl(233,98%,1%)");
+      ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+      if(!rot.dragging){rot.y+=0.0004;rot.x+=0.00008;}
+
+      const cosX=Math.cos(rot.x),sinX=Math.sin(rot.x);
+      const cosY=Math.cos(rot.y),sinY=Math.sin(rot.y);
+      const FOV=680,CX=W/2,CY=H/2;
+
+      // Project + sort far-to-near
+      const pts=[];
+      for(let i=0;i<stars.length;i++){
+        const s=stars[i];
+        const x1=s.ox*cosY+s.oz*sinY;
+        const z1=-s.ox*sinY+s.oz*cosY;
+        const y2=s.oy*cosX-z1*sinX;
+        const z2=s.oy*sinX+z1*cosX;
+        const d=z2+440;
+        if(d<50) continue;
+        const sc=FOV/d;
+        pts.push({px:CX+x1*sc,py:CY+y2*sc,d,sc,s});
+      }
+      pts.sort((a,b)=>a.d-b.d);
+
+      ctx.shadowBlur=0;
+      for(let i=0;i<pts.length;i++){
+        const {px,py,d,sc,s}=pts[i];
+        const r=Math.min(s.sz*sc,7);
+        if(r<0.15) continue;
+        const alpha=Math.min(0.9,Math.max(0.03,sc*0.8)); // closer=brighter
+        ctx.globalAlpha=alpha;
+        if(r>2.2){
+          ctx.shadowBlur=Math.min(r*4,20);
+          ctx.shadowColor=`hsl(${s.h},${s.s}%,${s.l}%)`;
+        } else if(ctx.shadowBlur!==0){
+          ctx.shadowBlur=0;
+        }
+        ctx.fillStyle=`hsl(${s.h},${s.s}%,${s.l}%)`;
+        ctx.beginPath();
+        ctx.arc(px,py,r,0,Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha=1;ctx.shadowBlur=0;
+      rafRef.current=requestAnimationFrame(draw);
+    };
+    rafRef.current=requestAnimationFrame(draw);
+
+    return ()=>{
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("resize",resize);
+      window.removeEventListener("mousedown",onDown);
+      window.removeEventListener("mousemove",onMove);
+      window.removeEventListener("mouseup",onUp);
+      window.removeEventListener("touchstart",onDown);
+      window.removeEventListener("touchmove",onMove);
+      window.removeEventListener("touchend",onUp);
+    };
+  },[show]);
+
+  return (
+    <canvas ref={cvRef} style={{position:"fixed",inset:0,zIndex:-1,opacity:show?1:0,transition:"opacity 1.4s ease",display:"block",pointerEvents:"none"}}/>
+  );
+}
+
 function JarLogo({size=28,dark=false}){
   const ink=dark?"#FFFFFF":"#0D0D0D";
-  const fill=dark?"#0D0D0D":"#FFFFFF";
   return (
-    <svg width={size} height={Math.round(size*1.18)} viewBox="0 0 60 71" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Lid */}
-      <rect x="15" y="1" width="30" height="14" rx="4" fill={ink}/>
-      {/* Jar body */}
-      <rect x="4" y="13" width="52" height="56" rx="13" fill={fill} stroke={ink} strokeWidth="3.5"/>
-      {/* Label band */}
-      <rect x="4" y="30" width="52" height="23" fill={ink}/>
-      {/* Cannabis leaf — white on label */}
-      <g transform="translate(30,41)" fill={fill}>
-        {/* Center leaf */}
-        <path d="M0,-10 L2,-4 L0,-5 L-2,-4 Z"/>
-        {/* Upper-left */}
-        <path d="M-1,-4 L-8,-8 L-5,-3 L-1,-4 Z"/>
-        {/* Upper-right */}
-        <path d="M1,-4 L8,-8 L5,-3 L1,-4 Z"/>
-        {/* Mid-left */}
-        <path d="M-2,-2 L-10,-4 L-6,-1 L-2,-2 Z"/>
-        {/* Mid-right */}
-        <path d="M2,-2 L10,-4 L6,-1 L2,-2 Z"/>
-        {/* Lower-left */}
-        <path d="M-2,0 L-9,2 L-5,3 L-2,0 Z"/>
-        {/* Lower-right */}
-        <path d="M2,0 L9,2 L5,3 L2,0 Z"/>
-        {/* Stem */}
-        <rect x="-1" y="1" width="2" height="6" rx="1"/>
-      </g>
+    <svg width={size} height={Math.round(size*(869/775))} viewBox="0 0 775 869" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fill={ink} d="M 182.09 743.85 C172.76,741.15 161.69,730.82 157.78,721.15 L 155.50 715.50 L 155.50 532.50 C155.50,359.74 155.60,349.03 157.31,341.11 C160.89,324.49 166.51,312.15 176.64,298.65 C189.90,280.98 208.36,268.81 232.50,261.83 L 240.50 259.52 L 376.00 259.21 C472.66,258.99 513.76,259.22 519.39,260.02 C552.15,264.70 581.29,285.81 595.86,315.42 C600.57,324.99 602.16,329.62 604.64,341.00 C606.41,349.11 606.50,357.90 606.50,532.00 L 606.50 714.50 L 604.06 721.00 C601.16,728.71 592.50,738.01 584.50,742.00 L 579.50 744.50 L 382.50 744.66 C255.79,744.77 184.28,744.48 182.09,743.85 ZM 575.50 730.88 C581.81,729.13 587.72,724.28 590.52,718.54 L 593.02 713.44 L 592.76 665.97 L 592.50 618.50 L 380.75 618.25 L 169.00 618.00 L 169.01 664.75 C169.01,692.53 169.41,712.95 170.00,715.07 C171.20,719.37 177.02,726.41 181.35,728.78 C184.29,730.39 197.23,730.53 377.00,731.01 C482.88,731.28 569.95,731.62 570.50,731.75 C571.05,731.88 573.30,731.49 575.50,730.88 ZM 384.61 574.50 C384.23,565.97 384.27,559.02 384.71,559.04 C385.14,559.06 388.20,559.72 391.50,560.52 C399.91,562.55 416.16,562.35 433.83,559.99 C449.29,557.93 452.00,557.34 452.00,556.03 C452.00,555.11 443.85,551.99 434.75,549.43 C431.04,548.38 428.02,547.29 428.05,547.01 C428.07,546.73 432.63,543.12 438.18,539.00 C448.41,531.40 464.85,515.99 473.34,506.05 C477.89,500.73 479.10,498.00 476.92,498.00 C472.29,498.00 444.13,507.12 432.23,512.47 C428.78,514.02 425.73,515.07 425.46,514.79 C425.18,514.51 426.35,511.19 428.06,507.39 C432.22,498.18 438.18,482.23 440.92,473.00 C442.15,468.88 443.59,464.15 444.12,462.50 C445.98,456.71 448.96,441.74 448.42,440.88 C448.13,440.39 447.38,440.00 446.78,440.00 C444.21,440.00 415.86,469.15 405.69,482.25 C402.38,486.51 399.30,490.00 398.84,490.00 C398.38,490.00 398.00,488.39 398.00,486.42 C398.00,468.45 385.98,410.28 381.71,407.59 C380.82,407.03 379.84,406.83 379.52,407.14 C378.93,407.73 376.19,417.18 373.02,429.50 C369.21,444.34 364.00,477.23 364.00,486.42 C364.00,488.39 363.62,490.00 363.16,490.00 C362.70,490.00 359.29,486.17 355.58,481.50 C348.47,472.52 332.55,455.38 322.39,445.75 C312.98,436.83 312.03,437.71 315.45,452.16 C319.63,469.77 326.43,489.74 333.92,506.34 C335.61,510.11 337.00,513.55 337.00,513.99 C337.00,514.43 332.84,513.09 327.75,511.00 C311.96,504.53 290.96,498.00 285.92,498.00 C284.86,498.00 284.00,498.69 284.00,499.54 C284.00,502.05 315.74,533.09 325.25,539.89 C333.98,546.12 335.56,547.97 332.25,548.04 C329.21,548.10 311.68,554.45 311.29,555.63 C310.73,557.31 312.72,557.80 329.17,559.99 C346.63,562.32 361.76,562.54 371.00,560.59 C377.82,559.15 379.16,559.27 378.54,561.28 C378.33,561.95 377.87,568.69 377.52,576.25 L 376.89 590.00 L 381.10 590.00 L 385.30 590.00 L 384.61 574.50 ZM 592.72 361.25 C592.31,348.06 591.72,342.90 589.99,337.00 C579.73,302.09 554.55,279.70 518.62,273.53 C505.18,271.22 255.36,271.23 242.86,273.55 C223.17,277.19 209.17,284.12 195.68,296.91 C185.09,306.97 178.31,318.05 172.84,334.26 C169.95,342.81 169.68,344.78 169.22,360.75 L 168.73 378.00 L 380.99 378.00 L 593.26 378.00 L 592.72 361.25 ZM 244.64 244.17 C243.04,243.86 242.94,240.72 243.21,199.17 C243.49,155.63 243.55,154.40 245.65,150.50 C248.35,145.48 251.49,142.53 256.23,140.55 C259.51,139.18 273.91,139.00 380.22,139.01 C459.87,139.01 501.76,139.36 504.22,140.04 C509.05,141.39 513.54,145.22 516.29,150.38 C518.46,154.43 518.51,155.30 518.79,199.25 C519.02,235.25 518.83,244.00 517.79,244.00 C517.08,244.00 455.72,244.12 381.43,244.25 C307.14,244.39 245.58,244.35 244.64,244.17 Z"/>
     </svg>
   );
 }
 
-function LiveBar(){
+function LiveBar({darkMode=false}){
   const [pulse,setPulse]=useState(true);
   useEffect(()=>{const t=setInterval(()=>setPulse(p=>!p),900);return ()=>clearInterval(t);},[]);
+  const lc=darkMode?"rgba(255,255,255,0.9)":T1;
+  const sc=darkMode?"rgba(255,255,255,0.45)":T2;
+  const dc=darkMode?"rgba(255,255,255,0.14)":BD;
   return (
     <div style={{display:"flex",alignItems:"center",gap:16,padding:"10px 0",marginBottom:24}}>
       <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
         <div style={{width:7,height:7,borderRadius:"50%",background:"#22C55E",opacity:pulse?1:0.35,transition:"opacity 0.7s ease",flexShrink:0}}/>
-        <span style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T1,fontFamily:FF,textTransform:"uppercase"}}>Live</span>
+        <span style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:lc,fontFamily:FF,textTransform:"uppercase"}}>Live</span>
       </div>
-      <div style={{flex:1,height:1,background:BD}}/>
+      <div style={{flex:1,height:1,background:dc}}/>
       <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-        <span style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T2,fontFamily:FF,textTransform:"uppercase"}}>From The Stash</span>
-        <JarLogo size={26}/>
+        <span style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:sc,fontFamily:FF,textTransform:"uppercase"}}>From The Stash</span>
+        <JarLogo size={26} dark={darkMode}/>
       </div>
     </div>
   );
@@ -1516,17 +1614,17 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
     <div
       ref={cardRef}
       style={{breakInside:"avoid",marginBottom:24,borderRadius:24,overflow:"hidden",
-              position:"relative",cursor:"pointer",background:"#EBEBEB",
+              position:"relative",cursor:"pointer",background:darkMode?"#1A1A22":"#EBEBEB",
               opacity:visible?1:0,
               transform:visible?(hov?"scale(1.03)":"translateY(0)"):"translateY(24px)",
-              boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",
+              boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
               transition:"opacity 0.45s ease, transform 0.45s ease, box-shadow .2s"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
       onClick={()=>onOpen(item)}
     >
       {isMock && (
-        <div style={{padding:item.mock.device==="iphone"?"20px 28px 20px":item.mock.device==="ipad"?"14px 12px":"10px 8px",background:item.mock.device==="iphone"?"#F0F0F0":item.mock.device==="ipad"?"#EAEAEA":"#E6E6E6"}}>
+        <div style={{padding:item.mock.device==="iphone"?"20px 28px 20px":item.mock.device==="ipad"?"14px 12px":"10px 8px",background:darkMode?(item.mock.device==="iphone"?"#14141C":item.mock.device==="ipad"?"#111119":"#0F0F17"):(item.mock.device==="iphone"?"#F0F0F0":item.mock.device==="ipad"?"#EAEAEA":"#E6E6E6")}}>
           <MockSVG mock={item.mock}/>
         </div>
       )}
@@ -1613,8 +1711,9 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode}){
   );
 }
 
-function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}){
+function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,cols=3}){
   const [lb,setLb]=useState(null);
+  const savedDark=useRef(false);
   const realItems=feed.filter(item=>item.type!=="mockup");
   const h1c=darkMode?"#FFFFFF":T1;
   const subc=darkMode?"rgba(255,255,255,0.5)":T2;
@@ -1622,10 +1721,14 @@ function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{padding:"64px 0 72px",marginBottom:32,textAlign:"center"}}>
-        <h1 style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:0.95,letterSpacing:"-0.03em",color:h1c,fontFamily:FF}}>Design the<br/>new standard.</h1>
+        <h1
+          onMouseEnter={()=>{savedDark.current=darkMode;onDarkMode&&onDarkMode(true);}}
+          onMouseLeave={()=>{onDarkMode&&onDarkMode(savedDark.current);}}
+          style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:0.95,letterSpacing:"-0.03em",color:h1c,fontFamily:FF,cursor:"default",transition:"color 0.3s"}}
+        >Design the<br/>new standard.</h1>
         <p style={{margin:"0 auto",fontSize:16,color:subc,fontFamily:FF,fontWeight:400,maxWidth:520,lineHeight:1.6}}>A shared space for explorations, shipped work, and everything worth stashing from the Weedmaps design team.</p>
       </div>
-      <LiveBar/>
+      <LiveBar darkMode={darkMode}/>
       <div style={{columns:cols,gap:24}}>
         {realItems.map(item=>(
           <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode}/>
@@ -1636,63 +1739,60 @@ function Explore({feed,projects,onSave,onEdit,onDelete,onSearch,darkMode,cols=3}
   );
 }
 
-function ProjCard({project,onOpen,onDelete}){
+function ProjCard({project,onOpen,onDelete,darkMode}){
   const [hov,setHov]=useState(false);
   const thumbs=project.thumbs||[];
   const members=project.members||[];
-  // Build stacked card positions: up to 3 cards, back-most first
   const stackCount=Math.min(thumbs.length,3);
   const stackCards=thumbs.slice(0,stackCount);
+  const cardBg=darkMode?"#1A1A22":BG;
+  const previewBg=darkMode?"#13131A":"#EFEFEF";
+  const tc=darkMode?"#FFFFFF":T1;
+  const sc=darkMode?"rgba(255,255,255,0.5)":T2;
+  const avatarBorder=darkMode?"#1A1A22":"#FFF";
+  const shadow=hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none";
   return (
-    <div style={{borderRadius:20,overflow:"visible",background:BG,cursor:"pointer",transition:"box-shadow .2s, transform .2s",boxShadow:hov?"0 12px 40px rgba(0,0,0,.08)":"none",transform:hov?"scale(1.03)":"scale(1)",display:"flex",flexDirection:"column"}}
+    <div style={{borderRadius:20,overflow:"visible",background:cardBg,cursor:"pointer",transition:"box-shadow .2s, transform .2s, background 0.3s",boxShadow:shadow,transform:hov?"scale(1.03)":"scale(1)",display:"flex",flexDirection:"column"}}
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onOpen(project)}>
       {/* Preview area */}
-      <div style={{height:220,background:"#EFEFEF",borderRadius:"20px 20px 0 0",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{height:220,background:previewBg,borderRadius:"20px 20px 0 0",position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.3s"}}>
         {stackCount===0&&(
-          <div style={{width:"72%",height:160,borderRadius:14,background:"linear-gradient(135deg,#E8E8E8,#D0D0D0)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{width:"72%",height:160,borderRadius:14,background:darkMode?"linear-gradient(135deg,#252530,#1A1A24)":"linear-gradient(135deg,#E8E8E8,#D0D0D0)",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <span style={{fontSize:32,opacity:.3}}>&#x1F4C2;</span>
           </div>
         )}
         {stackCount>0&&stackCards.map((t,idx)=>{
-          const isBack=idx<stackCount-1;
           const isFront=idx===stackCount-1;
-          // Back cards peek out rotated behind front card
           const rotations=stackCount===3?[-5,4,0]:stackCount===2?[-4,0]:([0]);
           const yOffsets=stackCount===3?[10,6,0]:stackCount===2?[8,0]:([0]);
-          const rot=rotations[idx]||0;
-          const yOff=yOffsets[idx]||0;
           return (
             <div key={idx} style={{
-              position:"absolute",
-              width:"68%",height:152,
-              borderRadius:14,
-              background:t,
-              transform:`rotate(${rot}deg) translateY(${yOff}px)`,
+              position:"absolute",width:"68%",height:152,borderRadius:14,background:t,
+              transform:`rotate(${rotations[idx]||0}deg) translateY(${yOffsets[idx]||0}px)`,
               transformOrigin:"center center",
-              boxShadow:isFront?"0 6px 20px rgba(0,0,0,.18)":"0 3px 10px rgba(0,0,0,.12)",
+              boxShadow:isFront?"0 6px 20px rgba(0,0,0,.28)":"0 3px 10px rgba(0,0,0,.18)",
               zIndex:idx,
             }}/>
           );
         })}
-        {/* Artifact count badge */}
-        <div style={{position:"absolute",bottom:12,right:14,background:"rgba(0,0,0,.45)",borderRadius:20,padding:"3px 10px",display:"flex",alignItems:"center",gap:5,backdropFilter:"blur(6px)"}}>
+        <div style={{position:"absolute",bottom:12,right:14,background:"rgba(0,0,0,.5)",borderRadius:20,padding:"3px 10px",display:"flex",alignItems:"center",gap:5,backdropFilter:"blur(6px)"}}>
           <span style={{fontSize:11,color:"rgba(255,255,255,.9)",fontFamily:FF,fontWeight:600}}>{project.artifactCount} artifact{project.artifactCount!==1?"s":""}</span>
         </div>
       </div>
       {/* Info section */}
       <div style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column",gap:6}}>
-        <p style={{margin:0,fontSize:15,fontWeight:700,color:T1,fontFamily:FF,lineHeight:1.2}}>{project.name}</p>
-        {project.desc&&(<p style={{margin:0,fontSize:13,color:T2,fontFamily:FF,lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{project.desc}</p>)}
+        <p style={{margin:0,fontSize:15,fontWeight:700,color:tc,fontFamily:FF,lineHeight:1.2,transition:"color 0.3s"}}>{project.name}</p>
+        {project.desc&&(<p style={{margin:0,fontSize:13,color:sc,fontFamily:FF,lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",transition:"color 0.3s"}}>{project.desc}</p>)}
         {members.length>0&&(
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
             <div style={{display:"flex",alignItems:"center"}}>
               {members.slice(0,4).map((m,i)=>(
-                <div key={m.id} style={{marginLeft:i>0?-7:0,border:"2px solid #FFF",borderRadius:"50%",zIndex:members.length-i,position:"relative",flexShrink:0}}>
+                <div key={m.id} style={{marginLeft:i>0?-7:0,border:`2px solid ${avatarBorder}`,borderRadius:"50%",zIndex:members.length-i,position:"relative",flexShrink:0,transition:"border-color 0.3s"}}>
                   <Av user={m} size={24} src={m.image}/>
                 </div>
               ))}
             </div>
-            <span style={{fontSize:12,color:T2,fontFamily:FF,lineHeight:1.3}}>
+            <span style={{fontSize:12,color:sc,fontFamily:FF,lineHeight:1.3,transition:"color 0.3s"}}>
               {members.length===1
                 ? members[0].name
                 : members.length===2
@@ -1710,7 +1810,7 @@ function Projects({projects,onOpen,onDelete,darkMode}){
   return (
     <div style={{padding:"16px 0"}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20}}>
-        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete}/>))}
+        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete} darkMode={darkMode}/>))}
       </div>
     </div>
   );
@@ -2051,7 +2151,9 @@ export default function App(){
   const [authUser,setAuthUser]=useState(null);
   const [profile,setProfile]=useState(null);
   const [showLogin,setShowLogin]=useState(false);
+  const [deskSearch,setDeskSearch]=useState(false);
   const searchRef=useRef(null);
+  const deskSearchRef=useRef(null);
   const logoRef=useRef(null);
   const toast=useCallback(msg=>{
     const id=Date.now()+Math.random();
@@ -2237,20 +2339,7 @@ export default function App(){
     return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth}/>);
   }
 
-  const toggleDarkMode=()=>{
-    if(logoRef.current){
-      const rect=logoRef.current.getBoundingClientRect();
-      const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
-      for(let i=0;i<12;i++){
-        const angle=Math.random()*Math.PI*2,dist=60+Math.random()*60,x=cx+Math.cos(angle)*dist,y=cy+Math.sin(angle)*dist;
-        const p=document.createElement("div");
-        p.style.cssText=`position:fixed;width:${8+Math.random()*12}px;height:${8+Math.random()*12}px;background:${i%2?"rgba(255,0,0,0.8)":"rgba(100,100,100,0.6)"};border-radius:50%;left:${x}px;top:${y}px;pointer-events:none;z-index:2000;animation:${i%2?"laser":"smoke"} ${0.6+Math.random()*0.4}s ease-out forwards;`;
-        document.body.appendChild(p);
-        setTimeout(()=>p.remove(),1200);
-      }
-    }
-    setDarkMode(v=>!v);
-  };
+  const toggleDarkMode=()=>{setDarkMode(v=>!v);};
 
   const create=async p=>{
     try{
@@ -2361,10 +2450,11 @@ export default function App(){
     </div>
   );
 
+  const showStars=darkMode&&view==="explore";
   return (
-    <div style={{minHeight:"100vh",background:darkMode?"#0D0D0D":PG,color:darkMode?"#FFF":T1,fontFamily:FF,transition:"background 0.3s, color 0.3s"}}>
-      <style>{`@keyframes smoke{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}@keyframes laser{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0.5)}}`}</style>
-      <nav style={{background:darkMode?"#1A1A1A":"#FFF",borderBottom:`1px solid ${darkMode?"#333":"#E8E8E8"}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100,transition:"background 0.3s, border-color 0.3s"}}>
+    <div style={{minHeight:"100vh",background:showStars?"transparent":(darkMode?"#0D0D0D":PG),color:darkMode?"#FFF":T1,fontFamily:FF,transition:"background 0.3s, color 0.3s"}}>
+      <StarField show={showStars}/>
+      <nav style={{background:showStars?"rgba(10,12,28,0.72)":(darkMode?"#1A1A1A":"#FFF"),backdropFilter:showStars?"blur(14px)":"none",WebkitBackdropFilter:showStars?"blur(14px)":"none",borderBottom:`1px solid ${showStars?"rgba(255,255,255,0.08)":(darkMode?"#333":"#E8E8E8")}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100,transition:"background 0.3s, border-color 0.3s, backdrop-filter 0.3s"}}>
         {!isMobile&&(<>
           <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,background:"none",border:"none",cursor:"pointer",padding:0}}>
             <JarLogo size={26} dark={darkMode}/>
@@ -2375,31 +2465,61 @@ export default function App(){
               <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
             ))}
           </div>
-          <div style={{flex:1}}/>
-          <div style={{width:520,position:"relative"}}>
-            <MI name="search" size={32} style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:T3,pointerEvents:"none"}}/>
-            <input value={srch} onChange={e=>setSrch(e.target.value)} onFocus={()=>{setSf(true);setShowTags(true);}} onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:sf?(darkMode?"#2A2A2A":"#FFF"):(darkMode?"#1A1A1A":"#F5F5F5"),border:`1px solid ${sf?(darkMode?"#444":BM):"transparent"}`,borderRadius:22,padding:"7px 16px 7px 52px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"all .15s"}}/>
-            {sf&&showTags&&(
-              <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:darkMode?"#1A1A1A":"#FFF",border:`1px solid ${darkMode?"#333":BD}`,borderRadius:12,boxShadow:darkMode?"0 4px 20px rgba(0,0,0,.5)":"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto",transition:"all 0.3s"}}>
-                {matchingTags.length>0?(
-                  <div style={{padding:8}}>
-                    <p style={{margin:"8px 12px 4px",fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase"}}>All Tags</p>
-                    {matchingTags.map(t=>(
-                      <button key={t} onClick={()=>{setSrch(t);setShowTags(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"10px 12px",fontSize:13,color:darkMode?"#FFF":T1,fontFamily:FF,cursor:"pointer",borderRadius:6,marginBottom:2}} onMouseEnter={e=>e.currentTarget.style.background=darkMode?"#2A2A2A":"#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                        <span style={{fontWeight:600}}>#</span>{t}
-                      </button>
-                    ))}
+          {/* Desktop search — collapsed pill or expanded input */}
+          {!deskSearch ? (
+            <>
+              <button
+                onClick={()=>{setDeskSearch(true);setTimeout(()=>deskSearchRef.current&&deskSearchRef.current.focus(),60);}}
+                style={{display:"flex",alignItems:"center",gap:6,background:darkMode?"#2A2A2A":"#F0F0F0",border:"1px solid transparent",borderRadius:20,padding:"6px 14px",color:darkMode?"#AAA":T2,fontSize:14,cursor:"pointer",fontFamily:FF,flexShrink:0,transition:"background 0.2s, color 0.2s"}}
+                onMouseEnter={e=>{e.currentTarget.style.background=darkMode?"#333":"#E8E8E8";e.currentTarget.style.color=darkMode?"#FFF":T1;}}
+                onMouseLeave={e=>{e.currentTarget.style.background=darkMode?"#2A2A2A":"#F0F0F0";e.currentTarget.style.color=darkMode?"#AAA":T2;}}
+              >
+                <MI name="search" size={18} style={{color:"inherit"}}/>
+                <span>Search</span>
+              </button>
+              <div style={{flex:1}}/>
+            </>
+          ) : (
+            <>
+              <div style={{flex:1,position:"relative",maxWidth:500}}>
+                <MI name="search" size={20} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:T3,pointerEvents:"none"}}/>
+                <input
+                  ref={deskSearchRef}
+                  value={srch}
+                  onChange={e=>setSrch(e.target.value)}
+                  onFocus={()=>{setSf(true);setShowTags(true);}}
+                  onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)}
+                  onKeyDown={e=>{if(e.key==="Escape"){setDeskSearch(false);setSrch("");}}}
+                  placeholder="Search projects or tags"
+                  style={{width:"100%",boxSizing:"border-box",background:darkMode?"#2A2A2A":"#FFF",border:`1px solid ${darkMode?"#444":BM}`,borderRadius:22,padding:"7px 38px 7px 42px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"background 0.2s"}}
+                />
+                <button
+                  onMouseDown={e=>{e.preventDefault();setDeskSearch(false);setSrch("");}}
+                  style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:T3,fontSize:16,lineHeight:1,padding:"4px 6px",borderRadius:"50%"}}
+                >&#x2715;</button>
+                {sf&&showTags&&(
+                  <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:darkMode?"#1A1A1A":"#FFF",border:`1px solid ${darkMode?"#333":BD}`,borderRadius:12,boxShadow:darkMode?"0 4px 20px rgba(0,0,0,.5)":"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto"}}>
+                    {matchingTags.length>0?(
+                      <div style={{padding:8}}>
+                        <p style={{margin:"8px 12px 4px",fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase"}}>All Tags</p>
+                        {matchingTags.map(t=>(
+                          <button key={t} onClick={()=>{setSrch(t);setShowTags(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"10px 12px",fontSize:13,color:darkMode?"#FFF":T1,fontFamily:FF,cursor:"pointer",borderRadius:6,marginBottom:2}} onMouseEnter={e=>e.currentTarget.style.background=darkMode?"#2A2A2A":"#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                            <span style={{fontWeight:600}}>#</span>{t}
+                          </button>
+                        ))}
+                      </div>
+                    ):(
+                      <div style={{padding:"16px 12px",textAlign:"center",color:T3,fontSize:13}}>No tags found</div>
+                    )}
                   </div>
-                ):(
-                  <div style={{padding:"16px 12px",textAlign:"center",color:T3,fontSize:13}}>No tags found</div>
                 )}
               </div>
-            )}
-          </div>
-          <div style={{flex:1}}/>
+              <div style={{flex:"0 0 12px"}}/>
+            </>
+          )}
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-            {view==="projects"&&(<BBtn sm onClick={()=>requireAuth(()=>setNewP(true),"new_project")}>+ Project</BBtn>)}
-            {view==="explore"&&(<BBtn sm onClick={()=>requireAuth(()=>setUplFeed(true),"new_artifact")}>+ Artifact</BBtn>)}
+            {view==="projects"&&(<BBtn sm darkMode={darkMode} onClick={()=>requireAuth(()=>setNewP(true),"new_project")}>+ Project</BBtn>)}
+            {view==="explore"&&(<BBtn sm darkMode={darkMode} onClick={()=>requireAuth(()=>setUplFeed(true),"new_artifact")}>+ Artifact</BBtn>)}
             {/* Auth user section */}
             {authUser&&profile?(
               <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:4}}>
@@ -2440,7 +2560,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
+        {view==="explore"&&(<Explore feed={feed} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} cols={winW<=640?1:winW<=1024?2:3}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode}/>)}
       </main>
