@@ -4,8 +4,21 @@ const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const configured = !!(url && key);
+
+// Wrap fetch with a 12-second timeout so hung requests fail fast instead of
+// silently blocking the UI for 20+ seconds.
+const fetchWithTimeout = (fetchUrl, options = {}) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  console.log("[Supabase] →", fetchUrl.toString().split("?")[0]);
+  return fetch(fetchUrl, { ...options, signal: controller.signal })
+    .then(res => { console.log("[Supabase] ←", res.status, fetchUrl.toString().split("?")[0]); return res; })
+    .catch(err => { console.error("[Supabase] ✗", err.message, fetchUrl.toString().split("?")[0]); throw err; })
+    .finally(() => clearTimeout(timer));
+};
+
 export const supabase = configured
-  ? createClient(url, key)
+  ? createClient(url, key, { global: { fetch: fetchWithTimeout } })
   : createClient("https://placeholder.supabase.co", "placeholder");
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
