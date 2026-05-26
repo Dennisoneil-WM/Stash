@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, configured, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, updateArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile, signInWithGoogle, signOutUser, fetchProfile, upsertProfile } from "./supabase.js";
+import { supabase, configured, applyTokensDirectly, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, updateArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile, signInWithGoogle, signOutUser, fetchProfile, upsertProfile } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -1702,10 +1702,8 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
 function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,currentUser,cols=3,feedLoading=false}){
   const [lb,setLb]=useState(null);
   const savedDark=useRef(false);
-  const nonMockItems=feed.filter(item=>item.type!=="mockup");
-  // While Supabase is still loading, show nothing instead of placeholder mockups.
-  // Once feedLoading is false, either real items or SFEED (if truly empty) are shown.
-  const realItems=feedLoading?[]:nonMockItems.length>0?nonMockItems:feed;
+  // Never show mockup seed data — only real uploaded items.
+  const realItems=feedLoading?[]:feed.filter(item=>item.type!=="mockup");
   const isFiltered=!!srch.trim();
   const h1c=darkMode?"#FFFFFF":T1;
   const subc=darkMode?"rgba(255,255,255,0.5)":T2;
@@ -1736,12 +1734,19 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       )}
-      {!feedLoading&&isFiltered&&realItems.length===0?(
+      {!feedLoading&&isFiltered&&realItems.length===0&&(
         <div style={{textAlign:"center",padding:"80px 0"}}>
           <p style={{margin:"0 0 10px",fontSize:22,fontWeight:700,color:h1c,fontFamily:FF}}>No results</p>
           <p style={{margin:0,fontSize:14,color:subc,fontFamily:FF}}>Nothing found for &#x201C;{srch}&#x201D;</p>
         </div>
-      ):(
+      )}
+      {!feedLoading&&!isFiltered&&realItems.length===0&&(
+        <div style={{textAlign:"center",padding:"80px 0",color:subc,fontFamily:FF}}>
+          <p style={{margin:"0 0 8px",fontSize:16,fontWeight:600,color:h1c}}>Nothing here yet</p>
+          <p style={{margin:0,fontSize:14}}>Hit <strong style={{color:h1c}}>+ Artifact</strong> to post the first one</p>
+        </div>
+      )}
+      {realItems.length>0&&(
         <div style={{columns:cols,gap:24}}>
           {realItems.map(item=>(
             <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode} currentUser={currentUser}/>
@@ -1820,12 +1825,28 @@ function ProjCard({project,onOpen,onDelete,darkMode}){
   );
 }
 
-function Projects({projects,onOpen,onDelete,darkMode}){
+function Projects({projects,onOpen,onDelete,darkMode,loading=false}){
+  const tc=darkMode?"#FFF":T1;
+  const sc=darkMode?"rgba(255,255,255,0.45)":T3;
   return (
     <div style={{padding:"16px 0"}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20}}>
-        {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete} darkMode={darkMode}/>))}
-      </div>
+      {loading&&(
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:320}}>
+          <div style={{width:28,height:28,border:`3px solid ${darkMode?"#333":"#E8E8E8"}`,borderTopColor:darkMode?"#FFF":T1,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+        </div>
+      )}
+      {!loading&&projects.length===0&&(
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:320,gap:12,textAlign:"center"}}>
+          <span style={{fontSize:40,opacity:.25}}>&#x1F4C2;</span>
+          <p style={{margin:0,fontSize:16,fontWeight:600,color:tc,fontFamily:FF}}>No projects yet</p>
+          <p style={{margin:0,fontSize:14,color:sc,fontFamily:FF}}>Hit <strong style={{color:tc}}>+ Project</strong> to create your first one</p>
+        </div>
+      )}
+      {!loading&&projects.length>0&&(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20}}>
+          {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete} darkMode={darkMode}/>))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2195,8 +2216,9 @@ export default function App(){
   const [view,setView]=useState("explore");
   const [proj,setProj]=useState(null);
   const [projects,setProjects]=useState([]);
-  const [feed,setFeed]=useState(SFEED);
+  const [feed,setFeed]=useState([]);
   const [feedLoading,setFeedLoading]=useState(true);
+  const [projectsLoading,setProjectsLoading]=useState(true);
   const [loading,setLoading]=useState(true);
   const [srch,setSrch]=useState(""); const [sf,setSf]=useState(false);
   const [newP,setNewP]=useState(false); const [newF,setNewF]=useState(false);
@@ -2244,31 +2266,27 @@ export default function App(){
 
   useEffect(()=>{
     setLoading(false);
-    // If Supabase isn't configured, show SFEED immediately
-    if(!configured){setFeedLoading(false);return;}
+    if(!configured){console.warn("[Stash] Supabase not configured");setFeedLoading(false);setProjectsLoading(false);return;}
+    console.log("[Stash] Starting data fetch...");
     const deletedProjIds=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
-    // Hard fallback: if Supabase takes more than 20s (e.g. paused free-tier cold start),
-    // stop the spinner and show SFEED so the page isn't stuck forever.
-    const fallback=setTimeout(()=>{
-      console.warn("[Stash] Feed load timed out after 20s — showing placeholders");
-      setFeedLoading(false);
-    },20000);
+    const fallback=setTimeout(()=>{ console.warn("[Stash] Fetch timed out after 10s"); setFeedLoading(false); setProjectsLoading(false); },10000);
     fetchProjects()
       .then(projs=>{
         const filtered=projs.filter(p=>!deletedProjIds.includes(String(p.id)));
         if(filtered.length) setProjects(filtered);
+        setProjectsLoading(false);
       })
-      .catch(e=>console.warn("Projects load failed:",e));
+      .catch(e=>{console.warn("Projects load failed:",e);setProjectsLoading(false);});
     fetchFeed()
       .then(feedItems=>{
         clearTimeout(fallback);
-        console.log("[Stash] fetchFeed returned",feedItems.length,"items",feedItems.map(f=>({id:f.id,type:f.type,name:f.name})));
+        console.log("[Stash] fetchFeed got",feedItems.length,"items, types:",feedItems.map(f=>f.type));
         const realItems=feedItems.filter(f=>f.type!=="mockup");
+        console.log("[Stash] realItems after filter:",realItems.length);
         if(realItems.length) setFeed(realItems);
-        else console.warn("[Stash] No real items found — check Supabase RLS policies on feed_items");
         setFeedLoading(false);
       })
-      .catch(e=>{clearTimeout(fallback);console.warn("Feed load failed:",e);setFeedLoading(false);});
+      .catch(e=>{clearTimeout(fallback);console.error("[Stash] Feed load failed:",e);setFeedLoading(false);});
     return()=>clearTimeout(fallback);
   },[applyStoredSettings]);
 
@@ -2300,69 +2318,74 @@ export default function App(){
     new URLSearchParams(window.location.search).get("auth_callback")==="1"&&
     !!window.opener;
 
-  // Close auth-callback popup. Write tokens to localStorage so the main window
-  // can pick them up via the 'storage' event — postMessage fails because
-  // Supabase's auth endpoint sets COOP headers that null window.opener.
+  // Close auth-callback popup. The access_token and refresh_token are in the
+  // URL hash immediately after OAuth — grab them directly without waiting for
+  // Supabase's async detectSessionInUrl (which can hang in the auth queue).
   useEffect(()=>{
     if(!isAuthPopup)return;
     let fired=false;
-    const done=(session)=>{
+    const done=(accessToken,refreshToken)=>{
       if(fired)return; fired=true;
       try{
         localStorage.setItem("stash_oauth_session",JSON.stringify({
-          access_token:session.access_token,
-          refresh_token:session.refresh_token,
+          access_token:accessToken,
+          refresh_token:refreshToken,
           ts:Date.now(),
         }));
       }catch(e){}
       setTimeout(()=>window.close(),300);
     };
-    // Register listener FIRST so we never miss the SIGNED_IN event.
+
+    // Fast path: tokens are right in the URL hash — no async needed.
+    const hash=window.location.hash.slice(1);
+    const hp=new URLSearchParams(hash);
+    const hashAt=hp.get("access_token");
+    const hashRt=hp.get("refresh_token");
+    if(hashAt){ done(hashAt,hashRt||""); return; }
+
+    // Fallback: wait for Supabase to process the session (PKCE flow / redirect).
     const{data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
       if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&session){
-        subscription.unsubscribe(); done(session);
+        subscription.unsubscribe();
+        done(session.access_token,session.refresh_token);
       }
     });
-    // Also check immediately — session may already be set if hash was processed
-    // before this effect ran.
     supabase.auth.getSession().then(({data:{session}})=>{
-      if(session) done(session);
+      if(session) done(session.access_token,session.refresh_token);
     });
     const t=setTimeout(()=>window.close(),12000);
     return()=>{subscription.unsubscribe();clearTimeout(t);};
   },[isAuthPopup]);
 
-  // Load profile from an auth user object
+  // Load profile from an auth user object.
+  // Sets authUser + a local profile immediately (from JWT metadata — no network),
+  // then fetches/upserts the DB profile in the background and updates if found.
   const loadProfile=useCallback(async(user)=>{
+    // Build local profile from auth metadata right now — no DB needed.
+    const name=user.user_metadata?.full_name||user.email?.split("@")[0]||"Designer";
+    const words=name.trim().split(" ");
+    const initials=((words.length>=2?words[0][0]+words[words.length-1][0]:name.slice(0,2)).toUpperCase());
+    const localProf={
+      id:user.id,
+      email:user.email,
+      name,
+      initials,
+      title:"Designer",
+      avatar_url:user.user_metadata?.avatar_url||null,
+      is_admin:user.email==="doneil@weedmaps.com",
+    };
+    // Set both immediately so the nav updates right away.
     setAuthUser(user);
+    setProfile(localProf);
+    // Background: fetch/upsert the DB profile and update if we get richer data.
     try{
       let prof=await fetchProfile(user.id);
       if(!prof){
-        const name=user.user_metadata?.full_name||user.email?.split("@")[0]||"Designer";
-        const words=name.trim().split(" ");
-        const initials=((words.length>=2?words[0][0]+words[words.length-1][0]:name.slice(0,2)).toUpperCase());
-        prof=await upsertProfile({
-          id:user.id,
-          email:user.email,
-          name,
-          initials,
-          title:"Designer",
-          avatar_url:user.user_metadata?.avatar_url||null,
-          is_admin:user.email==="doneil@weedmaps.com",
-        });
+        prof=await upsertProfile({...localProf});
       }
-      setProfile(prof);
+      if(prof) setProfile(prof);
     }catch(e){
-      // Profiles table may not exist yet — build a local profile from auth metadata
-      setProfile({
-        id:user.id,
-        email:user.email,
-        name:user.user_metadata?.full_name||user.email?.split("@")[0]||"Designer",
-        initials:((user.user_metadata?.full_name||"D").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()),
-        title:"Designer",
-        avatar_url:user.user_metadata?.avatar_url||null,
-        is_admin:user.email==="doneil@weedmaps.com",
-      });
+      // DB fetch failed — local profile already set above, nothing more to do.
     }
   },[]);
 
@@ -2371,21 +2394,67 @@ export default function App(){
   // before the popup redirects back to localhost.
   useEffect(()=>{
     if(!configured||isAuthPopup)return;
-    const onStorage=async e=>{
-      if(e.key!=="stash_oauth_session"||!e.newValue)return;
+    const applyOAuthSession=async(raw)=>{
       setShowLogin(false);
       try{
-        const{access_token,refresh_token}=JSON.parse(e.newValue);
+        const{access_token,refresh_token}=JSON.parse(raw);
         localStorage.removeItem("stash_oauth_session");
-        const{data,error}=await supabase.auth.setSession({access_token,refresh_token});
-        if(!error&&data?.session?.user&&!authUser){
-          await loadProfile(data.session.user);
+        console.log("[Auth] applyOAuthSession: got token, calling applyTokensDirectly");
+        // Decode JWT and write session directly — no network call, no auth queue hang
+        const user=applyTokensDirectly(access_token,refresh_token||"");
+        console.log("[Auth] applyTokensDirectly returned:", user?.email||"null");
+        if(user&&!authUser){
+          await loadProfile(user);
         }
-      }catch(err){console.warn("Auth sync error:",err);}
+      }catch(err){console.warn("[Auth] applyOAuthSession error:",err);}
+    };
+    // Check immediately — popup may have written before this listener was registered
+    const existing=localStorage.getItem("stash_oauth_session");
+    if(existing) applyOAuthSession(existing);
+    const onStorage=async e=>{
+      if(e.key!=="stash_oauth_session"||!e.newValue)return;
+      applyOAuthSession(e.newValue);
     };
     window.addEventListener("storage",onStorage);
     return()=>window.removeEventListener("storage",onStorage);
   },[authUser,loadProfile,isAuthPopup]);
+
+  // Polling fallback: when the login modal is open, poll getSession() every second.
+  // This catches the case where the storage event doesn't fire (cross-context incognito,
+  // same-origin but different partition, etc.) after the OAuth popup writes its token.
+  useEffect(()=>{
+    if(!showLogin||!configured||isAuthPopup||authUser)return;
+    let active=true;
+    const poll=async()=>{
+      if(!active)return;
+      try{
+        // First check if popup left a token we haven't consumed yet
+        const pending=localStorage.getItem("stash_oauth_session");
+        if(pending){
+          const{access_token,refresh_token}=JSON.parse(pending);
+          localStorage.removeItem("stash_oauth_session");
+          // Decode JWT directly — no network call, no auth queue hang
+          const user=applyTokensDirectly(access_token,refresh_token||"");
+          if(user){
+            setShowLogin(false);
+            await loadProfile(user);
+            return;
+          }
+        }
+        // Also check if Supabase's own cross-tab sync already updated the session
+        const{data:{session}}=await supabase.auth.getSession();
+        if(session?.user){
+          setShowLogin(false);
+          await loadProfile(session.user);
+          return;
+        }
+      }catch(e){}
+      if(active) setTimeout(poll,1000);
+    };
+    // Start polling after 1s — catches popup token and cross-tab session updates
+    const t=setTimeout(poll,1000);
+    return()=>{active=false;clearTimeout(t);};
+  },[showLogin,configured,isAuthPopup,authUser,loadProfile]);
 
   // Subscribe to Supabase auth state
   useEffect(()=>{
@@ -2395,7 +2464,7 @@ export default function App(){
       if(session?.user)loadProfile(session.user);
     });
     const{data:{subscription}}=supabase.auth.onAuthStateChange(async(event,session)=>{
-      if(event==="SIGNED_IN"&&session?.user){
+      if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED"||event==="USER_UPDATED"||event==="INITIAL_SESSION")&&session?.user){
         await loadProfile(session.user);
         setShowLogin(false);
       }else if(event==="SIGNED_OUT"){
@@ -2484,13 +2553,14 @@ export default function App(){
       const saved=await createProject(p,authUser?.id);
       setProjects(prev=>[saved,...prev]);
       toast("Project created");
-      if(p._navigate!==false) open(saved);
+      // Navigate into the project only if explicitly requested (e.g. from artifact save flow)
+      if(p._navigate===true) open(saved);
       return saved;
     }catch(e){
       console.error("createProject failed",e);
       const n={...p,id:Date.now(),thumbs:[],artifacts:{},user_id:authUser?.id||null};
       setProjects(prev=>[n,...prev]);
-      if(p._navigate!==false) open(n);
+      if(p._navigate===true) open(n);
       return n;
     }
   };
@@ -2716,7 +2786,7 @@ export default function App(){
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3} feedLoading={feedLoading}/>)}
-        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode}/>)}
+        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode} loading={projectsLoading}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode} onEdit={setEditItem} onDelete={deleteArt} canDeleteItem={canDeleteItem} onSave={setSaveIt} cols={winW<=640?1:winW<=1024?2:3}/>)}
       </main>
       {showLogin&&(<LoginModal onClose={()=>setShowLogin(false)}/>)}

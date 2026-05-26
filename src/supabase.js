@@ -5,23 +5,98 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const configured = !!(url && key);
 
-// Wrap fetch with a 12-second timeout so hung requests fail fast instead of
-// silently blocking the UI for 20+ seconds.
+// Clear any expired Supabase auth sessions from localStorage before the client
+// initialises. An expired session causes the client to fire a token-refresh
+// request on startup; if that request hangs it blocks ALL subsequent requests
+// for the full timeout duration and the feed never loads.
+if (configured) {
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith("sb-") && k.endsWith("-auth-token"))
+      .forEach(k => {
+        const raw = localStorage.getItem(k);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        // expires_at is a Unix timestamp in seconds
+        const exp = parsed?.expires_at ?? parsed?.session?.expires_at;
+        if (exp && exp < Date.now() / 1000) {
+          console.log("[Stash] Cleared expired session from localStorage");
+          localStorage.removeItem(k);
+        }
+      });
+  } catch (_) {}
+}
+
+// 8-second timeout per request.
 const fetchWithTimeout = (fetchUrl, options = {}) => {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
-  console.log("[Supabase] →", fetchUrl.toString().split("?")[0]);
+  const timer = setTimeout(() => controller.abort(), 8000);
   return fetch(fetchUrl, { ...options, signal: controller.signal })
-    .then(res => { console.log("[Supabase] ←", res.status, fetchUrl.toString().split("?")[0]); return res; })
-    .catch(err => { console.error("[Supabase] ✗", err.message, fetchUrl.toString().split("?")[0]); throw err; })
     .finally(() => clearTimeout(timer));
 };
 
+// Authenticated client — used for writes and auth operations.
+// Has session management; data requests queue behind token refresh.
 export const supabase = configured
   ? createClient(url, key, { global: { fetch: fetchWithTimeout } })
   : createClient("https://placeholder.supabase.co", "placeholder");
 
+// Public client — no auth, no session, no token-refresh queue.
+// Uses a unique storageKey so it never touches the main client's session.
+export const publicSupabase = configured
+  ? createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        storageKey: "sb-stash-public",
+      },
+      global: { fetch: fetchWithTimeout },
+    })
+  : createClient("https://placeholder.supabase.co", "placeholder", {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "sb-stash-public" },
+    });
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
+
+// Decode a JWT and write the session directly to Supabase's localStorage key.
+// No network call — works even when the auth queue is stuck.
+// Returns the decoded user object, or null on failure.
+export function applyTokensDirectly(accessToken, refreshToken) {
+  try {
+    // JWTs use base64url (- and _ instead of + and /) — convert before calling atob
+    const raw = accessToken.split(".")[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const pad = raw.length % 4;
+    const payload = JSON.parse(atob(pad ? raw + "=".repeat(4 - pad) : raw));
+    const projectRef = (url || "").match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
+    if (projectRef) {
+      const sessionData = {
+        access_token: accessToken,
+        token_type: "bearer",
+        expires_in: payload.exp - Math.floor(Date.now() / 1000),
+        expires_at: payload.exp,
+        refresh_token: refreshToken,
+        user: {
+          id: payload.sub,
+          aud: payload.aud || "authenticated",
+          role: payload.role || "authenticated",
+          email: payload.email,
+          email_confirmed_at: payload.email_confirmed_at,
+          user_metadata: payload.user_metadata || {},
+          app_metadata: payload.app_metadata || {},
+        },
+      };
+      localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify(sessionData));
+      console.log("[Auth] applyTokensDirectly: session written for", sessionData.user.email);
+      return sessionData.user;
+    }
+  } catch (e) {
+    console.error("[Auth] applyTokensDirectly failed:", e);
+  }
+  return null;
+}
 
 export async function signInWithGoogle() {
   // Opens Google OAuth in a popup so the main page never redirects away.
@@ -52,7 +127,9 @@ export async function signOutUser() {
 }
 
 export async function fetchProfile(userId) {
-  const { data, error } = await supabase
+  // Use publicSupabase — profiles are publicly readable per RLS, and this
+  // avoids the auth queue (which can block if the main client is refreshing).
+  const { data, error } = await publicSupabase
     .from("profiles")
     .select("*")
     .eq("id", userId)
@@ -75,7 +152,7 @@ export async function upsertProfile(profile) {
 // ── Projects ──────────────────────────────────────────────────────────────────
 
 export async function fetchProjects() {
-  const { data, error } = await supabase
+  const { data, error } = await publicSupabase
     .from("projects")
     .select("*")
     .order("created_at", { ascending: false });
@@ -160,7 +237,7 @@ function dbToProject(r, membersOverride) {
 // ── Artifacts ─────────────────────────────────────────────────────────────────
 
 export async function fetchArtifactsForProject(projectId) {
-  const { data, error } = await supabase
+  const { data, error } = await publicSupabase
     .from("artifacts")
     .select("*")
     .eq("project_id", projectId)
@@ -276,7 +353,7 @@ function dbToArtifact(r, overrides) {
 // ── Feed ──────────────────────────────────────────────────────────────────────
 
 export async function fetchFeed() {
-  const { data, error } = await supabase
+  const { data, error } = await publicSupabase
     .from("feed_items")
     .select("*")
     .order("created_at", { ascending: false });
