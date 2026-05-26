@@ -2234,20 +2234,26 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    if(!configured){setProjects(SPROJ);setFeed(SFEED.map(applyStoredSettings));setLoading(false);return;}
+    // Show the app immediately — no blocking spinner waiting on Supabase.
+    // SFEED acts as visual placeholders until real data arrives.
+    setLoading(false);
+    if(!configured)return;
     const deletedProjIds=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
-    // Race against a 6-second timeout so a hung Supabase connection never blocks the UI
-    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),6000));
-    Promise.race([Promise.all([fetchProjects(),fetchFeed()]),timeout])
-      .then(([projs,feedItems])=>{
-        const filteredProjs=projs.filter(p=>!deletedProjIds.includes(String(p.id)));
-        setProjects(filteredProjs.length?filteredProjs:SPROJ);
-        const realItems=feedItems.filter(f=>f.type!=="mockup");
-        // SFEED items go through applyStoredSettings so saved edits survive reload
-        setFeed(realItems.length?[...realItems,...SFEED.map(applyStoredSettings)]:SFEED.map(applyStoredSettings));
+    // Load Supabase data silently in the background (no timeout — free-tier
+    // projects can take 15–30s to wake from pause on the first request).
+    fetchProjects()
+      .then(projs=>{
+        const filtered=projs.filter(p=>!deletedProjIds.includes(String(p.id)));
+        if(filtered.length) setProjects(filtered);
       })
-      .catch(()=>{setProjects(SPROJ);setFeed(SFEED.map(applyStoredSettings));})
-      .finally(()=>setLoading(false));
+      .catch(e=>console.warn("Projects load failed:",e));
+    fetchFeed()
+      .then(feedItems=>{
+        const realItems=feedItems.filter(f=>f.type!=="mockup");
+        // Only swap out placeholders when real data arrives — never merge SFEED in
+        if(realItems.length) setFeed(realItems);
+      })
+      .catch(e=>console.warn("Feed load failed:",e));
   },[applyStoredSettings]);
 
   useEffect(()=>{
