@@ -1607,9 +1607,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
   },[isMobileWebsite,ifErr]);
 
   // Resolve avatar: if this item belongs to the signed-in user, use their Google photo
-  const userImage=item.user?.name===currentUser?.name?currentUser?.image:null;
-  const footerBg=darkMode?"#111118":"#FFF";
-  const showFooter=item.type!=="mockup";
+
 
   return (
     <div
@@ -1697,22 +1695,6 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
         )}
       </div>
 
-      {/* ── Metadata footer ───────────────────────────────────────── */}
-      {showFooter&&(
-        <div onClick={e=>e.stopPropagation()} style={{background:footerBg,padding:"12px 14px 14px",borderTop:`1px solid ${darkMode?"rgba(255,255,255,0.05)":BD}`}}>
-          <p style={{margin:"0 0 4px",fontSize:14,fontWeight:600,color:darkMode?"#FFF":T1,fontFamily:FF,lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.name}</p>
-          {item.desc&&(<p style={{margin:"0 0 7px",fontSize:12,color:darkMode?"rgba(255,255,255,0.5)":T2,fontFamily:FF,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.desc}</p>)}
-          {item.tags&&item.tags.length>0&&(
-            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:7}}>
-              {item.tags.map(t=>(<span key={t} style={{fontSize:11,color:darkMode?"rgba(255,255,255,0.4)":T3,fontFamily:FF}}>#{t}</span>))}
-            </div>
-          )}
-          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
-            <Av user={item.user||{name:"?",initials:"?"}} size={18} src={userImage}/>
-            <span style={{fontSize:12,color:darkMode?"rgba(255,255,255,0.35)":T3,fontFamily:FF}}>{item.user?.name||"Unknown"}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
