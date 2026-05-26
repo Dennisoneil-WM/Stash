@@ -2243,13 +2243,16 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    // Show the app immediately — no blocking spinner waiting on Supabase.
-    // SFEED acts as visual placeholders until real data arrives.
     setLoading(false);
-    if(!configured)return;
+    // If Supabase isn't configured, show SFEED immediately
+    if(!configured){setFeedLoading(false);return;}
     const deletedProjIds=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
-    // Load Supabase data silently in the background (no timeout — free-tier
-    // projects can take 15–30s to wake from pause on the first request).
+    // Hard fallback: if Supabase takes more than 20s (e.g. paused free-tier cold start),
+    // stop the spinner and show SFEED so the page isn't stuck forever.
+    const fallback=setTimeout(()=>{
+      console.warn("[Stash] Feed load timed out after 20s — showing placeholders");
+      setFeedLoading(false);
+    },20000);
     fetchProjects()
       .then(projs=>{
         const filtered=projs.filter(p=>!deletedProjIds.includes(String(p.id)));
@@ -2258,13 +2261,15 @@ export default function App(){
       .catch(e=>console.warn("Projects load failed:",e));
     fetchFeed()
       .then(feedItems=>{
+        clearTimeout(fallback);
         console.log("[Stash] fetchFeed returned",feedItems.length,"items",feedItems.map(f=>({id:f.id,type:f.type,name:f.name})));
         const realItems=feedItems.filter(f=>f.type!=="mockup");
-        // Only swap out placeholders when real data arrives — never merge SFEED in
         if(realItems.length) setFeed(realItems);
+        else console.warn("[Stash] No real items found — check Supabase RLS policies on feed_items");
         setFeedLoading(false);
       })
-      .catch(e=>{console.warn("Feed load failed:",e);setFeedLoading(false);});
+      .catch(e=>{clearTimeout(fallback);console.warn("Feed load failed:",e);setFeedLoading(false);});
+    return()=>clearTimeout(fallback);
   },[applyStoredSettings]);
 
   useEffect(()=>{
