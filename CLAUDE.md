@@ -172,7 +172,9 @@ All styling is via `style={{...}}` props. No className, no CSS files beyond the 
 
 ```jsx
 // Correct
+{% raw %}
 <div style={{background: BG, border: `1px solid ${BD}`, borderRadius: 12}}>
+{% endraw %}
 
 // Wrong — don't introduce CSS modules or utility classes
 <div className="card">
