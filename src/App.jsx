@@ -2255,20 +2255,37 @@ export default function App(){
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   // Close auth-callback popup (when this window IS the popup).
-  // Poll for the session instead of a fixed timeout — the OAuth code exchange
-  // can take 1-3s and closing too early drops the BroadcastChannel message.
+  // Listen for SIGNED_IN via onAuthStateChange — more reliable than polling.
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     if(params.get("auth_callback")==="1"&&window.opener){
-      let tries=0;
-      const iv=setInterval(async()=>{
-        tries++;
-        const {data:{session}}=await supabase.auth.getSession();
-        if(session||tries>25){clearInterval(iv);setTimeout(()=>window.close(),300);}
-      },200);
-      return ()=>clearInterval(iv);
+      const{data:{subscription}}=supabase.auth.onAuthStateChange((event)=>{
+        if(event==="SIGNED_IN"||event==="TOKEN_REFRESHED"){
+          subscription.unsubscribe();
+          // Wait a beat so BroadcastChannel reaches the main window before we vanish
+          setTimeout(()=>window.close(),800);
+        }
+      });
+      // Hard fallback — close after 10s no matter what
+      const t=setTimeout(()=>window.close(),10000);
+      return ()=>{subscription.unsubscribe();clearTimeout(t);};
     }
   },[]);
+
+  // Fallback auth sync: listen for localStorage writes from the OAuth popup.
+  // BroadcastChannel can be unreliable across popup windows; the storage event
+  // is guaranteed to fire whenever the popup writes the Supabase session key.
+  useEffect(()=>{
+    if(!configured)return;
+    const onStorage=async e=>{
+      if(!e.key||!e.key.includes("supabase"))return;
+      const{data:{session}}=await supabase.auth.getSession();
+      if(session?.user&&!authUser) await loadProfile(session.user);
+      setShowLogin(false);
+    };
+    window.addEventListener("storage",onStorage);
+    return ()=>window.removeEventListener("storage",onStorage);
+  },[authUser,loadProfile]);
 
   // Load profile from an auth user object
   const loadProfile=useCallback(async(user)=>{
