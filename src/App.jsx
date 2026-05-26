@@ -2465,58 +2465,53 @@ export default function App(){
               <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
             ))}
           </div>
-          {/* Desktop search — collapsed pill or expanded input */}
+          {/* Desktop search — collapsed pill or expanded input. flex:1 lives OUTSIDE so actions stay pinned right */}
           {!deskSearch ? (
-            <>
-              <button
-                onClick={()=>{setDeskSearch(true);setTimeout(()=>deskSearchRef.current&&deskSearchRef.current.focus(),60);}}
-                style={{display:"flex",alignItems:"center",gap:6,background:darkMode?"#2A2A2A":"#F0F0F0",border:"1px solid transparent",borderRadius:20,padding:"6px 14px",color:darkMode?"#AAA":T2,fontSize:14,cursor:"pointer",fontFamily:FF,flexShrink:0,transition:"background 0.2s, color 0.2s"}}
-                onMouseEnter={e=>{e.currentTarget.style.background=darkMode?"#333":"#E8E8E8";e.currentTarget.style.color=darkMode?"#FFF":T1;}}
-                onMouseLeave={e=>{e.currentTarget.style.background=darkMode?"#2A2A2A":"#F0F0F0";e.currentTarget.style.color=darkMode?"#AAA":T2;}}
-              >
-                <MI name="search" size={18} style={{color:"inherit"}}/>
-                <span>Search</span>
-              </button>
-              <div style={{flex:1}}/>
-            </>
+            <button
+              onClick={()=>{setDeskSearch(true);setTimeout(()=>deskSearchRef.current&&deskSearchRef.current.focus(),60);}}
+              style={{display:"flex",alignItems:"center",gap:6,background:darkMode?"#2A2A2A":"#F0F0F0",border:"1px solid transparent",borderRadius:20,padding:"6px 14px",color:darkMode?"#AAA":T2,fontSize:14,cursor:"pointer",fontFamily:FF,flexShrink:0,transition:"background 0.2s, color 0.2s"}}
+              onMouseEnter={e=>{e.currentTarget.style.background=darkMode?"#333":"#E8E8E8";e.currentTarget.style.color=darkMode?"#FFF":T1;}}
+              onMouseLeave={e=>{e.currentTarget.style.background=darkMode?"#2A2A2A":"#F0F0F0";e.currentTarget.style.color=darkMode?"#AAA":T2;}}
+            >
+              <MI name="search" size={18} style={{color:"inherit"}}/>
+              <span>Search</span>
+            </button>
           ) : (
-            <>
-              <div style={{flex:1,position:"relative",maxWidth:500}}>
-                <MI name="search" size={20} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:T3,pointerEvents:"none"}}/>
-                <input
-                  ref={deskSearchRef}
-                  value={srch}
-                  onChange={e=>setSrch(e.target.value)}
-                  onFocus={()=>{setSf(true);setShowTags(true);}}
-                  onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)}
-                  onKeyDown={e=>{if(e.key==="Escape"){setDeskSearch(false);setSrch("");}}}
-                  placeholder="Search projects or tags"
-                  style={{width:"100%",boxSizing:"border-box",background:darkMode?"#2A2A2A":"#FFF",border:`1px solid ${darkMode?"#444":BM}`,borderRadius:22,padding:"7px 38px 7px 42px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"background 0.2s"}}
-                />
-                <button
-                  onMouseDown={e=>{e.preventDefault();setDeskSearch(false);setSrch("");}}
-                  style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:T3,fontSize:16,lineHeight:1,padding:"4px 6px",borderRadius:"50%"}}
-                >&#x2715;</button>
-                {sf&&showTags&&(
-                  <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:darkMode?"#1A1A1A":"#FFF",border:`1px solid ${darkMode?"#333":BD}`,borderRadius:12,boxShadow:darkMode?"0 4px 20px rgba(0,0,0,.5)":"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto"}}>
-                    {matchingTags.length>0?(
-                      <div style={{padding:8}}>
-                        <p style={{margin:"8px 12px 4px",fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase"}}>All Tags</p>
-                        {matchingTags.map(t=>(
-                          <button key={t} onClick={()=>{setSrch(t);setShowTags(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"10px 12px",fontSize:13,color:darkMode?"#FFF":T1,fontFamily:FF,cursor:"pointer",borderRadius:6,marginBottom:2}} onMouseEnter={e=>e.currentTarget.style.background=darkMode?"#2A2A2A":"#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                            <span style={{fontWeight:600}}>#</span>{t}
-                          </button>
-                        ))}
-                      </div>
-                    ):(
-                      <div style={{padding:"16px 12px",textAlign:"center",color:T3,fontSize:13}}>No tags found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div style={{flex:"0 0 12px"}}/>
-            </>
+            <div style={{width:460,position:"relative",flexShrink:0}}>
+              <MI name="search" size={20} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:T3,pointerEvents:"none"}}/>
+              <input
+                ref={deskSearchRef}
+                value={srch}
+                onChange={e=>setSrch(e.target.value)}
+                onFocus={()=>{setSf(true);setShowTags(true);}}
+                onBlur={()=>setTimeout(()=>{setSf(false);setShowTags(false);},150)}
+                onKeyDown={e=>{if(e.key==="Escape"){setDeskSearch(false);setSrch("");}}}
+                placeholder="Search projects or tags"
+                style={{width:"100%",boxSizing:"border-box",background:darkMode?"#2A2A2A":"#FFF",border:`1px solid ${darkMode?"#444":BM}`,borderRadius:22,padding:"7px 38px 7px 42px",color:darkMode?"#FFF":T1,fontSize:14,outline:"none",fontFamily:FF,transition:"background 0.2s"}}
+              />
+              <button
+                onMouseDown={e=>{e.preventDefault();setDeskSearch(false);setSrch("");}}
+                style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:T3,fontSize:16,lineHeight:1,padding:"4px 6px",borderRadius:"50%"}}
+              >&#x2715;</button>
+              {sf&&showTags&&(
+                <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:8,background:darkMode?"#1A1A1A":"#FFF",border:`1px solid ${darkMode?"#333":BD}`,borderRadius:12,boxShadow:darkMode?"0 4px 20px rgba(0,0,0,.5)":"0 4px 20px rgba(0,0,0,.1)",zIndex:10,maxHeight:300,overflowY:"auto"}}>
+                  {matchingTags.length>0?(
+                    <div style={{padding:8}}>
+                      <p style={{margin:"8px 12px 4px",fontSize:11,fontWeight:700,color:T3,textTransform:"uppercase"}}>All Tags</p>
+                      {matchingTags.map(t=>(
+                        <button key={t} onClick={()=>{setSrch(t);setShowTags(false);}} style={{display:"block",width:"100%",textAlign:"left",background:"transparent",border:"none",padding:"10px 12px",fontSize:13,color:darkMode?"#FFF":T1,fontFamily:FF,cursor:"pointer",borderRadius:6,marginBottom:2}} onMouseEnter={e=>e.currentTarget.style.background=darkMode?"#2A2A2A":"#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <span style={{fontWeight:600}}>#</span>{t}
+                        </button>
+                      ))}
+                    </div>
+                  ):(
+                    <div style={{padding:"16px 12px",textAlign:"center",color:T3,fontSize:13}}>No tags found</div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
+          <div style={{flex:1}}/>{/* always pushes actions to the right */}
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {view==="projects"&&(<BBtn sm darkMode={darkMode} onClick={()=>requireAuth(()=>setNewP(true),"new_project")}>+ Project</BBtn>)}
             {view==="explore"&&(<BBtn sm darkMode={darkMode} onClick={()=>requireAuth(()=>setUplFeed(true),"new_artifact")}>+ Artifact</BBtn>)}
