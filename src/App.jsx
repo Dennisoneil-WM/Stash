@@ -1699,12 +1699,13 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
   );
 }
 
-function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,currentUser,cols=3}){
+function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,currentUser,cols=3,feedLoading=false}){
   const [lb,setLb]=useState(null);
   const savedDark=useRef(false);
   const nonMockItems=feed.filter(item=>item.type!=="mockup");
-  // Show real items when available; fall back to seed mockups when the feed is empty
-  const realItems=nonMockItems.length>0?nonMockItems:feed;
+  // While Supabase is still loading, show nothing instead of placeholder mockups.
+  // Once feedLoading is false, either real items or SFEED (if truly empty) are shown.
+  const realItems=feedLoading?[]:nonMockItems.length>0?nonMockItems:feed;
   const isFiltered=!!srch.trim();
   const h1c=darkMode?"#FFFFFF":T1;
   const subc=darkMode?"rgba(255,255,255,0.5)":T2;
@@ -1728,7 +1729,14 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
         </div>
       )}
       {!isFiltered&&(<LiveBar darkMode={darkMode}/>)}
-      {isFiltered&&realItems.length===0?(
+      {feedLoading&&(
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"24px 0",color:subc,fontFamily:FF,fontSize:13}}>
+          <div style={{width:16,height:16,border:`2px solid ${darkMode?"#444":BD}`,borderTopColor:darkMode?"#888":BM,borderRadius:"50%",animation:"spin 0.7s linear infinite",flexShrink:0}}/>
+          Loading content&#x2026;
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      )}
+      {!feedLoading&&isFiltered&&realItems.length===0?(
         <div style={{textAlign:"center",padding:"80px 0"}}>
           <p style={{margin:"0 0 10px",fontSize:22,fontWeight:700,color:h1c,fontFamily:FF}}>No results</p>
           <p style={{margin:0,fontSize:14,color:subc,fontFamily:FF}}>Nothing found for &#x201C;{srch}&#x201D;</p>
@@ -2188,6 +2196,7 @@ export default function App(){
   const [proj,setProj]=useState(null);
   const [projects,setProjects]=useState([]);
   const [feed,setFeed]=useState(SFEED);
+  const [feedLoading,setFeedLoading]=useState(true);
   const [loading,setLoading]=useState(true);
   const [srch,setSrch]=useState(""); const [sf,setSf]=useState(false);
   const [newP,setNewP]=useState(false); const [newF,setNewF]=useState(false);
@@ -2249,11 +2258,13 @@ export default function App(){
       .catch(e=>console.warn("Projects load failed:",e));
     fetchFeed()
       .then(feedItems=>{
+        console.log("[Stash] fetchFeed returned",feedItems.length,"items",feedItems.map(f=>({id:f.id,type:f.type,name:f.name})));
         const realItems=feedItems.filter(f=>f.type!=="mockup");
         // Only swap out placeholders when real data arrives — never merge SFEED in
         if(realItems.length) setFeed(realItems);
+        setFeedLoading(false);
       })
-      .catch(e=>console.warn("Feed load failed:",e));
+      .catch(e=>{console.warn("Feed load failed:",e);setFeedLoading(false);});
   },[applyStoredSettings]);
 
   useEffect(()=>{
@@ -2699,7 +2710,7 @@ export default function App(){
         </>)}
       </nav>
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3}/>)}
+        {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3} feedLoading={feedLoading}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode} onEdit={setEditItem} onDelete={deleteArt} canDeleteItem={canDeleteItem} onSave={setSaveIt} cols={winW<=640?1:winW<=1024?2:3}/>)}
       </main>
