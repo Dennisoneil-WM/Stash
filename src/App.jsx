@@ -2607,7 +2607,9 @@ export default function App(){
         toast("Changes saved");
         return;
       }catch(e){
-        console.error("Supabase update failed, change persisted via localStorage",e);
+        console.error("[saveEdit] DB update failed — settings saved to localStorage only:",e?.message||e);
+        toast("⚠️ Saved locally only — run supabase_migration.sql to fix DB");
+        return;
       }
     }
     setFeed(prev=>prev.map(f=>String(f.id)===String(updated.id)?{...f,...updated}:f));

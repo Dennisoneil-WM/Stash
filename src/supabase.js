@@ -407,13 +407,20 @@ export async function insertFeedItem(art, userId) {
 }
 
 export async function updateFeedItem(id, updates) {
+  const displaySettings = {
+    deviceShell: updates.deviceShell,
+    mobileBg: updates.mobileBg,
+    crop: updates.crop !== undefined ? updates.crop : null,
+    align: updates.align || "center",
+  };
+
   const updateObj = {
     name: updates.name,
     description: updates.desc || "",
     tags: updates.tags || [],
     device_shell: updates.deviceShell || "auto",
     mobile_bg: updates.mobileBg || "#000",
-    crop: updates.crop || null,
+    crop: updates.crop !== undefined ? updates.crop : null,
     align: updates.align || "center",
   };
 
@@ -424,25 +431,30 @@ export async function updateFeedItem(id, updates) {
     .select()
     .single();
 
-  if (error && (error.message.includes("device_shell") || error.message.includes("mobile_bg") || error.message.includes("crop") || error.message.includes("align"))) {
-    console.warn("New columns don't exist yet, updating without them:", error.message);
-    const basicUpdate = { name: updates.name, description: updates.desc || "", tags: updates.tags || [] };
-    const result = await supabase.from("feed_items").update(basicUpdate).eq("id", id).select().single();
-    if (result.error) throw result.error;
-    try {
-      localStorage.setItem(`device_${id}`, JSON.stringify({
-        deviceShell: updates.deviceShell, mobileBg: updates.mobileBg, crop: updates.crop, align: updates.align || "center",
-      }));
-    } catch(e) {}
-    data = result.data;
-  } else if (error) {
-    throw error;
+  if (error) {
+    const missingCol = error.message.includes("device_shell") ||
+                       error.message.includes("mobile_bg") ||
+                       error.message.includes("crop") ||
+                       error.message.includes("align");
+    if (missingCol) {
+      // Display columns missing — run supabase_migration.sql to fix permanently.
+      // Fall back to updating only the base columns.
+      console.error("[Stash] Display columns missing in DB. Run supabase_migration.sql to fix. Settings saved to localStorage only.");
+      const basicUpdate = { name: updates.name, description: updates.desc || "", tags: updates.tags || [] };
+      const result = await supabase.from("feed_items").update(basicUpdate).eq("id", id).select().single();
+      if (result.error) throw result.error;
+      data = result.data;
+    } else {
+      // Could be RLS blocking the update. Run supabase_migration.sql which disables
+      // RLS on feed_items so writes work without per-row policies.
+      console.error("[Stash] Feed item update failed:", error.code, error.message,
+        "\nIf this is code PGRST116, RLS is blocking writes — run supabase_migration.sql");
+      throw error;
+    }
   }
 
   try {
-    localStorage.setItem(`device_${id}`, JSON.stringify({
-      deviceShell: updates.deviceShell, mobileBg: updates.mobileBg, crop: updates.crop, align: updates.align || "center",
-    }));
+    localStorage.setItem(`device_${id}`, JSON.stringify(displaySettings));
   } catch(e) {}
   return dbToFeedItem(data);
 }
