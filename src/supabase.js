@@ -139,6 +139,21 @@ export async function fetchProfile(userId) {
   return data;
 }
 
+export async function fetchAllProfiles() {
+  const { data, error } = await publicSupabase
+    .from("profiles")
+    .select("id, name, initials, title, avatar_url")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data || []).map(p => ({
+    id: p.id,
+    name: p.name || "Unknown",
+    initials: p.initials || "?",
+    title: p.title || "",
+    image: p.avatar_url || null,
+  }));
+}
+
 export async function upsertProfile(profile) {
   const { data, error } = await supabase
     .from("profiles")
@@ -152,12 +167,50 @@ export async function upsertProfile(profile) {
 // ── Projects ──────────────────────────────────────────────────────────────────
 
 export async function fetchProjects() {
-  const { data, error } = await publicSupabase
+  const { data: projData, error: projError } = await publicSupabase
     .from("projects")
     .select("*")
     .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data.map(dbToProject);
+  if (projError) throw projError;
+
+  // Fetch artifact counts + thumbnails per-project in parallel.
+  // Full-table scans on artifacts are blocked by RLS; per-project
+  // queries with .eq("project_id", id) work fine for public reads.
+  const artResults = await Promise.all(
+    projData.map(r =>
+      publicSupabase
+        .from("artifacts")
+        .select("project_id, type, src, thumb")
+        .eq("project_id", r.id)
+    )
+  );
+
+  // Types whose src is an embed/page URL — unusable as an img/video src.
+  // video/gif/image: pass src through; ProjCard will render <video> or <img>.
+  // pdf/file: no visual preview, fall back to gradient thumb.
+  const EMBED_TYPES = new Set(["figma", "website", "mockup", "pdf", "file"]);
+
+  return projData.map((r, i) => {
+    const p = dbToProject(r);
+    const arts = artResults[i]?.data || [];
+    if (arts.length > 0) {
+      p.artifactCount = arts.length;
+      p.thumbs = arts
+        .slice(0, 4)
+        .map(a => {
+          // For embed types, src is an iframe URL — can't be used as background-image.
+          // Fall back to the CSS gradient thumb instead.
+          if (EMBED_TYPES.has(a.type)) return a.thumb || null;
+          return a.src || a.thumb || null;
+        })
+        .filter(Boolean);
+    } else {
+      // Fall back to stored values if the query returned nothing
+      p.artifactCount = r.artifact_count || 0;
+      p.thumbs = r.thumbs || [];
+    }
+    return p;
+  });
 }
 
 export async function createProject(p, userId) {
@@ -201,8 +254,28 @@ export async function updateProject(id, updates) {
   if (updates.artifactCount !== undefined) row.artifact_count = updates.artifactCount;
   if (updates.pages !== undefined) row.pages = updates.pages;
   if (updates.tags !== undefined) row.tags = updates.tags;
+  if (updates.name !== undefined) row.name = updates.name;
+  if (updates.desc !== undefined) row.description = updates.desc;
+  if (updates.members !== undefined) row.members = updates.members;
+  if (updates.teams !== undefined) {
+    try { row.teams = updates.teams; } catch(e) {}
+  }
   const { error } = await supabase.from("projects").update(row).eq("id", id);
+  // If teams column doesn't exist yet, retry without it
+  if (error && error.message && error.message.includes("teams")) {
+    const { teams: _t, ...rowWithout } = row;
+    const { error: e2 } = await supabase.from("projects").update(rowWithout).eq("id", id);
+    if (e2) throw e2;
+    try { localStorage.setItem(`teams_${id}`, JSON.stringify(updates.teams)); } catch(e) {}
+    return;
+  }
   if (error) throw error;
+  if (updates.members !== undefined) {
+    try { localStorage.setItem(`members_${id}`, JSON.stringify(updates.members)); } catch(e) {}
+  }
+  if (updates.teams !== undefined) {
+    try { localStorage.setItem(`teams_${id}`, JSON.stringify(updates.teams)); } catch(e) {}
+  }
 }
 
 export async function deleteProject(id) {
@@ -218,12 +291,18 @@ function dbToProject(r, membersOverride) {
       if (stored) members = JSON.parse(stored);
     } catch(e) {}
   }
+  let teams = r.teams || [];
+  try {
+    const storedTeams = localStorage.getItem(`teams_${r.id}`);
+    if (storedTeams) teams = JSON.parse(storedTeams);
+  } catch(e) {}
   return {
     id: r.id,
     name: r.name,
     desc: r.description,
     folder: r.folder,
     tags: r.tags || [],
+    teams,
     artifactCount: r.artifact_count,
     thumbs: r.thumbs || [],
     pages: r.pages || [{ id: "p1", label: "1", name: "Page 1" }],
@@ -252,24 +331,44 @@ export async function fetchArtifactsForProject(projectId) {
 }
 
 export async function insertArtifact(projectId, pageId, art, userId) {
-  const { data, error } = await supabase
+  const insertObj = {
+    project_id: projectId,
+    page_id: pageId,
+    name: art.name,
+    type: art.type,
+    src: art.src || null,
+    thumb: art.thumb || null,
+    viewport: art.viewport || null,
+    is_mobile: art.isMobile || false,
+    device_shell: art.deviceShell || "auto",
+    crop: art.crop || null,
+    align: art.align || "center",
+    user_name: art.user?.name || "Dennis O'Neil",
+    user_initials: art.user?.initials || "DO",
+    user_id: userId || null,
+  };
+
+  let { data, error } = await supabase
     .from("artifacts")
-    .insert({
-      project_id: projectId,
-      page_id: pageId,
-      name: art.name,
-      type: art.type,
-      src: art.src || null,
-      thumb: art.thumb || null,
-      viewport: art.viewport || null,
-      is_mobile: art.isMobile || false,
-      user_name: art.user?.name || "Dennis O'Neil",
-      user_initials: art.user?.initials || "DO",
-      user_id: userId || null,
-    })
+    .insert(insertObj)
     .select()
     .single();
-  if (error) throw error;
+
+  // Graceful fallback if display columns don't exist yet (run supabase_migration.sql to fix)
+  if (error && (error.message.includes("device_shell") || error.message.includes("crop") || error.message.includes("align"))) {
+    const { device_shell: _ds, crop: _c, align: _a, ...basicInsert } = insertObj;
+    const result = await supabase.from("artifacts").insert(basicInsert).select().single();
+    if (result.error) throw result.error;
+    data = result.data;
+    try {
+      localStorage.setItem(`art_${data.id}`, JSON.stringify({
+        deviceShell: art.deviceShell, crop: art.crop, align: art.align || "center",
+      }));
+    } catch(e) {}
+  } else if (error) {
+    throw error;
+  }
+
   return dbToArtifact(data);
 }
 

@@ -12,7 +12,7 @@
 // When splitting: import tokens + utils from those files instead of redeclaring.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useRef, useCallback, useEffect } from "react";
-import { supabase, configured, applyTokensDirectly, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, updateArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile, signInWithGoogle, signOutUser, fetchProfile, upsertProfile } from "./supabase.js";
+import { supabase, configured, applyTokensDirectly, fetchProjects, createProject, deleteProject, fetchArtifactsForProject, insertArtifact, updateArtifact, fetchFeed, insertFeedItem, updateFeedItem, deleteFeedItem, uploadFile, signInWithGoogle, signOutUser, fetchProfile, upsertProfile, fetchAllProfiles, updateProject } from "./supabase.js";
 
 const BG="#FFF",PG="#F5F5F5",BD="#E8E8E8",BM="#D0D0D0";
 const T1="#0D0D0D",T2="#6B6B6B",T3="#ABABAB",BK="#0D0D0D";
@@ -90,9 +90,14 @@ function figEmbed(u){if(!u)return "";if(u.includes("figma.com/embed"))return u;r
 function ensureHttp(u){if(!u)return "";return u.startsWith("http")?u:"https://"+u;}
 
 function Av({user,size=32,src}){
-  if(src) return (<img src={src} alt={user.name} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,display:"block"}}/>);
-  const bg=["#EBF5FB","#F0EBFB","#FBF0EB","#EBFBF0","#FBEBF0"],fg=["#1A6FA8","#6B21A8","#C2410C","#065F46","#9D174D"],i=(user.id-1)%5;
-  return (<div style={{width:size,height:size,borderRadius:"50%",background:bg[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.34,fontWeight:700,color:fg[i],flexShrink:0,userSelect:"none"}}>{user.initials}</div>);
+  const [imgErr,setImgErr]=useState(false);
+  const bg=["#EBF5FB","#F0EBFB","#FBF0EB","#EBFBF0","#FBEBF0"],fg=["#1A6FA8","#6B21A8","#C2410C","#065F46","#9D174D"];
+  // Support both numeric ids and UUID strings for color index
+  const idNum=typeof user.id==="number"?user.id:parseInt((user.id||"").replace(/-/g,"").slice(-4),16)||1;
+  const i=((idNum-1)%5+5)%5;
+  const initials=(<div style={{width:size,height:size,borderRadius:"50%",background:bg[i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.34,fontWeight:700,color:fg[i],flexShrink:0,userSelect:"none"}}>{user.initials}</div>);
+  if(src&&!imgErr) return (<img src={src} alt={user?.name||""} onError={()=>setImgErr(true)} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,display:"block"}}/>);
+  return initials;
 }
 function Bdg({type}){
   const L={figma:"Figma",website:"URL",file:"File",image:"Image",video:"Video",pdf:"PDF",gif:"GIF"};
@@ -119,7 +124,7 @@ function Fld({label,children}){
 function Mdl({title,onClose,children,w=520,isMobile=false}){
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:isMobile?0:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#FFF",borderRadius:isMobile?0:20,width:"100%",maxWidth:isMobile?"100%":w,height:isMobile?"100vh":"auto",padding:isMobile?"16px 16px 24px":"28px 28px 24px",boxShadow:isMobile?"none":"0 20px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"100vh":"92vh",overflowY:"auto"}}>
+      <div style={{background:"#FFF",borderRadius:isMobile?0:20,width:"100%",maxWidth:isMobile?"100%":w,height:isMobile?"100vh":"auto",padding:isMobile?"16px 16px 24px":"28px 28px 24px",boxShadow:isMobile?"none":"0 20px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"100vh":"92vh",overflowY:"auto",position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
           <span style={{fontSize:18,fontWeight:700,color:T1,fontFamily:FF}}>{title}</span>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:22,lineHeight:1,padding:4}}>&#x2715;</button>
@@ -239,7 +244,7 @@ function Thumb({art,h=220,onClick,darkMode,bare=false}){
   );
 }
 
-function LBox({art,onClose,onTagClick}){
+function LBox({art,onClose,onTagClick,currentUser}){
   const [winH,setWinH]=useState(window.innerHeight);
   const [winW,setWinW]=useState(window.innerWidth);
   useEffect(()=>{
@@ -255,7 +260,8 @@ function LBox({art,onClose,onTagClick}){
   const showNoDevice=ds==="none";
   // PhoneShell natural dimensions with noBackground=true (padding:0)
   const PHONE_W=307, PHONE_H=649;
-  const phoneScale=Math.min(2.2,Math.min((winH*0.82)/PHONE_H,(winW*0.48)/PHONE_W));
+  const isMobileView=winW<=640;
+  const phoneScale=Math.min(2.2,Math.min((winH*(isMobileView?0.78:0.82))/PHONE_H,(winW*(isMobileView?0.90:0.48))/PHONE_W));
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
@@ -312,6 +318,15 @@ function LBox({art,onClose,onTagClick}){
           </div>
         )}
         <span style={{color:"rgba(255,255,255,.45)",fontSize:12,fontFamily:FF}}>{art.name}</span>
+        {art.user&&(
+          <div style={{display:"flex",alignItems:"center",gap:9,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",borderRadius:100,padding:"6px 14px 6px 6px"}}>
+            {(()=>{const isMe=currentUser&&(String(art.user.id)===String(currentUser.id)||art.user.name===currentUser.name);const avSrc=isMe?currentUser.image:art.user.image;return(<Av user={isMe?{...art.user,...currentUser}:art.user} size={26} src={avSrc}/>);})()}
+            <div>
+              <p style={{margin:0,fontSize:12,fontWeight:600,color:"rgba(255,255,255,.82)",fontFamily:FF,lineHeight:1.2}}>{art.user.name}</p>
+              {art.user.title&&(<p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.38)",fontFamily:FF,lineHeight:1.2}}>{art.user.title}</p>)}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -876,6 +891,145 @@ function NewProjMdl({onClose,onCreate,isMobile=false}){
   );
 }
 
+function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,isMobile=false}){
+  const [nm,setNm]=useState(project.name||"");
+  const [ds,setDs]=useState(project.desc||"");
+  const [members,setMembers]=useState(project.members||[]);
+  const [teams,setTeams]=useState(project.teams||[]);
+  const [teamInput,setTeamInput]=useState("");
+  const [allProfiles,setAllProfiles]=useState([]);
+  const [saving,setSaving]=useState(false);
+  const [tab,setTab]=useState("info"); // "info" | "teams" | "members"
+  const [confirmDelete,setConfirmDelete]=useState(false);
+
+  useEffect(()=>{
+    fetchAllProfiles().then(ps=>{
+      // Always include currentUser in the list even if not in DB yet
+      const ids=new Set(ps.map(p=>String(p.id)));
+      if(currentUser&&!ids.has(String(currentUser.id))) ps=[currentUser,...ps];
+      setAllProfiles(ps);
+    }).catch(()=>{
+      setAllProfiles(currentUser?[currentUser]:[]);
+    });
+  },[]);
+
+  const toggleMember=u=>{
+    setMembers(prev=>{
+      const exists=prev.some(m=>String(m.id)===String(u.id));
+      return exists?prev.filter(m=>String(m.id)!==String(u.id)):[...prev,u];
+    });
+  };
+
+  const addTeam=()=>{
+    const t=teamInput.trim();
+    if(t&&!teams.includes(t)){setTeams(prev=>[...prev,t]);setTeamInput("");}
+  };
+
+  const save=async()=>{
+    if(!nm.trim())return;
+    setSaving(true);
+    await onSave({name:nm.trim(),desc:ds,members,teams});
+    setSaving(false);
+    onClose();
+  };
+
+  const TABS=[{id:"info",label:"Project",icon:"edit"},{id:"teams",label:"Teams",icon:"groups"},{id:"members",label:"Members",icon:"people"}];
+  const tabBtnStyle=(id)=>({
+    padding:"8px 16px",borderRadius:100,border:"none",cursor:"pointer",fontFamily:FF,fontWeight:600,fontSize:13,
+    background:tab===id?BK:"transparent",
+    color:tab===id?"#FFF":T2,
+    transition:"all .15s",
+  });
+
+  return (
+    <Mdl title="Project Settings" onClose={onClose} w={520} isMobile={isMobile}>
+      {/* Tab bar */}
+      <div style={{display:"flex",gap:4,background:"#F5F5F5",borderRadius:100,padding:4,marginBottom:24}}>
+        {TABS.map(t=>(<button key={t.id} style={tabBtnStyle(t.id)} onClick={()=>setTab(t.id)}>{t.label}</button>))}
+      </div>
+
+      {/* Info tab */}
+      {tab==="info"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+          <Fld label="Project Name"><TIn ph="Project name" val={nm} set={setNm} af/></Fld>
+          <Fld label="Summary">
+            <TIn ph="What is this project about? What problem does it solve?" val={ds} set={setDs} multi/>
+          </Fld>
+        </div>
+      )}
+
+      {/* Teams tab */}
+      {tab==="teams"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
+          <Fld label="Teams Involved">
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:teams.length?12:0}}>
+              {teams.map(t=>(
+                <div key={t} style={{display:"flex",alignItems:"center",gap:6,background:BK,borderRadius:100,padding:"5px 12px 5px 14px",fontSize:13,color:"#FFF",fontFamily:FF,fontWeight:500}}>
+                  {t}
+                  <button onClick={()=>setTeams(prev=>prev.filter(x=>x!==t))} style={{background:"rgba(255,255,255,.25)",border:"none",cursor:"pointer",color:"#FFF",fontSize:14,padding:0,lineHeight:1,width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>&#x2715;</button>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <input value={teamInput} onChange={e=>setTeamInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTeam();}}} placeholder="e.g. Core 2, Checkout, Budbot..." style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"9px 14px",fontSize:13,color:T1,outline:"none",fontFamily:FF,transition:"border-color .15s"}} onFocus={e=>e.target.style.borderColor=BM} onBlur={e=>e.target.style.borderColor=BD}/>
+              <button onClick={addTeam} style={{background:BK,border:"none",borderRadius:100,padding:"9px 18px",color:"#FFF",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Add</button>
+            </div>
+            <p style={{margin:"8px 0 0",fontSize:12,color:T3,fontFamily:FF}}>Press Enter or click Add to add a team.</p>
+          </Fld>
+        </div>
+      )}
+
+      {/* Members tab */}
+      {tab==="members"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:24,maxHeight:360,overflowY:"auto"}}>
+          {allProfiles.length===0&&(<p style={{fontSize:13,color:T3,fontFamily:FF,textAlign:"center",padding:"24px 0"}}>Loading teammates...</p>)}
+          {allProfiles.map(u=>{
+            const sel=members.some(m=>String(m.id)===String(u.id));
+            const isMe=currentUser&&String(u.id)===String(currentUser.id);
+            const displayUser=isMe?{...u,...currentUser}:u;
+            const displayImg=isMe?currentUser.image:u.image;
+            return (
+              <button key={u.id} onClick={()=>toggleMember(displayUser)} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",border:`${sel?2:1}px solid ${sel?BK:BD}`,borderRadius:14,background:sel?"#FAFAFA":"#FFF",cursor:"pointer",textAlign:"left",transition:"all .15s",fontFamily:FF,width:"100%"}}>
+                <Av user={displayUser} size={36} src={displayImg}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{margin:0,fontSize:13,fontWeight:sel?700:500,color:T1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayUser.name}{isMe&&<span style={{fontSize:11,color:T3,fontWeight:400,marginLeft:6}}>(you)</span>}</p>
+                  <p style={{margin:0,fontSize:11,color:T3}}>{displayUser.title||"Team member"}</p>
+                </div>
+                {sel&&(<MI name="check_circle" size={20} style={{color:BK,flexShrink:0}}/>)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        {canDelete&&(
+          <button onClick={()=>setConfirmDelete(true)} style={{background:"none",border:"none",cursor:"pointer",color:"#DC2626",fontSize:13,fontWeight:600,fontFamily:FF,padding:"8px 4px",marginRight:"auto"}}>Delete Project</button>
+        )}
+        <div style={{marginLeft:"auto",display:"flex",gap:10}}>
+          <GBtn sm onClick={onClose}>Cancel</GBtn>
+          <BBtn sm disabled={!nm.trim()||saving} onClick={save}>{saving?"Saving...":"Save Changes"}</BBtn>
+        </div>
+      </div>
+
+      {/* ── Delete confirmation overlay ── */}
+      {confirmDelete&&(
+        <div style={{position:"absolute",inset:0,background:"rgba(255,255,255,.96)",borderRadius:"inherit",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:32,zIndex:10}}>
+          <div style={{width:48,height:48,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:4}}>
+            <MI name="delete_outline" size={26} style={{color:"#DC2626"}}/>
+          </div>
+          <p style={{margin:0,fontSize:17,fontWeight:700,color:T1,fontFamily:FF,textAlign:"center"}}>Delete &#x201C;{project.name}&#x201D;?</p>
+          <p style={{margin:0,fontSize:14,color:T2,fontFamily:FF,lineHeight:1.55,textAlign:"center",maxWidth:340}}>This will permanently delete this project and all its settings. Artifacts already published to the feed won&#x2019;t be removed.</p>
+          <div style={{display:"flex",gap:10,marginTop:8}}>
+            <GBtn sm onClick={()=>setConfirmDelete(false)}>Go Back</GBtn>
+            <button onClick={()=>{onDelete&&onDelete(project.id);onClose();}} style={{background:"#DC2626",border:"none",color:"#FFF",borderRadius:100,padding:"9px 22px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:FF}}>Yes, Delete Project</button>
+          </div>
+        </div>
+      )}
+    </Mdl>
+  );
+}
+
 function NewFolderMdl({onClose,projects,isMobile=false}){
   const [nm,setNm]=useState(""); const [ds,setDs]=useState(""); const [srch,setSrch]=useState("");
   const fp=projects.filter(p=>p.name.toLowerCase().includes(srch.toLowerCase()));
@@ -954,24 +1108,64 @@ function SaveMdl({art,projects,onClose,onSave,isMobile=false}){
   );
 }
 
-function ArtTile({art,onPublish,onSave,onOpen,onDelete,darkMode,canDelete}){
+function ArtTile({art,onPublish,onSave,onOpen,onDelete,onEdit,darkMode,canDelete}){
   const [hov,setHov]=useState(false); const [menu,setMenu]=useState(false);
+  // Identical media-rendering logic to ExploreCard so tiles look the same everywhere
+  const ds=art.deviceShell||"auto";
+  const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile===true);
+  const showNoDevice=ds==="none";
+  const hasCrop=art.type==="video"&&!!art.crop;
+  const showCroppedVideo=hasCrop&&art.src;
+  const isMobileMedia=(art.type==="image"||art.type==="gif"||(art.type==="video"&&!hasCrop))&&art.src&&showMobile&&!showNoDevice;
   return (
-    <div style={{position:"relative"}} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>{setHov(false);setMenu(false);}}>
-      <Thumb art={art} onClick={()=>onOpen(art)} darkMode={darkMode}/>
-      {hov&&(
-        <div style={{position:"absolute",top:10,right:10,display:"flex",gap:6}}>
-          <button onClick={e=>{e.stopPropagation();onSave(art);}} style={{background:"rgba(255,255,255,.94)",border:`1px solid ${BM}`,borderRadius:100,padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
-          <button onClick={e=>{e.stopPropagation();setMenu(!menu);}} style={{background:"rgba(255,255,255,.94)",border:`1px solid ${BM}`,borderRadius:8,width:30,height:30,cursor:"pointer",color:T1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x22EF;</button>
-        </div>
-      )}
+    <div style={{position:"relative",borderRadius:16,overflow:"hidden",background:darkMode?"#1A1A22":"#EBEBEB"}}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>{setHov(false);setMenu(false);}}>
+      {/* ── Media — same rendering as ExploreCard ── */}
+      <div style={{position:"relative",cursor:"pointer"}} onClick={()=>onOpen(art)}>
+        {isMobileMedia&&(
+          <PhoneShell bg={art.mobileBg||"#000"} darkMode={darkMode}>
+            {(art.type==="image"||art.type==="gif")&&(<img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>)}
+            {art.type==="video"&&(<video src={art.src} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}} muted loop playsInline autoPlay/>)}
+          </PhoneShell>
+        )}
+        {showNoDevice&&(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src&&(
+          <>
+            {(art.type==="image"||art.type==="gif")&&(
+              <div style={{width:"100%",overflow:"hidden",...(art.crop?{aspectRatio:`${(art.crop.r-art.crop.l)/(art.crop.b-art.crop.t)}`,clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}>
+                <img src={art.src} alt={art.name} style={{width:"100%",display:"block",objectFit:art.crop?"fill":"cover"}}/>
+              </div>
+            )}
+            {art.type==="video"&&!hasCrop&&(
+              <div style={{width:"100%",overflow:"hidden",background:"#000"}}>
+                <video src={art.src} style={{width:"100%",display:"block"}} muted loop playsInline autoPlay/>
+              </div>
+            )}
+          </>
+        )}
+        {showCroppedVideo&&(<CroppedVideo src={art.src} crop={art.crop}/>)}
+        {!isMobileMedia&&!showNoDevice&&!showCroppedVideo&&art.type==="video"&&art.src&&(
+          // Natural aspect ratio — portrait videos render tall, landscape renders wide
+          <div style={{width:"100%",background:"#000",lineHeight:0}}>
+            <video src={art.src} style={{width:"100%",height:"auto",display:"block",maxHeight:"70vh"}} muted loop playsInline autoPlay/>
+          </div>
+        )}
+        {!isMobileMedia&&!showNoDevice&&!showCroppedVideo&&art.type!=="video"&&(
+          <Thumb art={art} h={320} darkMode={darkMode} bare/>
+        )}
+        {hov&&(
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.08)",display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10,gap:6}}>
+            {onEdit&&art.type!=="mockup"&&(
+              <button onClick={e=>{e.stopPropagation();onEdit(art);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Edit</button>
+            )}
+            <button onClick={e=>{e.stopPropagation();onSave(art);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
+            <button onClick={e=>{e.stopPropagation();setMenu(!menu);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:8,width:30,height:30,cursor:"pointer",color:T1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x22EF;</button>
+          </div>
+        )}
+      </div>
+      {/* ── ⋯ menu ── */}
       {menu&&(
         <div style={{position:"absolute",top:46,right:10,zIndex:20,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"6px 0",minWidth:170,boxShadow:"0 8px 32px rgba(0,0,0,.10)"}}>
-          {["Show Controls","Loop Video","Audio On","Replace Media"].map(it=>(
-            <button key={it} onClick={()=>setMenu(false)} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>{it}</button>
-          ))}
-          <div style={{height:1,background:BD,margin:"4px 0"}}/>
-          <button onClick={()=>{onPublish(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Publish</button>
+          <button onClick={()=>{onPublish(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Publish to Feed</button>
           {canDelete&&(
             <button onClick={()=>{onDelete&&onDelete(art.id);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#FEF2F2"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:"#DC2626",fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Delete</button>
           )}
@@ -1447,13 +1641,13 @@ function StarField({show}){
     const stars=Array.from({length:1600},()=>{
       const theta=Math.random()*Math.PI*2;
       const phi=Math.acos(2*Math.random()-1);
-      const r=Math.cbrt(Math.random())*900; // cbrt = uniform density (not concentrated at center)
+      const r=Math.cbrt(Math.random())*900;
       return {
         ox:r*Math.sin(phi)*Math.cos(theta),
         oy:r*Math.sin(phi)*Math.sin(theta),
         oz:r*Math.cos(phi),
         sz:0.3+Math.random()*2.0,
-        h:28+Math.floor(Math.random()*50),  // warm yellows/oranges/whites
+        h:28+Math.floor(Math.random()*50),
         s:45+Math.floor(Math.random()*55),
         l:76+Math.floor(Math.random()*24),
       };
@@ -1481,7 +1675,6 @@ function StarField({show}){
 
     const draw=()=>{
       const W=canvas.width,H=canvas.height;
-      // Deep space background — dark navy radial gradient
       const bg=ctx.createRadialGradient(W*0.5,H*0.08,0,W*0.5,H*0.55,Math.max(W,H)*0.9);
       bg.addColorStop(0,"hsl(230,100%,6%)");
       bg.addColorStop(1,"hsl(233,98%,1%)");
@@ -1493,7 +1686,6 @@ function StarField({show}){
       const cosY=Math.cos(rot.y),sinY=Math.sin(rot.y);
       const FOV=680,CX=W/2,CY=H/2;
 
-      // Project + sort far-to-near
       const pts=[];
       for(let i=0;i<stars.length;i++){
         const s=stars[i];
@@ -1513,7 +1705,7 @@ function StarField({show}){
         const {px,py,d,sc,s}=pts[i];
         const r=Math.min(s.sz*sc,7);
         if(r<0.15) continue;
-        const alpha=Math.min(0.9,Math.max(0.03,sc*0.8)); // closer=brighter
+        const alpha=Math.min(0.9,Math.max(0.03,sc*0.8));
         ctx.globalAlpha=alpha;
         if(r>2.2){
           ctx.shadowBlur=Math.min(r*4,20);
@@ -1714,8 +1906,8 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
           <h1
             onMouseEnter={()=>{savedDark.current=darkMode;onDarkMode&&onDarkMode(true);}}
             onMouseLeave={()=>{onDarkMode&&onDarkMode(savedDark.current);}}
-            style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:0.95,letterSpacing:"-0.03em",color:h1c,fontFamily:FF,cursor:"default",transition:"color 0.3s"}}
-          >Design the<br/>new standard.</h1>
+            style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:1.0,letterSpacing:"-0.03em",color:h1c,fontFamily:FF,cursor:"default",userSelect:"none",transition:"color 0.3s"}}
+          >Design the<br/>next chapter.</h1>
           <p style={{margin:"0 auto",fontSize:16,color:subc,fontFamily:FF,fontWeight:400,maxWidth:520,lineHeight:1.6}}>A shared space for explorations, shipped work, and everything worth stashing from the Weedmaps design team.</p>
         </div>
       )}
@@ -1753,12 +1945,12 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
           ))}
         </div>
       )}
-      {lb&&(<LBox art={lb} onClose={()=>setLb(null)} onTagClick={t=>{onSearch&&onSearch(t);}}/>)}
+      {lb&&(<LBox art={lb} onClose={()=>setLb(null)} onTagClick={t=>{onSearch&&onSearch(t);}} currentUser={currentUser}/>)}
     </div>
   );
 }
 
-function ProjCard({project,onOpen,onDelete,darkMode}){
+function ProjCard({project,onOpen,onDelete,darkMode,currentUser}){
   const [hov,setHov]=useState(false);
   const thumbs=project.thumbs||[];
   const members=project.members||[];
@@ -1784,14 +1976,21 @@ function ProjCard({project,onOpen,onDelete,darkMode}){
           const isFront=idx===stackCount-1;
           const rotations=stackCount===3?[-5,4,0]:stackCount===2?[-4,0]:([0]);
           const yOffsets=stackCount===3?[10,6,0]:stackCount===2?[8,0]:([0]);
+          const isUrl=t&&(t.startsWith("http")||t.startsWith("data:")||t.startsWith("blob:"));
+          const isVideo=isUrl&&(t.includes(".mp4")||t.includes(".mov")||t.includes(".webm")||t.includes(".quicktime")||t.includes("video"));
           return (
             <div key={idx} style={{
-              position:"absolute",width:"68%",height:152,borderRadius:14,background:t,
+              position:"absolute",width:"68%",height:152,borderRadius:14,overflow:"hidden",
+              backgroundColor:"#E0E0E0",
               transform:`rotate(${rotations[idx]||0}deg) translateY(${yOffsets[idx]||0}px)`,
               transformOrigin:"center center",
               boxShadow:isFront?"0 6px 20px rgba(0,0,0,.28)":"0 3px 10px rgba(0,0,0,.18)",
               zIndex:idx,
-            }}/>
+            }}>
+              {isVideo&&(<video src={t} autoPlay muted loop playsInline style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>)}
+              {!isVideo&&isUrl&&(<img src={t} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>)}
+              {!isUrl&&(<div style={{width:"100%",height:"100%",backgroundImage:t,backgroundSize:"cover",backgroundPosition:"center"}}/>)}
+            </div>
           );
         })}
         <div style={{position:"absolute",bottom:12,right:14,background:"rgba(0,0,0,.5)",borderRadius:20,padding:"3px 10px",display:"flex",alignItems:"center",gap:5,backdropFilter:"blur(6px)"}}>
@@ -1805,18 +2004,21 @@ function ProjCard({project,onOpen,onDelete,darkMode}){
         {members.length>0&&(
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
             <div style={{display:"flex",alignItems:"center"}}>
-              {members.slice(0,4).map((m,i)=>(
-                <div key={m.id} style={{marginLeft:i>0?-7:0,border:`2px solid ${avatarBorder}`,borderRadius:"50%",zIndex:members.length-i,position:"relative",flexShrink:0,transition:"border-color 0.3s"}}>
-                  <Av user={m} size={24} src={m.image}/>
-                </div>
-              ))}
+              {members.slice(0,4).map((m,i)=>{
+                const liveImg=currentUser&&String(m.id)===String(currentUser.id)?currentUser.image:m.image;
+                const liveUser=currentUser&&String(m.id)===String(currentUser.id)?{...m,...currentUser}:m;
+                return (
+                  <div key={m.id} style={{marginLeft:i>0?-7:0,border:`2px solid ${avatarBorder}`,borderRadius:"50%",zIndex:members.length-i,position:"relative",flexShrink:0,transition:"border-color 0.3s"}}>
+                    <Av user={liveUser} size={24} src={liveImg}/>
+                  </div>
+                );
+              })}
             </div>
             <span style={{fontSize:12,color:sc,fontFamily:FF,lineHeight:1.3,transition:"color 0.3s"}}>
-              {members.length===1
-                ? members[0].name
-                : members.length===2
-                  ? `${members[0].name} & ${members[1].name}`
-                  : `${members[0].name} +${members.length-1} more`}
+              {(()=>{
+                const nm=m=>currentUser&&String(m.id)===String(currentUser.id)?currentUser.name:m.name;
+                return members.length===1?nm(members[0]):members.length===2?`${nm(members[0])} & ${nm(members[1])}`:`${nm(members[0])} +${members.length-1} more`;
+              })()}
             </span>
           </div>
         )}
@@ -1825,7 +2027,7 @@ function ProjCard({project,onOpen,onDelete,darkMode}){
   );
 }
 
-function Projects({projects,onOpen,onDelete,darkMode,loading=false}){
+function Projects({projects,onOpen,onDelete,darkMode,loading=false,currentUser}){
   const tc=darkMode?"#FFF":T1;
   const sc=darkMode?"rgba(255,255,255,0.45)":T3;
   return (
@@ -1844,14 +2046,14 @@ function Projects({projects,onOpen,onDelete,darkMode,loading=false}){
       )}
       {!loading&&projects.length>0&&(
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:20}}>
-          {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete} darkMode={darkMode}/>))}
+          {projects.map(p=>(<ProjCard key={p.id} project={p} onOpen={onOpen} onDelete={onDelete} darkMode={darkMode} currentUser={currentUser}/>))}
         </div>
       )}
     </div>
   );
 }
 
-function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,currentUser,canDeleteItem,onRequireAuth}){
+function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,darkMode,authUser,isAdmin,currentUser,canDeleteItem,onRequireAuth,isMobile=false}){
   const [ap,setAp]=useState(project.pages[0].id);
   const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
@@ -1859,14 +2061,15 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
   const [pub,setPub]=useState(null);
   const [save,setSave]=useState(null);
   const [lb,setLb]=useState(null);
+  const [editItem,setEditItem]=useState(null);
   const [artsLoaded,setArtsLoaded]=useState(false);
-  const [cardSize,setCardSize]=useState(260);
+  const [colSetting,setColSetting]=useState(3); // slider value 1-4; cols = 5-colSetting (right=large=1col, left=small=4col)
   const [sizePhase,setSizePhase]=useState(0); // toggles to re-trigger bounce animation
   const [presMode,setPresMode]=useState(false);
   const [presIdx,setPresIdx]=useState(0);
   const [dragFrom,setDragFrom]=useState(null);
   const [dragOver,setDragOver]=useState(null);
-  const [confirmDel,setConfirmDel]=useState(false);
+  const [showSettings,setShowSettings]=useState(false);
 
   useEffect(()=>{
     const isUuid=typeof project.id==="string"&&project.id.includes("-");
@@ -1921,6 +2124,34 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
     setAp(id);
   };
 
+  const saveArtEdit=async updated=>{
+    // Persist to localStorage immediately
+    try{
+      localStorage.setItem(`art_${updated.id}`,JSON.stringify({
+        deviceShell:updated.deviceShell,
+        crop:updated.crop,
+        align:updated.align||"center",
+      }));
+    }catch(e){}
+    // Update in-memory state right away so UI reflects changes without reload
+    const applyToArts=prev=>{
+      const next={};
+      for(const [pid,list] of Object.entries(prev)){
+        next[pid]=list.map(a=>String(a.id)===String(updated.id)?{...a,...updated}:a);
+      }
+      return next;
+    };
+    setArts(applyToArts);
+    const isUuid=typeof updated.id==="string"&&updated.id.includes("-");
+    if(isUuid){
+      try{
+        await updateArtifact(updated.id,updated);
+      }catch(e){
+        console.error("[saveArtEdit] DB update failed — saved to localStorage only:",e?.message||e);
+      }
+    }
+  };
+
   const reorder=(from,to)=>{
     if(from===null||from===to)return;
     // Reorder within the flat all-pages list, then redistribute back
@@ -1932,34 +2163,49 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
     setArts({[pageId]:flat});
   };
 
+  const dBg=darkMode?"#111114":PG;
+  const dHdr=darkMode?"#18181C":"#FFF";
+  const dBdr=darkMode?"#2A2A30":BD;
+  const dT1=darkMode?"#FFFFFF":T1;
+  const dT2=darkMode?"rgba(255,255,255,0.55)":T2;
+  const dT3=darkMode?"rgba(255,255,255,0.28)":T3;
+  const dHov=darkMode?"rgba(255,255,255,0.06)":"#F5F5F5";
+
   return (
-    <div style={{height:"100vh",display:"flex",flexDirection:"column",background:PG,fontFamily:FF}}>
+    <div style={{height:"100vh",display:"flex",flexDirection:"column",background:dBg,fontFamily:FF,transition:"background 0.3s"}}>
 
       {/* ── Top header ─────────────────────────────────────────────────── */}
-      <div style={{background:"#FFF",borderBottom:`1px solid ${BD}`,display:"flex",alignItems:"center",padding:"0 20px",height:54,flexShrink:0,gap:10}}>
-        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex",alignItems:"center",borderRadius:8,marginRight:2}}>
-          <MI name="arrow_back" size={22} style={{color:T2}}/>
+      <div style={{background:dHdr,borderBottom:`1px solid ${dBdr}`,display:"flex",alignItems:"center",padding:"0 20px",height:54,flexShrink:0,gap:10,transition:"background 0.3s,border-color 0.3s",position:"relative"}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex",alignItems:"center",borderRadius:8,marginRight:2,flexShrink:0}}>
+          <MI name="arrow_back" size={22} style={{color:dT2}}/>
         </button>
-        <span style={{fontSize:15,fontWeight:700,color:T1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220}}>{project.name}</span>
+        <span style={{fontSize:15,fontWeight:700,color:dT1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:isMobile?140:220,transition:"color 0.3s",flexShrink:1}}>{project.name}</span>
 
-        {/* Card size slider */}
-        <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-          <MI name="grid_view" size={16} style={{color:T3}}/>
-          <input type="range" min={160} max={480} step={40} value={cardSize} onChange={e=>{setCardSize(Number(e.target.value));setSizePhase(p=>p+1);}} style={{width:120,accentColor:BK,cursor:"pointer"}}/>
-          <MI name="crop_square" size={18} style={{color:T3}}/>
-        </div>
+        {/* Spacer so action buttons stay right */}
+        <div style={{flex:1}}/>
+
+        {/* Card size slider — desktop only, truly centered via absolute position */}
+        {!isMobile&&(
+          <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",display:"flex",alignItems:"center",gap:10,pointerEvents:"auto"}}>
+            <MI name="grid_view" size={16} style={{color:dT3}}/>
+            <input type="range" min={1} max={4} step={1} value={colSetting} onChange={e=>{setColSetting(Number(e.target.value));setSizePhase(p=>p+1);}} style={{width:120,accentColor:darkMode?"#FFF":BK,cursor:"pointer"}}/>
+            <MI name="crop_square" size={18} style={{color:dT3}}/>
+          </div>
+        )}
 
         {/* Action buttons */}
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-          <button onClick={()=>{setPresIdx(0);setPresMode(true);}} style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:100,padding:"6px 14px",color:T1,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,display:"flex",alignItems:"center",gap:5,transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="#EBEBEB"} onMouseLeave={e=>e.currentTarget.style.background="#F5F5F5"}>
-            <MI name="play_arrow" size={18} style={{color:T1}}/>Present
+          <button onClick={()=>{if(onRequireAuth){onRequireAuth(()=>setShowNew(true),`new_artifact_in_project:${project.id}`);}else{setShowNew(true);}}} style={{background:darkMode?"#FFF":BK,border:"none",borderRadius:"50%",width:isMobile?36:undefined,height:isMobile?36:undefined,padding:isMobile?0:"6px 14px",color:darkMode?"#000":"#FFF",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FF,display:"flex",alignItems:"center",justifyContent:"center",gap:4,flexShrink:0}}>
+            {isMobile?(<MI name="add" size={20} style={{color:darkMode?"#000":"#FFF"}}/>):(<>+ New Artifact</>)}
           </button>
-          <BBtn sm onClick={()=>{if(onRequireAuth){onRequireAuth(()=>setShowNew(true),`new_artifact_in_project:${project.id}`);}else{setShowNew(true);}}}>+ New Artifact</BBtn>
-          {(isAdmin||(authUser&&project.user_id===authUser?.id))&&(
-            <button onClick={()=>setConfirmDel(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,display:"flex",alignItems:"center"}} title="Delete project">
-              <MI name="delete_outline" size={22} style={{color:T3}}/>
+          {!isMobile&&(
+            <button onClick={()=>{setPresIdx(0);setPresMode(true);}} style={{background:dHov,border:`1px solid ${dBdr}`,borderRadius:100,padding:"6px 14px",color:dT1,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:FF,display:"flex",alignItems:"center",gap:5,transition:"background .15s"}}>
+              <MI name="play_arrow" size={18} style={{color:dT1}}/>Present
             </button>
           )}
+          <button onClick={()=>setShowSettings(true)} style={{background:"none",border:`1px solid ${dBdr}`,cursor:"pointer",padding:0,width:36,height:36,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s",flexShrink:0}} title="Project settings">
+            <MI name="settings" size={20} style={{color:dT2}}/>
+          </button>
         </div>
       </div>
 
@@ -1967,65 +2213,62 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
       <style>{`
         @keyframes cardBounceA{0%{transform:scale(.97)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
         @keyframes cardBounceB{0%{transform:scale(.97)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
+        .proj-carousel::-webkit-scrollbar{display:none}
+        .proj-carousel{-ms-overflow-style:none;scrollbar-width:none;}
       `}</style>
-      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"24px 28px"}}>
-        {pa.length===0?(
-          <div style={{height:"100%",minHeight:300,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
-            <div style={{fontSize:48,color:BM}}>&#x25FB;</div>
-            <p style={{margin:0,fontSize:15,color:T3,fontFamily:FF}}>No artifacts yet in this project</p>
-            <BBtn onClick={()=>setShowNew(true)}>+ Add First Artifact</BBtn>
-          </div>
-        ):(
-          <div style={{display:"flex",flexWrap:"wrap",gap:20,alignContent:"flex-start"}}>
-            {pa.map((art,idx)=>(
-              <div key={art.id}
-                draggable
-                onDragStart={e=>{e.dataTransfer.effectAllowed="move";setDragFrom(idx);}}
-                onDragEnd={()=>{setDragFrom(null);setDragOver(null);}}
-                onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDragOver(idx);}}
-                onDragLeave={()=>{if(dragOver===idx)setDragOver(null);}}
-                onDrop={e=>{e.preventDefault();reorder(dragFrom,idx);setDragFrom(null);setDragOver(null);}}
-                style={{
-                  flexBasis:cardSize,
-                  flexGrow:1,
-                  flexShrink:0,
-                  minWidth:0,
-                  opacity:dragFrom===idx?0.35:1,
-                  borderRadius:16,
-                  outline:dragOver===idx&&dragFrom!==idx?`2px dashed ${BM}`:"2px solid transparent",
-                  cursor:"grab",
-                  transition:"flex-basis 0.42s cubic-bezier(0.34,1.56,0.64,1), opacity .15s",
-                  animation:`${sizePhase%2===0?"cardBounceA":"cardBounceB"} 0.42s cubic-bezier(0.34,1.56,0.64,1)`,
-                  willChange:"flex-basis, transform",
-                }}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,paddingLeft:2}}>
-                  <MI name="drag_indicator" size={16} style={{color:T3,flexShrink:0}}/>
-                  <span style={{fontSize:12,color:T3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
-                  <Bdg type={art.type}/>
-                </div>
-                <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} onDelete={artId=>{const pageId=pages[0]?.id||"p1";setArts(prev=>({...prev,[pageId]:(prev[pageId]||[]).filter(a=>a.id!==artId)}));}} darkMode={darkMode} canDelete={canDeleteItem?canDeleteItem(art):false}/>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Delete confirmation ───────────────────────────────────────── */}
-      {confirmDel&&(
-        <div onClick={e=>{if(e.target===e.currentTarget)setConfirmDel(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1100,padding:24}}>
-          <div style={{background:"#FFF",borderRadius:20,padding:28,width:"100%",maxWidth:360,boxShadow:"0 20px 60px rgba(0,0,0,.18)"}}>
-            <p style={{margin:"0 0 8px",fontSize:17,fontWeight:700,color:T1,fontFamily:FF}}>Delete &#x201C;{project.name}&#x201D;?</p>
-            <p style={{margin:"0 0 24px",fontSize:14,color:T2,fontFamily:FF,lineHeight:1.5}}>This will permanently delete this project. Artifacts published to the feed won&#x2019;t be removed.</p>
-            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <GBtn sm onClick={()=>setConfirmDel(false)}>Cancel</GBtn>
-              <button onClick={()=>{onDelete&&onDelete(project.id);onBack();}} style={{background:"#DC2626",border:"none",color:"#FFF",borderRadius:100,padding:"9px 20px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:FF}}>Delete Project</button>
+      {(() => {
+        // colSetting 1(left/small)→4cols, 4(right/large)→1col; mobile always 1col
+        const cols = isMobile ? 1 : (5 - colSetting);
+        const gapPx = isMobile ? 16 : 20;
+        const itemBasis = `calc(${100/cols}% - ${gapPx*(cols-1)/cols}px)`;
+        if(pa.length===0) return (
+          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+              <div style={{fontSize:48,color:BM}}>&#x25FB;</div>
+              <p style={{margin:0,fontSize:15,color:T3,fontFamily:FF}}>No artifacts yet in this project</p>
+              <BBtn onClick={()=>setShowNew(true)}>+ Add First Artifact</BBtn>
             </div>
           </div>
-        </div>
-      )}
+        );
+        return (
+          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:isMobile?"16px":"24px 28px"}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:gapPx,alignContent:"flex-start"}}>
+              {pa.map((art,idx)=>(
+                <div key={art.id}
+                  draggable
+                  onDragStart={e=>{e.dataTransfer.effectAllowed="move";setDragFrom(idx);}}
+                  onDragEnd={()=>{setDragFrom(null);setDragOver(null);}}
+                  onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDragOver(idx);}}
+                  onDragLeave={()=>{if(dragOver===idx)setDragOver(null);}}
+                  onDrop={e=>{e.preventDefault();reorder(dragFrom,idx);setDragFrom(null);setDragOver(null);}}
+                  style={{
+                    flexBasis: itemBasis,
+                    flexGrow: 0,
+                    flexShrink: 0,
+                    minWidth: 0,
+                    opacity:dragFrom===idx?0.35:1,
+                    borderRadius:16,
+                    outline:dragOver===idx&&dragFrom!==idx?`2px dashed ${BM}`:"2px solid transparent",
+                    cursor:"grab",
+                    transition:"flex-basis 0.42s cubic-bezier(0.34,1.56,0.64,1), opacity .15s",
+                    animation:`${sizePhase%2===0?"cardBounceA":"cardBounceB"} 0.42s cubic-bezier(0.34,1.56,0.64,1)`,
+                    willChange:"flex-basis, transform",
+                  }}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,paddingLeft:2}}>
+                    <MI name="drag_indicator" size={16} style={{color:dT3,flexShrink:0}}/>
+                    <span style={{fontSize:12,color:dT3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
+                    <Bdg type={art.type}/>
+                  </div>
+                  <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} onEdit={setEditItem} onDelete={artId=>{const pageId=pages[0]?.id||"p1";setArts(prev=>({...prev,[pageId]:(prev[pageId]||[]).filter(a=>a.id!==artId)}));}} darkMode={darkMode} canDelete={canDeleteItem?canDeleteItem(art):false}/>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Presentation mode ─────────────────────────────────────────── */}
-      {presMode&&(
+      {presMode&&!isMobile&&(
         <div style={{position:"fixed",inset:0,background:"#080808",zIndex:2000,display:"flex",flexDirection:"column",fontFamily:FF}}>
           <style>{`@keyframes pdFadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
@@ -2038,19 +2281,15 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
                 <div style={{width:40,height:3,background:"rgba(255,255,255,.12)",borderRadius:2}}/>
                 <h1 style={{margin:0,fontSize:"clamp(28px,4.5vw,54px)",fontWeight:800,color:"#FFF",lineHeight:1.1,letterSpacing:"-0.03em"}}>{project.name}</h1>
                 {project.desc&&(<p style={{margin:0,fontSize:17,color:"rgba(255,255,255,.42)",lineHeight:1.65,maxWidth:460}}>{project.desc}</p>)}
-                {members.length>0&&(
-                  <div style={{display:"flex",gap:28,marginTop:8,flexWrap:"wrap",justifyContent:"center"}}>
-                    {members.map(m=>(
-                      <div key={m.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
-                        <div style={{padding:2,background:"rgba(255,255,255,.08)",borderRadius:"50%",border:"1px solid rgba(255,255,255,.1)"}}>
-                          <Av user={m} size={58} src={m.image}/>
-                        </div>
-                        <div style={{textAlign:"center"}}>
-                          <p style={{margin:"0 0 2px",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.82)"}}>{m.name}</p>
-                          <p style={{margin:0,fontSize:11,color:"rgba(255,255,255,.32)"}}>{m.title}</p>
-                        </div>
-                      </div>
-                    ))}
+                {currentUser&&(
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12,marginTop:8}}>
+                    <div style={{padding:3,background:"rgba(255,255,255,.08)",borderRadius:"50%",border:"2px solid rgba(255,255,255,.14)"}}>
+                      <Av user={currentUser} size={62} src={currentUser.image}/>
+                    </div>
+                    <div style={{textAlign:"center"}}>
+                      <p style={{margin:"0 0 4px",fontSize:14,fontWeight:700,color:"rgba(255,255,255,.9)",fontFamily:FF}}>{currentUser.name}</p>
+                      <p style={{margin:0,fontSize:12,color:"rgba(255,255,255,.38)",fontFamily:FF}}>{currentUser.title}</p>
+                    </div>
                   </div>
                 )}
                 <div style={{display:"inline-flex",alignItems:"center",gap:10,marginTop:4,background:"rgba(255,255,255,.05)",borderRadius:100,padding:"8px 20px",border:"1px solid rgba(255,255,255,.07)"}}>
@@ -2062,14 +2301,49 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
             )}
 
             {/* Artifact slides */}
-            {presIdx>0&&presIdx<=pa.length&&(
-              <div key={presIdx} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,maxWidth:"90vw",animation:"pdFadeUp .25s ease-out"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",maxHeight:"72vh"}}>
-                  <Thumb art={pa[presIdx-1]} h={Math.round(window.innerHeight*0.62)} onClick={()=>setLb(pa[presIdx-1])} darkMode/>
+            {presIdx>0&&presIdx<=pa.length&&(()=>{
+              const art=pa[presIdx-1];
+              const ds=art.deviceShell||"auto";
+              const hasCrop=art.type==="video"&&!!art.crop;
+              const showMobile=((ds==="mobile")||(ds==="auto"&&art.isMobile))&&!hasCrop;
+              const showNoDevice=ds==="none";
+              const PHONE_W=307,PHONE_H=649;
+              const pH=window.innerHeight,pW=window.innerWidth;
+              const phoneScale=Math.min(2.2,Math.min((pH*0.80)/PHONE_H,(pW*0.52)/PHONE_W));
+              const isImg=art.type==="image"||art.type==="gif";
+              const isVid=art.type==="video";
+              const isEmbed=art.type==="pdf"||art.type==="figma"||art.type==="website";
+              return (
+                <div key={presIdx} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,maxWidth:"90vw",animation:"pdFadeUp .25s ease-out"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {hasCrop&&art.src&&(
+                      <div style={{width:"min(70vw,70vh)"}} onClick={()=>setLb(art)}>
+                        <CroppedVideo src={art.src} crop={art.crop} wrapStyle={{borderRadius:20}}/>
+                      </div>
+                    )}
+                    {(isImg||isVid)&&art.src&&showMobile&&(
+                      <div onClick={()=>setLb(art)} style={{width:PHONE_W*phoneScale,height:PHONE_H*phoneScale,position:"relative",flexShrink:0,cursor:"pointer"}}>
+                        <div style={{position:"absolute",top:"50%",left:"50%",transform:`translate(-50%,-50%) scale(${phoneScale})`,transformOrigin:"center center"}}>
+                          <PhoneShell bg={art.mobileBg||"#000"} noBackground={true}>
+                            {isImg&&(<img src={art.src} alt={art.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>)}
+                            {isVid&&(<video src={art.src} muted loop playsInline autoPlay style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>)}
+                          </PhoneShell>
+                        </div>
+                      </div>
+                    )}
+                    {(isImg||isVid)&&art.src&&!showMobile&&!hasCrop&&(
+                      <div style={{maxWidth:"82vw",maxHeight:"78vh",borderRadius:16,overflow:"hidden",cursor:"pointer"}} onClick={()=>setLb(art)}>
+                        {isImg&&(<img src={art.src} alt={art.name} style={{maxWidth:"82vw",maxHeight:"78vh",objectFit:"contain",display:"block"}}/>)}
+                        {isVid&&(<video src={art.src} muted loop playsInline autoPlay style={{maxWidth:"82vw",maxHeight:"78vh",display:"block"}}/>)}
+                      </div>
+                    )}
+                    {isEmbed&&art.src&&(<iframe src={art.src} title={art.name} allowFullScreen style={{width:"76vw",height:"78vh",border:"none",display:"block",borderRadius:16}}/>)}
+                    {!art.src&&(<div style={{width:480,height:320,background:art.thumb||GR[0],borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,.35)",fontSize:13,fontFamily:FF}}>No preview available</span></div>)}
+                  </div>
+                  <p style={{margin:0,fontSize:14,color:"rgba(255,255,255,.45)",fontWeight:500,letterSpacing:".01em",fontFamily:FF}}>{art.name}</p>
                 </div>
-                <p style={{margin:0,fontSize:14,color:"rgba(255,255,255,.45)",fontWeight:500,letterSpacing:".01em"}}>{pa[presIdx-1].name}</p>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Prev / next buttons */}
             <button onClick={()=>setPresIdx(i=>Math.max(0,i-1))} disabled={presIdx===0} style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,.08)",border:"none",borderRadius:"50%",width:48,height:48,cursor:presIdx===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:presIdx===0?.2:0.75,transition:"opacity .2s"}}>
@@ -2098,7 +2372,9 @@ function ProjDetail({project,projects,onBack,onDelete,darkMode,authUser,isAdmin,
       {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode}/>)}
       {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
       {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
-      {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
+      {lb&&(<LBox art={lb} onClose={()=>setLb(null)} currentUser={currentUser}/>)}
+      {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveArtEdit} isMobile={isMobile}/>)}
+      {showSettings&&(<ProjSettingsMdl project={project} onClose={()=>setShowSettings(false)} currentUser={currentUser} isMobile={isMobile} canDelete={isAdmin||(authUser&&project.user_id===authUser?.id)} onDelete={(id)=>{onDelete&&onDelete(id);onBack();}} onSave={async(updates)=>{onUpdateProject&&await onUpdateProject(project.id,updates);}}/>)}
     </div>
   );
 }
@@ -2120,7 +2396,7 @@ function Profile({user,feed,darkMode,onEdit,onDelete,canDeleteItem,onSave,cols=3
   };
   return (
     <div style={{maxWidth:1200,margin:"0 auto",padding:"48px 32px 32px"}}>
-      {lb&&(<LBox art={lb} onClose={()=>setLb(null)}/>)}
+      {lb&&(<LBox art={lb} onClose={()=>setLb(null)} currentUser={user}/>)}
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:48}}>
         <Av user={user} size={80} src={user.image}/>
         <h1 style={{margin:"16px 0 4px",fontSize:22,fontWeight:700,color:tc,fontFamily:FF}}>{user.name}</h1>
@@ -2229,7 +2505,7 @@ export default function App(){
   const [mobileMenu,setMobileMenu]=useState(false);
   const [searchExp,setSearchExp]=useState(false);
   const [showTags,setShowTags]=useState(false);
-  const [darkMode,setDarkMode]=useState(false);
+  const [darkMode,setDarkMode]=useState(()=>{try{return localStorage.getItem("stash_dark_mode")==="true";}catch(e){return false;}});
   const [editItem,setEditItem]=useState(null);
   const [uplError,setUplError]=useState(null);
   const [toasts,setToasts]=useState([]);
@@ -2313,10 +2589,14 @@ export default function App(){
   },[searchExp]);
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
-  // Detect if this window is the OAuth popup (auth_callback=1 in URL + has opener).
-  const isAuthPopup=typeof window!=="undefined"&&
-    new URLSearchParams(window.location.search).get("auth_callback")==="1"&&
-    !!window.opener;
+  // Detect if this window is the OAuth popup.
+  // We use window.name ("stash_google_auth") because it persists through the
+  // entire OAuth redirect chain — unlike ?auth_callback=1 which Supabase drops,
+  // or window.opener which COOP headers null out before we can read it.
+  const isAuthPopup=typeof window!=="undefined"&&(
+    window.name==="stash_google_auth"||
+    new URLSearchParams(window.location.search).get("auth_callback")==="1"
+  );
 
   // Close auth-callback popup. The access_token and refresh_token are in the
   // URL hash immediately after OAuth — grab them directly without waiting for
@@ -2542,11 +2822,27 @@ export default function App(){
     setProjects(prev=>prev.filter(p=>p.id!==projId));
   };
 
+  const updateProjSettings=async(projId,updates)=>{
+    // Optimistically update local state
+    setProjects(prev=>prev.map(p=>p.id===projId?{...p,...updates}:p));
+    if(proj&&proj.id===projId) setProj(prev=>({...prev,...updates}));
+    // Persist to Supabase if UUID project
+    const isUuid=typeof projId==="string"&&projId.includes("-");
+    if(isUuid){
+      try{ await updateProject(projId,updates); }
+      catch(e){ console.error("Failed to save project settings:",e); }
+    } else {
+      // localStorage fallback for seed projects
+      if(updates.members) try{localStorage.setItem(`members_${projId}`,JSON.stringify(updates.members));}catch(e){}
+      if(updates.teams) try{localStorage.setItem(`teams_${projId}`,JSON.stringify(updates.teams));}catch(e){}
+    }
+  };
+
   if(view==="project"&&proj){
-    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth}/>);
+    return (<ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} onUpdateProject={updateProjSettings} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth} isMobile={isMobile}/>);
   }
 
-  const toggleDarkMode=()=>{setDarkMode(v=>!v);};
+  const toggleDarkMode=()=>{setDarkMode(v=>{const n=!v;try{localStorage.setItem("stash_dark_mode",n);}catch(e){}return n;});};
 
   const create=async p=>{
     try{
@@ -2637,7 +2933,15 @@ export default function App(){
     setProjects(prev=>prev.map(p=>{
       if(p.id!==proj.id)return p;
       const page=p.artifacts||{};
-      return{...p,artifacts:{...page,[pageId]:[...(page[pageId]||[]),saved]},artifactCount:(p.artifactCount||0)+1};
+      const newCount=(p.artifactCount||0)+1;
+      // For embed types whose src is an iframe/page URL, use gradient thumb instead
+      const embedType=["figma","website","mockup","pdf","file"].includes(saved.type);
+      const newThumb=embedType?(saved.thumb||null):(saved.src||saved.thumb||null);
+      const newThumbs=newThumb?[newThumb,...(p.thumbs||[])].slice(0,4):(p.thumbs||[]);
+      if(isUuid){
+        updateProject(proj.id,{artifactCount:newCount,thumbs:newThumbs}).catch(e=>console.error("updateProject failed",e));
+      }
+      return{...p,artifacts:{...page,[pageId]:[...(page[pageId]||[]),saved]},artifactCount:newCount,thumbs:newThumbs};
     }));
     toast(`Saved to ${proj.name}`);
   };
@@ -2685,7 +2989,7 @@ export default function App(){
   return (
     <div style={{minHeight:"100vh",background:showStars?"transparent":(darkMode?"#0D0D0D":PG),color:darkMode?"#FFF":T1,fontFamily:FF,transition:"background 0.3s, color 0.3s"}}>
       <StarField show={showStars}/>
-      <nav style={{background:showStars?"rgba(10,12,28,0.72)":(darkMode?"#1A1A1A":"#FFF"),backdropFilter:showStars?"blur(14px)":"none",WebkitBackdropFilter:showStars?"blur(14px)":"none",borderBottom:`1px solid ${showStars?"rgba(255,255,255,0.08)":(darkMode?"#333":"#E8E8E8")}`,display:"flex",alignItems:"center",gap:12,padding:"0 20px",height:52,position:"sticky",top:0,zIndex:100,transition:"background 0.3s, border-color 0.3s, backdrop-filter 0.3s"}}>
+      <nav style={{background:isMobile?"transparent":(showStars?"rgba(10,12,28,0.72)":(darkMode?"#1A1A1A":"#FFF")),backdropFilter:(!isMobile&&showStars)?"blur(14px)":"none",WebkitBackdropFilter:(!isMobile&&showStars)?"blur(14px)":"none",borderBottom:isMobile?"none":`1px solid ${showStars?"rgba(255,255,255,0.08)":(darkMode?"#333":"#E8E8E8")}`,display:"flex",alignItems:"center",gap:8,padding:isMobile?"0 16px":"0 20px",height:isMobile?60:52,position:"sticky",top:0,zIndex:100,transition:"background 0.3s, border-color 0.3s, backdrop-filter 0.3s"}}>
         {!isMobile&&(<>
           <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,background:"none",border:"none",cursor:"pointer",padding:0}}>
             <JarLogo size={26} dark={darkMode}/>
@@ -2765,17 +3069,15 @@ export default function App(){
         {isMobile&&(<>
           {!searchExp&&(<>
             <button ref={logoRef} onClick={toggleDarkMode} style={{display:"flex",alignItems:"center",justifyContent:"center",background:"none",border:"none",cursor:"pointer",padding:0,flexShrink:0}}>
-              <JarLogo size={isMobile?36:26} dark={darkMode}/>
+              <JarLogo size={32} dark={darkMode}/>
             </button>
-            <div style={{flex:1}}/>
-            <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,flexShrink:0,transition:"background 0.3s"}}>
+            <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",display:"flex",gap:2,background:darkMode?"rgba(24,24,32,0.72)":"rgba(255,255,255,0.72)",backdropFilter:"blur(20px) saturate(180%)",WebkitBackdropFilter:"blur(20px) saturate(180%)",border:darkMode?"1px solid rgba(255,255,255,0.10)":"1px solid rgba(255,255,255,0.85)",boxShadow:darkMode?"0 2px 10px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.07)":"0 2px 8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(255,255,255,0.95)",borderRadius:20,padding:3,flexShrink:0,transition:"background 0.3s,border-color 0.3s"}}>
               {["Explore","Projects"].map(v=>(
-                <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
+                <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"rgba(255,255,255,0.14)":"rgba(255,255,255,0.95)"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.8)"}`:"1px solid transparent",boxShadow:view===v.toLowerCase()?(darkMode?"none":"0 1px 4px rgba(0,0,0,0.08)"):"none",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"rgba(255,255,255,0.5)":T3),fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
               ))}
             </div>
             <div style={{flex:1}}/>
-            {view==="explore"&&(<button onClick={()=>requireAuth(()=>setUplFeed(true),"new_artifact")} style={{background:BK,border:"none",borderRadius:100,cursor:"pointer",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center"}}><MI name="add" size={24} style={{color:"#FFF"}}/></button>)}
-            <button onClick={()=>authUser?setView("profile"):setShowLogin(true)} style={{width:34,height:34,borderRadius:"50%",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:8}}><Av user={currentUser} size={28} src={profile?.avatar_url}/></button>
+            <button onClick={()=>setMobileMenu(m=>!m)} style={{background:darkMode?"rgba(255,255,255,0.14)":"rgba(0,0,0,0.85)",backdropFilter:"blur(20px) saturate(180%)",WebkitBackdropFilter:"blur(20px) saturate(180%)",border:darkMode?"1px solid rgba(255,255,255,0.12)":"1px solid rgba(255,255,255,0.15)",boxShadow:"0 2px 10px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.08)",borderRadius:100,cursor:"pointer",width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.3s"}}><span style={{color:"#FFF",fontSize:18,letterSpacing:"0.08em",lineHeight:1,marginTop:-2}}>&#x22EF;</span></button>
           </>)}
           {searchExp&&(<>
             <div style={{flex:1,position:"relative"}}>
@@ -2786,9 +3088,48 @@ export default function App(){
           </>)}
         </>)}
       </nav>
+      {isMobile&&(<div style={{position:"fixed",top:0,left:0,right:0,height:80,background:`linear-gradient(to bottom, ${showStars?"rgba(8,8,18,0.85)":darkMode?"rgba(13,13,13,0.85)":"rgba(245,245,245,0.85)"} 0%, ${showStars?"rgba(8,8,18,0.4)":darkMode?"rgba(13,13,13,0.4)":"rgba(245,245,245,0.4)"} 60%, ${showStars?"rgba(8,8,18,0)":darkMode?"rgba(13,13,13,0)":"rgba(245,245,245,0)"} 100%)`,zIndex:99,pointerEvents:"none",transition:"background 0.3s"}}/>)}
+      {isMobile&&mobileMenu&&(<>
+        <div onClick={()=>setMobileMenu(false)} style={{position:"fixed",inset:0,zIndex:149}}/>
+        <div style={{position:"fixed",top:70,right:16,zIndex:150,background:darkMode?"rgba(24,24,32,0.9)":"rgba(255,255,255,0.92)",backdropFilter:"blur(28px) saturate(180%)",WebkitBackdropFilter:"blur(28px) saturate(180%)",border:darkMode?"1px solid rgba(255,255,255,0.10)":"1px solid rgba(255,255,255,0.85)",boxShadow:darkMode?"0 8px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.07)":"0 8px 32px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.9)",borderRadius:16,overflow:"hidden",minWidth:200}}>
+          {authUser?(
+            <>
+              <button onClick={()=>{setMobileMenu(false);requireAuth(()=>setUplFeed(true),"new_artifact");}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <MI name="add_circle" size={20} style={{color:darkMode?"rgba(255,255,255,0.45)":T3,flexShrink:0}}/>Artifact
+              </button>
+              <div style={{height:1,background:darkMode?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",margin:"0 18px"}}/>
+              <button onClick={()=>{setMobileMenu(false);setSearchExp(true);}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <MI name="search" size={20} style={{color:darkMode?"rgba(255,255,255,0.45)":T3,flexShrink:0}}/>Search
+              </button>
+              <div style={{height:1,background:darkMode?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",margin:"0 18px"}}/>
+              <button onClick={()=>{setMobileMenu(false);setView("profile");}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <Av user={currentUser} size={22} src={profile?.avatar_url}/><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser?.name||"Profile"}</span>
+              </button>
+              <div style={{height:1,background:darkMode?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",margin:"0 18px"}}/>
+              <button onClick={()=>{setMobileMenu(false);handleSignOut();}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:"#FF453A",cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <MI name="logout" size={20} style={{color:"#FF453A",flexShrink:0}}/>Sign out
+              </button>
+            </>
+          ):(
+            <>
+              <button onClick={()=>{setMobileMenu(false);setSearchExp(true);}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <MI name="search" size={20} style={{color:darkMode?"rgba(255,255,255,0.45)":T3,flexShrink:0}}/>Search
+              </button>
+              <div style={{height:1,background:darkMode?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",margin:"0 18px"}}/>
+              <button onClick={()=>{setMobileMenu(false);requireAuth(()=>setUplFeed(true),"new_artifact");}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <MI name="add_circle" size={20} style={{color:darkMode?"rgba(255,255,255,0.45)":T3,flexShrink:0}}/>Artifact
+              </button>
+              <div style={{height:1,background:darkMode?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",margin:"0 18px"}}/>
+              <button onClick={()=>{setMobileMenu(false);setShowLogin(true);}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+                <MI name="login" size={20} style={{color:darkMode?"rgba(255,255,255,0.45)":T3,flexShrink:0}}/>Sign in
+              </button>
+            </>
+          )}
+        </div>
+      </>)}
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
         {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3} feedLoading={feedLoading}/>)}
-        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode} loading={projectsLoading}/>)}
+        {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode} loading={projectsLoading} currentUser={currentUser}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode} onEdit={setEditItem} onDelete={deleteArt} canDeleteItem={canDeleteItem} onSave={setSaveIt} cols={winW<=640?1:winW<=1024?2:3}/>)}
       </main>
       {showLogin&&(<LoginModal onClose={()=>setShowLogin(false)}/>)}
@@ -2805,50 +3146,47 @@ export default function App(){
       )}
       {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} onSave={()=>toast("Saved to project")} isMobile={isMobile}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} onSaveToProject={addArtToProject} projects={projects} isMobile={isMobile}/>)}
-      {isMobile&&!searchExp&&(
-        <button onClick={()=>setSearchExp(true)} style={{position:"fixed",bottom:"24px",right:"24px",width:"56px",height:"56px",borderRadius:"50%",background:BK,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#FFF",boxShadow:darkMode?"0 4px 12px rgba(0,0,0,.5)":"0 4px 12px rgba(0,0,0,.15)",zIndex:50}}><MI name="search" size={28} style={{color:"#FFF"}}/></button>
-      )}
       {isMobile&&searchExp&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#0D0D0D",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",transition:"background 0.3s",WebkitUserSelect:"none",userSelect:"none"}}>
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(8,8,18,0.82)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",WebkitUserSelect:"none",userSelect:"none"}}>
           <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}html,body{margin:0;padding:0}`}</style>
-          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid #333",background:"#1A1A1A",transition:"all 0.3s",flexShrink:0}}>
-            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#999",fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
+          <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid rgba(255,255,255,0.07)",flexShrink:0}}>
+            <button onClick={()=>{setSearchExp(false);setSrch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:24,padding:0,lineHeight:1,flexShrink:0}}>&#x2190;</button>
             <div style={{flex:1,position:"relative"}}>
-              <MI name="search" size={32} style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"#666",pointerEvents:"none"}}/>
-              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 16px 8px 50px",fontSize:16,color:"#E8E8E8",outline:"none",fontFamily:FF,placeholder:"#999"}}/>
+              <MI name="search" size={28} style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,0.3)",pointerEvents:"none"}}/>
+              <input ref={searchRef} value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search projects or tags" style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.08)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.12)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.06)",borderRadius:22,padding:"10px 16px 10px 50px",fontSize:16,color:"#FFF",outline:"none",fontFamily:FF}}/>
             </div>
           </div>
-          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 20px"}}>
+          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"20px 20px"}}>
             {srch.trim()?(
               <div>
-                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>Matching Tags</p>
+                <p style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 12px"}}>Matching Tags</p>
                 {matchingTags.length>0?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                     {matchingTags.map(t=>(
-                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
-                        <span>&#x23;</span>{t}
+                      <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.09)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.13)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.07)",borderRadius:20,padding:"8px 14px",fontSize:13,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                        <span style={{opacity:0.5}}>&#x23;</span>{t}
                       </button>
                     ))}
                   </div>
                 ):(
-                  <p style={{fontSize:13,color:"#666",textAlign:"center",padding:"24px 0"}}>No tags match "{srch}"</p>
+                  <p style={{fontSize:13,color:"rgba(255,255,255,0.3)",textAlign:"center",padding:"24px 0"}}>No tags match &ldquo;{srch}&rdquo;</p>
                 )}
               </div>
             ):(
               <div>
-                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>All Tags</p>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:24}}>
+                <p style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 12px"}}>All Tags</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:28}}>
                   {allTags.slice(0,12).map(t=>(
-                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#262626",border:"1px solid #333",borderRadius:20,padding:"8px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
-                      <span>&#x23;</span>{t}
+                    <button key={t} onClick={()=>{setSrch(t);setSearchExp(false);}} style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.09)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.13)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.07)",borderRadius:20,padding:"8px 14px",fontSize:13,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontFamily:FF,fontWeight:500}}>
+                      <span style={{opacity:0.5}}>&#x23;</span>{t}
                     </button>
                   ))}
                 </div>
-                <p style={{fontSize:11,fontWeight:700,color:"#666",textTransform:"uppercase",margin:"0 0 12px"}}>Popular Searches</p>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <p style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 12px"}}>Popular Searches</p>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {["web","mobile","redesign","v2","checkout"].map(s=>(
-                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",textAlign:"left",background:"#262626",border:"1px solid #333",borderRadius:100,padding:"12px 14px",fontSize:13,color:"#E8E8E8",cursor:"pointer",fontFamily:FF}}>
-                      <MI name="search" size={18} style={{color:"#666",flexShrink:0}}/>{s}
+                    <button key={s} onClick={()=>{setSrch(s);setSearchExp(false);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",textAlign:"left",background:"rgba(255,255,255,0.07)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.10)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.05)",borderRadius:100,padding:"13px 18px",fontSize:14,color:"rgba(255,255,255,0.8)",cursor:"pointer",fontFamily:FF}}>
+                      <MI name="search" size={18} style={{color:"rgba(255,255,255,0.3)",flexShrink:0}}/>{s}
                     </button>
                   ))}
                 </div>
