@@ -249,6 +249,14 @@ export async function createProject(p, userId) {
 }
 
 export async function updateProject(id, updates) {
+  // Always write to localStorage first — guarantees persistence even if Supabase rejects
+  if (updates.name !== undefined) try{localStorage.setItem(`proj_name_${id}`,updates.name);}catch(e){}
+  if (updates.desc !== undefined) try{localStorage.setItem(`proj_desc_${id}`,updates.desc);}catch(e){}
+  if (updates.members !== undefined) try{localStorage.setItem(`members_${id}`,JSON.stringify(updates.members));}catch(e){}
+  if (updates.teams !== undefined) try{localStorage.setItem(`teams_${id}`,JSON.stringify(updates.teams));}catch(e){}
+  if (updates.prd !== undefined) try{localStorage.setItem(`prd_${id}`,updates.prd);}catch(e){}
+  if (updates.prototype !== undefined) try{localStorage.setItem(`prototype_${id}`,updates.prototype);}catch(e){}
+
   const row = {};
   if (updates.thumbs !== undefined) row.thumbs = updates.thumbs;
   if (updates.artifactCount !== undefined) row.artifact_count = updates.artifactCount;
@@ -257,24 +265,19 @@ export async function updateProject(id, updates) {
   if (updates.name !== undefined) row.name = updates.name;
   if (updates.desc !== undefined) row.description = updates.desc;
   if (updates.members !== undefined) row.members = updates.members;
-  if (updates.teams !== undefined) {
-    try { row.teams = updates.teams; } catch(e) {}
-  }
+  if (updates.teams !== undefined) row.teams = updates.teams;
+  if (updates.prd !== undefined) row.prd_url = updates.prd;
+  if (updates.prototype !== undefined) row.prototype_url = updates.prototype;
   const { error } = await supabase.from("projects").update(row).eq("id", id);
-  // If teams column doesn't exist yet, retry without it
-  if (error && error.message && error.message.includes("teams")) {
-    const { teams: _t, ...rowWithout } = row;
-    const { error: e2 } = await supabase.from("projects").update(rowWithout).eq("id", id);
-    if (e2) throw e2;
-    try { localStorage.setItem(`teams_${id}`, JSON.stringify(updates.teams)); } catch(e) {}
-    return;
-  }
-  if (error) throw error;
-  if (updates.members !== undefined) {
-    try { localStorage.setItem(`members_${id}`, JSON.stringify(updates.members)); } catch(e) {}
-  }
-  if (updates.teams !== undefined) {
-    try { localStorage.setItem(`teams_${id}`, JSON.stringify(updates.teams)); } catch(e) {}
+  // Graceful fallback: retry stripping columns that may not exist in the schema
+  if (error && error.message) {
+    const unknown = ["teams","prd_url","prototype_url","description"].filter(c=>error.message.includes(c));
+    if (unknown.length > 0) {
+      const safeRow = {...row};
+      unknown.forEach(c=>delete safeRow[c]);
+      const { error: e2 } = await supabase.from("projects").update(safeRow).eq("id", id);
+      if (e2) throw e2;
+    } else { throw error; }
   }
 }
 
@@ -292,17 +295,24 @@ function dbToProject(r, membersOverride) {
     } catch(e) {}
   }
   let teams = r.teams || [];
-  try {
-    const storedTeams = localStorage.getItem(`teams_${r.id}`);
-    if (storedTeams) teams = JSON.parse(storedTeams);
-  } catch(e) {}
+  try { const s=localStorage.getItem(`teams_${r.id}`); if(s) teams=JSON.parse(s); } catch(e) {}
+  let prd = r.prd_url || "";
+  try { const s=localStorage.getItem(`prd_${r.id}`); if(s!=null) prd=s; } catch(e) {}
+  let prototype = r.prototype_url || "";
+  try { const s=localStorage.getItem(`prototype_${r.id}`); if(s!=null) prototype=s; } catch(e) {}
+  let name = r.name || "";
+  try { const s=localStorage.getItem(`proj_name_${r.id}`); if(s!=null) name=s; } catch(e) {}
+  let desc = r.description || "";
+  try { const s=localStorage.getItem(`proj_desc_${r.id}`); if(s!=null) desc=s; } catch(e) {}
   return {
     id: r.id,
-    name: r.name,
-    desc: r.description,
+    name,
+    desc,
     folder: r.folder,
     tags: r.tags || [],
     teams,
+    prd,
+    prototype,
     artifactCount: r.artifact_count,
     thumbs: r.thumbs || [],
     pages: r.pages || [{ id: "p1", label: "1", name: "Page 1" }],
@@ -560,6 +570,11 @@ export async function updateFeedItem(id, updates) {
 
 export async function deleteFeedItem(id) {
   const { error } = await supabase.from("feed_items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteArtifact(id) {
+  const { error } = await supabase.from("artifacts").delete().eq("id", id);
   if (error) throw error;
 }
 

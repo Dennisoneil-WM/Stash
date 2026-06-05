@@ -1,7 +1,31 @@
 {
   "permissions": {
     "allow": [
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(npm install *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__get_page_text",
+      "WebFetch(domain:codepen.io)",
+      "mcp__Claude_in_Chrome__javascript_tool",
+      "Bash(gh pr *)",
+      "Bash(npm run *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(node --input-type=module)",
+      "Bash(npx --yes acorn --ecma2020 --module src/App.jsx)",
+      "Bash(git stash *)",
+      "Bash(vercel --version)",
+      "Bash(npm list *)",
+      "Bash(vercel env *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(npx vercel *)",
+      "Bash(node -e \"const {execSync} = require\\('child_process'\\); console.log\\(execSync\\('npx vercel --prod 2>&1', {timeout: 60000}\\).toString\\(\\)\\);\")",
+      "Bash(npm --prefix /Users/doneil/Documents/Stash run build)"
     ]
   }
 }
