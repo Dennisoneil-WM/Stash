@@ -2830,7 +2830,7 @@ export default function App(){
     const isUuid=typeof projId==="string"&&projId.includes("-");
     if(isUuid){
       try{ await updateProject(projId,updates); }
-      catch(e){ console.error("Failed to save project settings:",e); toast("Failed to save — check console for details"); }
+      catch(e){ console.error("Failed to save project settings:",e); }
     } else {
       // localStorage fallback for seed projects
       if(updates.members) try{localStorage.setItem(`members_${projId}`,JSON.stringify(updates.members));}catch(e){}
