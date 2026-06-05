@@ -260,11 +260,11 @@ export async function updateProject(id, updates) {
   if (updates.teams !== undefined) {
     try { row.teams = updates.teams; } catch(e) {}
   }
-  const { error } = await supabase.from("projects").update(row).eq("id", id);
+  const { error } = await publicSupabase.from("projects").update(row).eq("id", id);
   // If teams column doesn't exist yet, retry without it
   if (error && error.message && error.message.includes("teams")) {
     const { teams: _t, ...rowWithout } = row;
-    const { error: e2 } = await supabase.from("projects").update(rowWithout).eq("id", id);
+    const { error: e2 } = await publicSupabase.from("projects").update(rowWithout).eq("id", id);
     if (e2) throw e2;
     try { localStorage.setItem(`teams_${id}`, JSON.stringify(updates.teams)); } catch(e) {}
     return;
