@@ -25,7 +25,9 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
       "Bash(npx vercel *)",
       "Bash(node -e \"const {execSync} = require\\('child_process'\\); console.log\\(execSync\\('npx vercel --prod 2>&1', {timeout: 60000}\\).toString\\(\\)\\);\")",
-      "Bash(npm --prefix /Users/doneil/Documents/Stash run build)"
+      "Bash(npm --prefix /Users/doneil/Documents/Stash run build)",
+      "Bash(curl -s http://localhost:5174/)",
+      "Bash(awk 'NR>=50 && NR<=80')"
     ]
   }
 }

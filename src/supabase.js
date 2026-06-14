@@ -195,15 +195,21 @@ export async function fetchProjects() {
     const arts = artResults[i]?.data || [];
     if (arts.length > 0) {
       p.artifactCount = arts.length;
-      p.thumbs = arts
-        .slice(0, 4)
-        .map(a => {
-          // For embed types, src is an iframe URL — can't be used as background-image.
-          // Fall back to the CSS gradient thumb instead.
-          if (EMBED_TYPES.has(a.type)) return a.thumb || null;
-          return a.src || a.thumb || null;
-        })
-        .filter(Boolean);
+      // If the project has a stored thumb order (e.g. user featured an artifact),
+      // preserve it — don't auto-generate from artifact order which would clobber it.
+      if (r.thumbs && r.thumbs.length > 0) {
+        p.thumbs = r.thumbs;
+      } else {
+        p.thumbs = arts
+          .slice(0, 4)
+          .map(a => {
+            // For embed types, src is an iframe URL — can't be used as background-image.
+            // Fall back to the CSS gradient thumb instead.
+            if (EMBED_TYPES.has(a.type)) return a.thumb || null;
+            return a.src || a.thumb || null;
+          })
+          .filter(Boolean);
+      }
     } else {
       // Fall back to stored values if the query returned nothing
       p.artifactCount = r.artifact_count || 0;
@@ -257,6 +263,9 @@ export async function updateProject(id, updates) {
   if (updates.prd !== undefined) try{localStorage.setItem(`prd_${id}`,updates.prd);}catch(e){}
   if (updates.prototype !== undefined) try{localStorage.setItem(`prototype_${id}`,updates.prototype);}catch(e){}
 
+  // Only include columns that actually exist in the DB schema.
+  // members, teams, prd_url, prototype_url, user_id are NOT schema columns —
+  // they caused silent write failures that took `description` down with them.
   const row = {};
   if (updates.thumbs !== undefined) row.thumbs = updates.thumbs;
   if (updates.artifactCount !== undefined) row.artifact_count = updates.artifactCount;
@@ -264,21 +273,11 @@ export async function updateProject(id, updates) {
   if (updates.tags !== undefined) row.tags = updates.tags;
   if (updates.name !== undefined) row.name = updates.name;
   if (updates.desc !== undefined) row.description = updates.desc;
-  if (updates.members !== undefined) row.members = updates.members;
-  if (updates.teams !== undefined) row.teams = updates.teams;
-  if (updates.prd !== undefined) row.prd_url = updates.prd;
-  if (updates.prototype !== undefined) row.prototype_url = updates.prototype;
+
+  if (Object.keys(row).length === 0) return; // nothing to write to DB
+
   const { error } = await supabase.from("projects").update(row).eq("id", id);
-  // Graceful fallback: retry stripping columns that may not exist in the schema
-  if (error && error.message) {
-    const unknown = ["teams","prd_url","prototype_url","description"].filter(c=>error.message.includes(c));
-    if (unknown.length > 0) {
-      const safeRow = {...row};
-      unknown.forEach(c=>delete safeRow[c]);
-      const { error: e2 } = await supabase.from("projects").update(safeRow).eq("id", id);
-      if (e2) throw e2;
-    } else { throw error; }
-  }
+  if (error) throw error;
 }
 
 export async function deleteProject(id) {
@@ -300,6 +299,8 @@ function dbToProject(r, membersOverride) {
   try { const s=localStorage.getItem(`prd_${r.id}`); if(s!=null) prd=s; } catch(e) {}
   let prototype = r.prototype_url || "";
   try { const s=localStorage.getItem(`prototype_${r.id}`); if(s!=null) prototype=s; } catch(e) {}
+  let figmaFile = "";
+  try { const s=localStorage.getItem(`figmaFile_${r.id}`); if(s!=null) figmaFile=s; } catch(e) {}
   let name = r.name || "";
   try { const s=localStorage.getItem(`proj_name_${r.id}`); if(s!=null) name=s; } catch(e) {}
   let desc = r.description || "";
@@ -313,9 +314,10 @@ function dbToProject(r, membersOverride) {
     teams,
     prd,
     prototype,
+    figmaFile,
     artifactCount: r.artifact_count,
     thumbs: r.thumbs || [],
-    pages: r.pages || [{ id: "p1", label: "1", name: "Page 1" }],
+    pages: (r.pages && r.pages.length > 0) ? r.pages : [{ id: "p1", label: "1", name: "Page 1" }],
     rows: r.rows || ["R1"],
     members,
     user_id: r.user_id || null,
@@ -370,14 +372,23 @@ export async function insertArtifact(projectId, pageId, art, userId) {
     const result = await supabase.from("artifacts").insert(basicInsert).select().single();
     if (result.error) throw result.error;
     data = result.data;
-    try {
-      localStorage.setItem(`art_${data.id}`, JSON.stringify({
-        deviceShell: art.deviceShell, crop: art.crop, align: art.align || "center",
-      }));
-    } catch(e) {}
   } else if (error) {
     throw error;
   }
+
+  // Always persist ALL extra metadata to localStorage — covers DB column gaps and provides
+  // a fast, reliable read path for desc, tags, slideCount, mobileBg, deviceShell, crop, align.
+  try {
+    localStorage.setItem(`art_${data.id}`, JSON.stringify({
+      deviceShell: art.deviceShell,
+      crop: art.crop || null,
+      align: art.align || "center",
+      desc: art.desc || "",
+      tags: art.tags || [],
+      slideCount: art.slideCount || null,
+      mobileBg: art.mobileBg || null,
+    }));
+  } catch(e) {}
 
   return dbToArtifact(data);
 }
@@ -390,6 +401,7 @@ export async function updateArtifact(id, updates) {
     crop: updates.crop !== undefined ? updates.crop : null,
     align: updates.align || "center",
     is_mobile: updates.isMobile || false,
+    viewport: updates.viewport !== undefined ? updates.viewport : null,
   };
 
   let { data, error } = await supabase
@@ -408,12 +420,18 @@ export async function updateArtifact(id, updates) {
     throw error;
   }
 
-  // Always persist display settings to localStorage
+  // Merge with existing localStorage, then persist ALL extra metadata
+  let storedMeta = {};
+  try { storedMeta = JSON.parse(localStorage.getItem(`art_${id}`) || "{}"); } catch(e) {}
   try {
     localStorage.setItem(`art_${id}`, JSON.stringify({
-      deviceShell: updates.deviceShell,
-      crop: updates.crop,
-      align: updates.align || "center",
+      deviceShell: updates.deviceShell !== undefined ? updates.deviceShell : storedMeta.deviceShell,
+      crop: 'crop' in updates ? updates.crop : storedMeta.crop,
+      align: updates.align !== undefined ? updates.align : (storedMeta.align || "center"),
+      desc: updates.desc !== undefined ? updates.desc : (storedMeta.desc || ""),
+      tags: updates.tags !== undefined ? updates.tags : (storedMeta.tags || []),
+      slideCount: updates.slideCount !== undefined ? updates.slideCount : storedMeta.slideCount,
+      mobileBg: updates.mobileBg !== undefined ? updates.mobileBg : storedMeta.mobileBg,
     }));
   } catch(e) {}
 
@@ -421,11 +439,16 @@ export async function updateArtifact(id, updates) {
 }
 
 function dbToArtifact(r, overrides) {
+  // Start from DB values where columns exist
   let deviceShell = r.device_shell || "auto";
   let crop = r.crop !== undefined ? r.crop : null;
   let align = r.align || "center";
+  let desc = r.description || "";
+  let tags = r.tags || [];
+  let slideCount = null;
+  let mobileBg = null;
 
-  // Read from localStorage as fallback (survives DB column gaps)
+  // localStorage is the canonical store for all extra metadata — always written on insert/update
   try {
     const stored = localStorage.getItem(`art_${r.id}`);
     if (stored) {
@@ -433,14 +456,27 @@ function dbToArtifact(r, overrides) {
       if (parsed.deviceShell !== undefined) deviceShell = parsed.deviceShell;
       if ('crop' in parsed) crop = parsed.crop;
       if (parsed.align !== undefined) align = parsed.align;
+      if (parsed.desc !== undefined) desc = parsed.desc;
+      if (parsed.tags !== undefined) tags = parsed.tags;
+      if (parsed.slideCount !== undefined) slideCount = parsed.slideCount;
+      if (parsed.mobileBg !== undefined) mobileBg = parsed.mobileBg;
     }
   } catch(e) {}
 
-  // In-memory overrides take top priority (right after a save)
+  // Backward compat: old slide_count_* key from before unified storage
+  if (!slideCount) {
+    try { const s = localStorage.getItem(`slide_count_${r.id}`); if (s) slideCount = parseInt(s) || null; } catch(e) {}
+  }
+
+  // In-memory overrides take top priority (applied immediately after a save, before next load)
   if (overrides) {
     if (overrides.deviceShell !== undefined) deviceShell = overrides.deviceShell;
     if ('crop' in overrides) crop = overrides.crop;
     if (overrides.align !== undefined) align = overrides.align;
+    if (overrides.desc !== undefined) desc = overrides.desc;
+    if (overrides.tags !== undefined) tags = overrides.tags;
+    if (overrides.slideCount !== undefined) slideCount = overrides.slideCount;
+    if (overrides.mobileBg !== undefined) mobileBg = overrides.mobileBg;
   }
 
   return {
@@ -454,6 +490,10 @@ function dbToArtifact(r, overrides) {
     deviceShell,
     crop,
     align,
+    desc,
+    tags,
+    slideCount,
+    mobileBg,
     user_id: r.user_id || null,
     user: { name: r.user_name, initials: r.user_initials },
   };
@@ -595,6 +635,8 @@ function dbToFeedItem(r) {
     }
   } catch(e) {}
 
+  let slideCount = null;
+  try { const s = localStorage.getItem(`slide_count_${r.id}`); if (s) slideCount = parseInt(s) || null; } catch(e) {}
   return {
     id: r.id,
     name: r.name,
@@ -610,6 +652,7 @@ function dbToFeedItem(r) {
     mobileBg,
     crop,
     align,
+    slideCount,
     user_id: r.user_id || null,
     user: { name: r.user_name, initials: r.user_initials },
   };

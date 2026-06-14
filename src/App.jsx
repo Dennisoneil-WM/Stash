@@ -86,8 +86,10 @@ function toURL(f){return new Promise(r=>{const rd=new FileReader();rd.onload=e=>
 function isImg(f){return f.type.startsWith("image/");}
 function isVid(f){return f.type.startsWith("video/");}
 function isPdf(f){return f.type==="application/pdf";}
-function figEmbed(u){if(!u)return "";if(u.includes("figma.com/embed"))return u;return "https://www.figma.com/embed?embed_host=share&url="+encodeURIComponent(u);}
+function figEmbed(u){if(!u)return "";if(u.includes("figma.com/embed"))return u;const inner=u.includes("figma.com/proto/")&&!u.includes("scaling=")?u+(u.includes("?")?"&":"?")+"scaling=scale_down_to_fit":u;return "https://www.figma.com/embed?embed_host=share&url="+encodeURIComponent(inner);}
+function addFigmaScaling(src){if(!src)return src;const m=src.match(/([?&]url=)([^&\s]+)/);if(!m)return src;let inner=decodeURIComponent(m[2]);if(!inner.includes("figma.com/proto/")||inner.includes("scaling="))return src;inner+=(inner.includes("?")?"&":"?")+"scaling=scale_down_to_fit";return src.replace(m[0],m[1]+encodeURIComponent(inner));}
 function ensureHttp(u){if(!u)return "";return u.startsWith("http")?u:"https://"+u;}
+function slidesEmbed(u){if(!u)return "";const m=u.match(/presentation\/d\/([a-zA-Z0-9_-]+)/);if(!m)return u;return `https://docs.google.com/presentation/d/${m[1]}/embed?rm=minimal&start=false&loop=false`;}
 
 function Av({user,size=32,src}){
   const [imgErr,setImgErr]=useState(false);
@@ -100,8 +102,10 @@ function Av({user,size=32,src}){
   return initials;
 }
 function Bdg({type}){
-  const L={figma:"Figma",website:"URL",file:"File",image:"Image",video:"Video",pdf:"PDF",gif:"GIF"};
-  return (<span style={{fontSize:10,fontWeight:600,color:T2,background:"#F0F0F0",padding:"2px 7px",borderRadius:4,letterSpacing:"0.04em",textTransform:"uppercase"}}>{L[type]||"Media"}</span>);
+  const L={figma:"Figma",website:"URL",file:"File",image:"Image",video:"Video",pdf:"PDF",gif:"GIF",slides:"Slides"};
+  const C={slides:{bg:"#EBF5FB",color:"#1A6FA8"}};
+  const custom=C[type];
+  return (<span style={{fontSize:10,fontWeight:600,color:custom?custom.color:T2,background:custom?custom.bg:"#F0F0F0",padding:"2px 7px",borderRadius:4,letterSpacing:"0.04em",textTransform:"uppercase"}}>{L[type]||"Media"}</span>);
 }
 function BBtn({children,onClick,disabled,fw,sm,darkMode}){
   const bg=disabled?(darkMode?"#333":"#E0E0E0"):(darkMode?"#FFFFFF":BK);
@@ -116,14 +120,14 @@ function TIn({ph,val,set,multi,af}){
   return multi ? (<textarea placeholder={ph} value={val} onChange={e=>set(e.target.value)} rows={3} style={{...s,resize:"vertical"}}/>) : (<input placeholder={ph} value={val} onChange={e=>set(e.target.value)} autoFocus={af} style={s}/>);
 }
 function TSel({val,set,opts}){
-  return (<select value={val} onChange={e=>set(e.target.value)} style={{background:"#FAFAFA",border:`1px solid ${BD}`,borderRadius:10,padding:"11px 14px",color:T1,fontSize:14,width:"100%",outline:"none",fontFamily:FF}}>{opts.map(o=>(<option key={o.v!=null?o.v:o} value={o.v!=null?o.v:o}>{o.l!=null?o.l:o}</option>))}</select>);
+  return (<select value={val} onChange={e=>set(e.target.value)} style={{background:"#FAFAFA",border:`1px solid ${BD}`,borderRadius:10,padding:"11px 36px 11px 14px",color:T1,fontSize:14,width:"100%",outline:"none",fontFamily:FF,appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 12px center"}}>{opts.map(o=>(<option key={o.v!=null?o.v:o} value={o.v!=null?o.v:o}>{o.l!=null?o.l:o}</option>))}</select>);
 }
 function Fld({label,children}){
   return (<div>{label&&(<label style={{fontSize:13,color:T2,display:"block",marginBottom:8,fontWeight:500}}>{label}</label>)}{children}</div>);
 }
 function Mdl({title,onClose,children,w=520,isMobile=false}){
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:isMobile?0:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:isMobile?0:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:"#FFF",borderRadius:isMobile?0:20,width:"100%",maxWidth:isMobile?"100%":w,height:isMobile?"100vh":"auto",padding:isMobile?"16px 16px 24px":"28px 28px 24px",boxShadow:isMobile?"none":"0 20px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"100vh":"92vh",overflowY:"auto",position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
           <span style={{fontSize:18,fontWeight:700,color:T1,fontFamily:FF}}>{title}</span>
@@ -160,7 +164,7 @@ function Thumb({art,h=220,onClick,darkMode,bare=false}){
   const ds=art.deviceShell||"auto";
   const showMobile=(ds==="mobile")||(ds==="auto"&&art.isMobile);
   const br=bare?0:12;
-  const bd=bare?"none":`1px solid ${BD}`;
+  const bd="none";
 
   if((art.type==="image"||art.type==="gif")&&art.src){
     if(ds==="none"){
@@ -213,6 +217,14 @@ function Thumb({art,h=220,onClick,darkMode,bare=false}){
       </div>
     );
   }
+  if(art.type==="slides"&&art.src){
+    return (
+      <div onClick={onClick} style={{width:"100%",aspectRatio:"16/9",borderRadius:br,overflow:"hidden",border:bd,cursor:"pointer",background:"#EBF5FB",position:"relative"}}>
+        {!fl&&(<div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,background:"#EBF5FB",zIndex:1}}><MI name="slideshow" size={32} style={{color:"#1A6FA8",opacity:.6}}/><span style={{fontSize:12,color:"#1A6FA8",fontFamily:FF}}>Slides</span></div>)}
+        <iframe src={art.src} title={art.name} style={{width:"100%",height:"100%",border:"none",pointerEvents:"none",display:"block"}} loading="lazy" onLoad={()=>setFl(true)}/>
+      </div>
+    );
+  }
   if(art.type==="website"&&art.src){
     if(showMobile) return (
       <div onClick={onClick} style={{cursor:"pointer"}}>
@@ -228,7 +240,7 @@ function Thumb({art,h=220,onClick,darkMode,bare=false}){
     const vp=VPS[art.viewport]||VPS["Desktop (1512x900)"];
     const sc=Math.min(h/vp.h,280/vp.w);
     return (
-      <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:`1px solid ${BD}`,cursor:"pointer",background:"#F0F0F0",position:"relative"}}>
+      <div onClick={onClick} style={{height:h,borderRadius:12,overflow:"hidden",border:"none",cursor:"pointer",background:"#F0F0F0",position:"relative"}}>
         <div style={{position:"absolute",top:0,left:0,width:vp.w,height:vp.h,transform:`scale(${sc})`,transformOrigin:"top left",pointerEvents:"none"}}>
           <iframe src={art.src} title={art.name} style={{width:"100%",height:"100%",border:"none"}} sandbox="allow-scripts allow-same-origin"/>
         </div>
@@ -236,7 +248,7 @@ function Thumb({art,h=220,onClick,darkMode,bare=false}){
     );
   }
   return (
-    <div onClick={onClick} style={{height:h,borderRadius:12,background:art.thumb||GR[0],border:`1px solid ${BD}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+    <div onClick={onClick} style={{height:h,borderRadius:12,background:art.thumb||GR[0],border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
       {art.type==="figma"&&(<span style={{fontSize:32,opacity:.5}}>&#x2736;</span>)}
       {art.type==="website"&&(<span style={{fontSize:32,opacity:.5}}>&#x1F310;</span>)}
       {art.type==="file"&&(<span style={{fontSize:32,opacity:.5}}>&#x1F4C4;</span>)}
@@ -247,8 +259,12 @@ function Thumb({art,h=220,onClick,darkMode,bare=false}){
 function LBox({art,onClose,onTagClick,currentUser}){
   const [winH,setWinH]=useState(window.innerHeight);
   const [winW,setWinW]=useState(window.innerWidth);
+  const [slideIdx,setSlideIdx]=useState(1);
   useEffect(()=>{
-    const onKey=e=>{if(e.key==="Escape")onClose();};
+    const onKey=e=>{
+      if(e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")) return;
+      if(e.key==="Escape"){onClose();}
+    };
     const onResize=()=>{setWinH(window.innerHeight);setWinW(window.innerWidth);};
     window.addEventListener("keydown",onKey);
     window.addEventListener("resize",onResize);
@@ -262,6 +278,11 @@ function LBox({art,onClose,onTagClick,currentUser}){
   const PHONE_W=307, PHONE_H=649;
   const isMobileView=winW<=640;
   const phoneScale=Math.min(2.2,Math.min((winH*(isMobileView?0.78:0.82))/PHONE_H,(winW*(isMobileView?0.90:0.48))/PHONE_W));
+  // Figma iframe: render at native viewport size, scale via CSS transform to eliminate scrollbars
+  const figVd=art.type==="figma"?(art.viewport&&VPS[art.viewport]||null):null;
+  const figScale=figVd?Math.min(winW*0.90,winH*0.84*(figVd.w/figVd.h))/figVd.w:1;
+  const figContainerW=figVd?Math.round(figScale*figVd.w):null;
+  const figContainerH=figVd?Math.round(figScale*figVd.h):null;
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:32}}>
       <button onClick={onClose} style={{position:"absolute",top:20,right:24,background:"none",border:"none",color:"#FFF",fontSize:28,cursor:"pointer"}}>&#x2715;</button>
@@ -296,7 +317,34 @@ function LBox({art,onClose,onTagClick,currentUser}){
             )}
           </div>
         )}
-        {(art.type==="pdf"||art.type==="figma"||art.type==="website")&&art.src&&(<iframe src={art.src} title={art.name} allowFullScreen onClick={e=>e.stopPropagation()} style={{width:"80vw",height:"85vh",border:"none",display:"block",borderRadius:23}}/>)}
+        {(art.type==="pdf"||art.type==="website")&&art.src&&(<iframe src={art.src} title={art.name} allowFullScreen onClick={e=>e.stopPropagation()} style={{width:"80vw",height:"85vh",border:"none",display:"block",borderRadius:23}}/>)}
+        {art.type==="figma"&&art.src&&figVd&&(
+          <div onClick={e=>e.stopPropagation()} style={{width:figContainerW,height:figContainerH,overflow:"hidden",borderRadius:23,flexShrink:0}}>
+            <iframe src={art.src} title={art.name} allowFullScreen
+              style={{width:figVd.w,height:figVd.h,transform:`scale(${figScale})`,transformOrigin:"top left",border:"none",display:"block"}}/>
+          </div>
+        )}
+        {art.type==="figma"&&art.src&&!figVd&&(
+          <iframe src={art.src} title={art.name} allowFullScreen onClick={e=>e.stopPropagation()} style={{width:"80vw",height:"85vh",border:"none",display:"block",borderRadius:23}}/>
+        )}
+        {art.type==="slides"&&art.src&&(
+          <div onClick={e=>e.stopPropagation()} style={{width:"min(92vw, calc(82vh * 1.778))",maxWidth:1280}}>
+            <div style={{width:"100%",aspectRatio:"16/9",position:"relative",borderRadius:16,overflow:"hidden"}}>
+              <iframe
+                src={art.src.replace(/&slide=[^&]*/g,"")+`&slide=id.p${slideIdx}`}
+                title={art.name} allowFullScreen
+                style={{width:"100%",height:"100%",border:"none",display:"block"}}/>
+              <button onClick={(e)=>{e.stopPropagation();setSlideIdx(i=>Math.max(1,i-1));}}
+                style={{position:"absolute",left:16,top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.45)",border:"none",borderRadius:"50%",width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:.7}}>
+                <MI name="arrow_back" size={22} style={{color:"#FFF"}}/>
+              </button>
+              <button onClick={(e)=>{e.stopPropagation();setSlideIdx(i=>i+1);}}
+                style={{position:"absolute",right:16,top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.45)",border:"none",borderRadius:"50%",width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:.7}}>
+                <MI name="arrow_forward" size={22} style={{color:"#FFF"}}/>
+              </button>
+            </div>
+          </div>
+        )}
         {!art.src&&(<div style={{width:560,height:340,background:art.thumb||GR[0],display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,.4)",fontSize:13,fontFamily:FF}}>Seed data placeholder - upload a real file</span></div>)}
       </div>
       <div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:10}} onClick={e=>e.stopPropagation()}>
@@ -459,8 +507,20 @@ function TagInput({tags,setTags}){
   );
 }
 
+function ProjThumb({project,size=32}){
+  const t=(project.thumbs||[])[0];
+  const isUrl=t&&(t.startsWith("http")||t.startsWith("data:image"));
+  const isVid=t&&(t.startsWith("data:video")||/\.(mp4|mov|webm)/i.test(t));
+  return (
+    <div style={{width:size,height:size,borderRadius:6,overflow:"hidden",flexShrink:0,background:t&&!isUrl&&!isVid?t:BD}}>
+      {isUrl&&<img src={t} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>}
+      {isVid&&<video src={t} muted playsInline preload="metadata" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>}
+    </div>
+  );
+}
+
 function ProjectPicker({projects,selected,onSelect,onNewProject,onNew}){
-  const [mode,setMode]=useState("none"); // "none"|"existing"|"new"
+  const [mode,setMode]=useState(selected?"selected":"none"); // "none"|"existing"|"new"|"selected"
   const [newName,setNewName]=useState("");
   return (
     <div>
@@ -479,12 +539,10 @@ function ProjectPicker({projects,selected,onSelect,onNewProject,onNew}){
               <button onClick={()=>setMode("none")} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:18,lineHeight:1,padding:"0 2px"}}>&#x2715;</button>
             </div>
           </div>
-          <div style={{maxHeight:160,overflowY:"auto"}}>
+          <div style={{maxHeight:220,overflowY:"auto"}}>
             {projects.map(p=>(
               <button key={p.id} onClick={()=>{onSelect(p);setMode("selected");}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",background:selected?.id===p.id?"#F5F5F5":"#FFF",border:"none",borderBottom:`1px solid ${BD}`,padding:"10px 14px",cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
-                <div style={{display:"flex",gap:3,flexShrink:0}}>
-                  {(p.thumbs||[]).slice(0,2).map((t,i)=>(<div key={i} style={{width:20,height:20,borderRadius:4,background:t}}/>))}
-                </div>
+                <ProjThumb project={p} size={32}/>
                 <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{p.name}</span>
                 {selected?.id===p.id&&<MI name="check" size={16} style={{color:BK,flexShrink:0}}/>}
               </button>
@@ -501,6 +559,7 @@ function ProjectPicker({projects,selected,onSelect,onNewProject,onNew}){
       )}
       {mode==="selected"&&selected&&(
         <div style={{display:"flex",alignItems:"center",gap:10,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:12,padding:"10px 14px"}}>
+          <ProjThumb project={selected} size={32}/>
           <span style={{fontSize:13,fontWeight:600,color:T1,flex:1}}>{selected.name}</span>
           <button onClick={()=>{onSelect(null);setMode("existing");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:13,fontFamily:FF}}>Change</button>
           <button onClick={()=>{onSelect(null);setMode("none");}} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:16,padding:0}}>&#x2715;</button>
@@ -510,7 +569,7 @@ function ProjectPicker({projects,selected,onSelect,onNewProject,onNew}){
   );
 }
 
-function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=false}){
+function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=false,defaultProject=null}){
   const [tab,setTab]=useState("file");
   const [drag,setDrag]=useState(false);
   const [q,setQ]=useState([]);
@@ -519,12 +578,14 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
   const [cropMode,setCropMode]=useState(null); // {artIndex} when cropping
   // per-source fields
   const [fu,setFu]=useState(""); const [fn,setFn]=useState("");
+  const [fvp,setFvp]=useState("Desktop (1512x900)");
   const [su,setSu]=useState(""); const [sn,setSn]=useState("");
+  const [gu,setGu]=useState(""); const [gn,setGn]=useState("");
   const [vp,setVp]=useState("Desktop (1512x900)");
   // shared fields
   const [desc,setDesc]=useState("");
   const [tags,setTags]=useState([]);
-  const [linkedProj,setLinkedProj]=useState(null);
+  const [linkedProj,setLinkedProj]=useState(defaultProject);
   const ref=useRef();
 
   const proc=useCallback(async raw=>{
@@ -643,7 +704,7 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
     );
   }
 
-  const tabs=[{id:"file",label:"File"},{id:"figma",label:"Figma"},{id:"website",label:"Website"}];
+  const tabs=[{id:"file",label:"File"},{id:"figma",label:"Figma"},{id:"website",label:"URL"},{id:"slides",label:"Slides"}];
 
   const sharedFields=(
     <div style={{display:"flex",flexDirection:"column",gap:16,marginTop:16,paddingTop:16,borderTop:`1px solid ${BD}`}}>
@@ -690,26 +751,40 @@ function NewArtMdl({onClose,onAdd,projects=[],onCreateProject,darkMode,isMobile=
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="Figma URL"><TIn ph="https://www.figma.com/design/..." val={fu} set={v=>{setFu(v);if(!fn)setFn(v.split("/").filter(Boolean).pop()||"");}} /></Fld>
           <Fld label="Name"><TIn ph="Frame or file name" val={fn} set={setFn}/></Fld>
+          <Fld label="Prototype viewport"><TSel val={fvp} set={setFvp} opts={Object.keys(VPS)}/></Fld>
           <div style={{background:"#FFFBEB",border:"1px solid #F0D060",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#7A6000",fontFamily:FF,lineHeight:1.5}}>
             The file must be set to "Anyone with the link can view" in Figma share settings.
           </div>
           {sharedFields}
-          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:null,deviceShell:"auto",crop:null,mobileBg:"#000"}])}>Add Figma Artifact</BBtn>
+          <BBtn fw disabled={!fu.trim()} onClick={()=>submit([{id:uid(),name:fn||fu,type:"figma",src:figEmbed(fu),thumb:GR[1],viewport:fvp,isMobile:fvp.includes("390")||fvp.includes("Mobile"),deviceShell:"auto",crop:null,mobileBg:"#000"}])}>Add Figma Artifact</BBtn>
         </div>
       )}
 
       {tab==="website" && (
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Fld label="URL">
-            <div style={{position:"relative"}}>
-              <TIn ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
-              <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"#F0F0F0",borderRadius:6,padding:"3px 8px",fontSize:11,fontWeight:700,color:T2}}>Quick</span>
-            </div>
+            <TIn ph="https://weedmaps.com" val={su} set={v=>{setSu(v);if(!sn)setSn(v.replace(/https?:\/\//,"").split("/")[0]);}}/>
           </Fld>
           <Fld label="Viewport"><TSel val={vp} set={setVp} opts={Object.keys(VPS)}/></Fld>
           <Fld label="Name"><TIn ph="weedmaps.com" val={sn} set={setSn}/></Fld>
           {sharedFields}
           <BBtn fw disabled={!su.trim()} onClick={()=>submit([{id:uid(),name:sn||su,type:"website",src:ensureHttp(su),thumb:GR[3],viewport:vp,isMobile:vp.includes("390")||vp.includes("Mobile"),deviceShell:"auto",crop:null,mobileBg:"#FFF"}])}>Add Website Artifact</BBtn>
+        </div>
+      )}
+
+      {tab==="slides" && (
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <Fld label="Google Slides URL">
+            <TIn ph="https://docs.google.com/presentation/d/..." val={gu} set={v=>{setGu(v);if(!gn){const m=v.match(/\/d\/[^/]+\/.*?([^/?#]+)[?#]?/);setGn(m?decodeURIComponent(m[1]).replace(/-/g," "):"");}}} />
+          </Fld>
+          <Fld label="Name"><TIn ph="Deck name" val={gn} set={setGn}/></Fld>
+          <div style={{background:"#EBF5FB",border:"1px solid #BFDBFE",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#1A6FA8",fontFamily:FF,lineHeight:1.6}}>
+            <strong>Share settings:</strong> Set the Google Slides sharing to "Anyone at Weedmaps with the link can view".
+          </div>
+          {sharedFields}
+          <BBtn fw disabled={!gu.trim()||!gn.trim()} onClick={()=>{
+            submit([{id:uid(),name:gn,type:"slides",src:slidesEmbed(gu),thumb:GR[2],viewport:null,deviceShell:"auto",crop:null,isMobile:false}]);
+          }}>Add Slides Artifact</BBtn>
         </div>
       )}
     </Mdl>
@@ -721,6 +796,7 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,onCreateProject
   const [desc,setDesc]=useState(art.desc||"");
   const [tags,setTags]=useState(art.tags||[]);
   const [deviceShell,setDeviceShell]=useState(art.deviceShell||"auto");
+  const [figVp,setFigVp]=useState(art.viewport||"Desktop (1512x900)");
   const [mobileBg,setMobileBg]=useState(art.mobileBg||"#000");
   const [cropMode,setCropMode]=useState(false);
   const [crop,setCrop]=useState(art.crop||null);
@@ -732,7 +808,7 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,onCreateProject
 
   const save=async()=>{
     setSaving(true);
-    const updated={...art,name,desc,tags,deviceShell,crop,mobileBg,align};
+    const updated={...art,name,desc,tags,deviceShell,crop,mobileBg,align,viewport:art.type==="figma"?figVp:art.viewport};
     console.log("Saving artifact:",{id:updated.id,deviceShell:updated.deviceShell,name:updated.name});
     await onSave(updated);
     if(newProjMode&&newProjName.trim()&&onCreateProject){
@@ -801,9 +877,7 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,onCreateProject
           </div>
         )}
         {art.type==="figma"&&(
-          <div style={{background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T2,fontFamily:FF}}>
-            Figma embed
-          </div>
+          <Fld label="Prototype viewport"><TSel val={figVp} set={setFigVp} opts={Object.keys(VPS)}/></Fld>
         )}
         {projects.length>0&&(
           <div style={{borderTop:`1px solid ${BD}`,paddingTop:16,display:"flex",flexDirection:"column",gap:12}}>
@@ -841,11 +915,12 @@ function NewProjMdl({onClose,onCreate,currentUser,isMobile=false}){
   const toggleMember=u=>setMembers(prev=>prev.some(m=>String(m.id)===String(u.id))?prev.filter(m=>String(m.id)!==String(u.id)):[...prev,u]);
 
   useEffect(()=>{
+    const isRealUser=u=>u&&typeof u.id==="string"&&u.id.includes("-");
     fetchAllProfiles().then(ps=>{
       const ids=new Set(ps.map(p=>String(p.id)));
-      if(currentUser&&!ids.has(String(currentUser.id))) ps=[currentUser,...ps];
+      if(isRealUser(currentUser)&&!ids.has(String(currentUser.id))) ps=[currentUser,...ps];
       setAllProfiles(ps);
-    }).catch(()=>setAllProfiles(currentUser?[currentUser]:[]));
+    }).catch(()=>setAllProfiles(isRealUser(currentUser)?[currentUser]:[]));
   },[]);
 
   return (
@@ -888,6 +963,7 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
   const [ds,setDs]=useState(project.desc||"");
   const [prd,setPrd]=useState(project.prd||"");
   const [prototype,setPrototype]=useState(project.prototype||"");
+  const [figmaFile,setFigmaFile]=useState(project.figmaFile||"");
   const [members,setMembers]=useState(project.members||[]);
   const [teams,setTeams]=useState(project.teams||[]);
   const [teamInput,setTeamInput]=useState("");
@@ -897,13 +973,14 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
   const [confirmDelete,setConfirmDelete]=useState(false);
 
   useEffect(()=>{
+    // isRealUser: only add currentUser if they have a UUID (not the numeric seed fallback)
+    const isRealUser=u=>u&&typeof u.id==="string"&&u.id.includes("-");
     fetchAllProfiles().then(ps=>{
-      // Always include currentUser in the list even if not in DB yet
       const ids=new Set(ps.map(p=>String(p.id)));
-      if(currentUser&&!ids.has(String(currentUser.id))) ps=[currentUser,...ps];
+      if(isRealUser(currentUser)&&!ids.has(String(currentUser.id))) ps=[currentUser,...ps];
       setAllProfiles(ps);
     }).catch(()=>{
-      setAllProfiles(currentUser?[currentUser]:[]);
+      setAllProfiles(isRealUser(currentUser)?[currentUser]:[]);
     });
   },[]);
 
@@ -922,7 +999,7 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
   const save=async()=>{
     if(!nm.trim())return;
     setSaving(true);
-    await onSave({name:nm.trim(),desc:ds,members,teams,prd:prd.trim(),prototype:prototype.trim()});
+    await onSave({name:nm.trim(),desc:ds,members,teams,prd:prd.trim(),prototype:prototype.trim(),figmaFile:figmaFile.trim()});
     setSaving(false);
     onClose();
   };
@@ -961,6 +1038,13 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
               <MI name="play_circle" size={16} style={{color:T3,flexShrink:0}}/>
               <input value={prototype} onChange={e=>setPrototype(e.target.value)} placeholder="https://figma.com/proto/..." style={{flex:1,background:"none",border:"none",padding:"9px 0",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
               {prototype.trim()&&(<a href={ensureHttp(prototype)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{color:T3,display:"flex",alignItems:"center"}} title="Open Prototype"><MI name="open_in_new" size={15} style={{color:T3}}/></a>)}
+            </div>
+          </Fld>
+          <Fld label="Figma File Link">
+            <div style={{display:"flex",alignItems:"center",gap:8,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"0 12px",transition:"border-color .15s"}}>
+              <MI name="diamond" size={16} style={{color:T3,flexShrink:0}}/>
+              <input value={figmaFile} onChange={e=>setFigmaFile(e.target.value)} placeholder="https://figma.com/design/..." style={{flex:1,background:"none",border:"none",padding:"9px 0",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
+              {figmaFile.trim()&&(<a href={ensureHttp(figmaFile)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{color:T3,display:"flex",alignItems:"center"}} title="Open Figma File"><MI name="open_in_new" size={15} style={{color:T3}}/></a>)}
             </div>
           </Fld>
         </div>
@@ -1072,51 +1156,70 @@ function NewFolderMdl({onClose,projects,isMobile=false}){
   );
 }
 
-function PubMdl({art,onClose,isMobile=false}){
+function PubMdl({art,onClose,onPublish,isMobile=false}){
   const [nm,setNm]=useState(art?art.name:""); const [ds,setDs]=useState(""); const [done,setDone]=useState(false);
+  const [eyes]=useState(()=>Array.from({length:34},(_,i)=>{
+    const angle=(i/34)*Math.PI*2+(Math.random()*.35-.175);
+    const dist=90+Math.random()*310;
+    return{sz:Math.floor(14+Math.random()*34),dx:`${Math.round(Math.cos(angle)*dist)}px`,dy:`${Math.round(Math.sin(angle)*dist)}px`,rot:`${Math.floor(Math.random()*720-360)}deg`,dur:(0.45+Math.random()*.8).toFixed(2),dly:(Math.random()*.5).toFixed(2)};
+  }));
   if(done){
     return (
-      <Mdl title="" onClose={onClose} w={400} isMobile={isMobile}>
-        <div style={{textAlign:"center",padding:"16px 0 8px"}}>
-          <div style={{fontSize:48,marginBottom:16}}>&#x1F389;</div>
-          <p style={{color:T1,fontWeight:700,fontSize:18,margin:"0 0 8px",fontFamily:FF}}>Published to Feed</p>
-          <p style={{color:T2,fontSize:14,margin:"0 0 24px",fontFamily:FF}}>"{nm}" is now visible to the team.</p>
-          <BBtn onClick={onClose}>Done</BBtn>
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.97)",zIndex:2500,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}} onClick={onClose}>
+        <style>{`
+          @keyframes eyefly{0%{transform:translate(0,0) scale(.08) rotate(0deg);opacity:1;}70%{opacity:.85;}100%{transform:translate(var(--ex),var(--ey)) scale(1) rotate(var(--er));opacity:0;}}
+          @keyframes pubshow{from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+          @keyframes eyeblink{0%,90%,100%{transform:scaleY(1);}95%{transform:scaleY(.1);}}
+        `}</style>
+        {eyes.map((e,i)=>(
+          <div key={i} style={{position:"absolute",top:"50%",left:"50%",fontSize:e.sz,lineHeight:1,marginTop:-(e.sz/2),marginLeft:-(e.sz/2),pointerEvents:"none","--ex":e.dx,"--ey":e.dy,"--er":e.rot,animation:`eyefly ${e.dur}s ${e.dly}s cubic-bezier(.05,.9,.2,1) both`}}>&#x1F441;</div>
+        ))}
+        <div onClick={ev=>ev.stopPropagation()} style={{textAlign:"center",padding:"32px 40px",background:"rgba(255,255,255,.07)",borderRadius:28,backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,.13)",position:"relative",zIndex:1,animation:"pubshow .4s .2s ease both",maxWidth:340}}>
+          <div style={{fontSize:60,marginBottom:16,display:"inline-block",animation:"eyeblink 3s 1s ease-in-out infinite"}}>&#x1F441;</div>
+          <p style={{color:"#FFF",fontWeight:700,fontSize:20,margin:"0 0 8px",fontFamily:FF}}>Published to Explore</p>
+          <p style={{color:"rgba(255,255,255,.5)",fontSize:14,margin:"0 0 26px",fontFamily:FF,lineHeight:1.55}}>&#x201C;{nm}&#x201D; is now visible to the team.</p>
+          <button onClick={onClose} style={{background:"#FFF",border:"none",borderRadius:100,padding:"13px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FF,color:"#0D0D0D"}}>Done</button>
         </div>
-      </Mdl>
+      </div>
     );
   }
   return (
-    <Mdl title="Publish to Feed" onClose={onClose} w={480} isMobile={isMobile}>
-      {art&&(<div style={{width:72,height:72,borderRadius:12,background:art.thumb||GR[0],margin:"0 auto 20px",border:`1px solid ${BD}`,overflow:"hidden"}}>{art.src&&(art.type==="image"||art.type==="gif")&&(<img src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}</div>)}
-      <p style={{color:T2,fontSize:13,textAlign:"center",margin:"-4px 0 22px",fontFamily:FF}}>Publishing will share this artifact to the team feed where other members can see it.</p>
+    <Mdl title="Publish to Explore" onClose={onClose} w={480} isMobile={isMobile}>
+      {art&&(
+        <div style={{width:88,height:88,borderRadius:14,background:art.thumb||GR[0],margin:"0 auto 20px",overflow:"hidden",flexShrink:0}}>
+          {art.src&&(art.type==="image"||art.type==="gif")&&(<img src={art.src} style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
+          {art.src&&art.type==="video"&&(<video src={art.src} muted playsInline preload="metadata" style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
+        </div>
+      )}
+      <p style={{color:T2,fontSize:13,textAlign:"center",margin:"-4px 0 22px",fontFamily:FF}}>Publishing will share this artifact to the Explore feed where other members can see it.</p>
       <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:24}}>
         <Fld label="Name"><TIn val={nm} set={setNm} ph="Artifact name"/></Fld>
         <Fld label="Description (optional)"><TIn val={ds} set={setDs} ph="Add a description..." multi/></Fld>
       </div>
-      <BBtn fw disabled={!nm.trim()} onClick={()=>setDone(true)}>Publish to Feed</BBtn>
+      <BBtn fw disabled={!nm.trim()} onClick={()=>{onPublish&&onPublish({...art,name:nm,desc:ds});setDone(true);}}>Publish to Explore</BBtn>
     </Mdl>
   );
 }
 
 function SaveMdl({art,projects,onClose,onSave,isMobile=false}){
-  const [pj,setPj]=useState(projects[0]?projects[0].id:1); const [pg,setPg]=useState("p1");
-  const proj=projects.find(x=>x.id===pj)||projects[0];
+  // Store id as string so UUID and numeric IDs both work in find()
+  const [pj,setPj]=useState(projects[0]?String(projects[0].id):"");
+  const proj=projects.find(x=>String(x.id)===pj)||projects[0];
   return (
-    <Mdl title="Save to Project" onClose={onClose} w={420} isMobile={isMobile}>
-      <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
-        <Fld label="Project"><TSel val={pj} set={v=>{setPj(Number(v));setPg("p1");}} opts={projects.map(p=>({v:p.id,l:p.name}))}/></Fld>
-        <Fld label="Page"><TSel val={pg} set={setPg} opts={(proj?proj.pages:[]).map(p=>({v:p.id,l:p.name}))}/></Fld>
+    <Mdl title="Save as Inspiration" onClose={onClose} w={420} isMobile={isMobile}>
+      <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
+        <Fld label="Project"><TSel val={pj} set={v=>setPj(String(v))} opts={projects.map(p=>({v:String(p.id),l:p.name}))}/></Fld>
+        <p style={{margin:0,fontSize:13,color:T3,fontFamily:FF,lineHeight:1.5}}>Saved as a reference in the project's Inspiration section — separate from working artifacts.</p>
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
         <GBtn onClick={onClose}>Cancel</GBtn>
-        <BBtn onClick={()=>{onSave&&onSave();onClose();}}>Save</BBtn>
+        <BBtn onClick={()=>{onSave&&onSave(proj);onClose();}}>Save</BBtn>
       </div>
     </Mdl>
   );
 }
 
-function ArtTile({art,onPublish,onSave,onOpen,onDelete,onEdit,darkMode,canDelete}){
+function ArtTile({art,onPublish,onSave,onOpen,onDelete,onEdit,onFeature,darkMode,canDelete}){
   const [hov,setHov]=useState(false); const [menu,setMenu]=useState(false);
   // Identical media-rendering logic to ExploreCard so tiles look the same everywhere
   const ds=art.deviceShell||"auto";
@@ -1161,19 +1264,25 @@ function ArtTile({art,onPublish,onSave,onOpen,onDelete,onEdit,darkMode,canDelete
           <Thumb art={art} h={320} darkMode={darkMode} bare/>
         )}
         {hov&&(
-          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.08)",display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10,gap:6}}>
-            {onEdit&&art.type!=="mockup"&&(
-              <button onClick={e=>{e.stopPropagation();onEdit(art);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Edit</button>
-            )}
-            <button onClick={e=>{e.stopPropagation();onSave(art);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
-            <button onClick={e=>{e.stopPropagation();setMenu(!menu);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:T1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x22EF;</button>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.08)",display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10}}>
+            <button onClick={e=>{e.stopPropagation();setMenu(m=>!m);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:T1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x22EF;</button>
           </div>
         )}
       </div>
-      {/* ── ⋯ menu ── */}
       {menu&&(
-        <div style={{position:"absolute",top:46,right:10,zIndex:20,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"6px 0",minWidth:170,boxShadow:"0 8px 32px rgba(0,0,0,.10)"}}>
+        <div style={{position:"absolute",top:46,right:10,zIndex:20,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"6px 0",minWidth:190,boxShadow:"0 8px 32px rgba(0,0,0,.10)"}}>
+          <button onClick={()=>{onSave(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Save as Inspiration</button>
+          {onEdit&&art.type!=="mockup"&&(
+            <button onClick={()=>{onEdit(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Edit</button>
+          )}
+          <div style={{height:1,background:BD,margin:"4px 0"}}/>
+          {onFeature&&(
+            <button onClick={()=>{onFeature(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"flex",alignItems:"center",gap:8,width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>
+              <MI name="star" size={15} style={{color:"#F59E0B",flexShrink:0}}/>Feature on card
+            </button>
+          )}
           <button onClick={()=>{onPublish(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Publish to Explore</button>
+          {canDelete&&(<div style={{height:1,background:BD,margin:"4px 0"}}/>)}
           {canDelete&&(
             <button onClick={()=>{onDelete&&onDelete(art.id);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#FEF2F2"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:"#DC2626",fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Remove</button>
           )}
@@ -1780,6 +1889,7 @@ function LiveBar({darkMode=false}){
 
 function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
   const [hov,setHov]=useState(false);
+  const [menu,setMenu]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const [visible,setVisible]=useState(false);
   const cardRef=useRef(null);
@@ -1819,7 +1929,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
               boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
               transition:"opacity 0.45s ease, transform 0.45s ease, box-shadow .2s"}}
       onMouseEnter={()=>setHov(true)}
-      onMouseLeave={()=>setHov(false)}
+      onMouseLeave={()=>{setHov(false);setMenu(false);}}
     >
       {/* ── Media area — click opens lightbox ─────────────────────── */}
       <div style={{position:"relative",cursor:"pointer"}} onClick={()=>onOpen(item)}>
@@ -1881,27 +1991,29 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
           <Thumb art={item} h={320} darkMode={darkMode} bare/>
         )}
         {hov&&(
-          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.1)",
-                       display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10,gap:6}}>
-            {onEdit&&item.type!=="mockup"&&(
-              <button onClick={e=>{e.stopPropagation();onEdit(item);}}
-                style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,
-                        padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Edit</button>
-            )}
-            <button onClick={e=>{e.stopPropagation();onSave(item);}}
-              style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:100,
-                      padding:"6px 14px",color:T1,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FF}}>Save</button>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.08)",display:"flex",alignItems:"flex-start",justifyContent:"flex-end",padding:10}}>
+            <button onClick={e=>{e.stopPropagation();setMenu(m=>!m);}} style={{background:"rgba(255,255,255,.96)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:T1,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>&#x22EF;</button>
           </div>
         )}
       </div>
-
+      {menu&&(
+        <div style={{position:"absolute",top:46,right:10,zIndex:20,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"6px 0",minWidth:190,boxShadow:"0 8px 32px rgba(0,0,0,.10)"}}>
+          <button onClick={()=>{onSave(item);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Save as Inspiration</button>
+          {onEdit&&item.type!=="mockup"&&(
+            <button onClick={()=>{onEdit(item);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Edit</button>
+          )}
+          {onDelete&&currentUser&&item.user_id&&item.user_id===currentUser.id&&(<div style={{height:1,background:BD,margin:"4px 0"}}/>)}
+          {onDelete&&currentUser&&item.user_id&&item.user_id===currentUser.id&&(
+            <button onClick={()=>{onDelete(item.id);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#FEF2F2"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:"#DC2626",fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Remove from Explore</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode,onDarkMode,currentUser,cols=3,feedLoading=false}){
   const [lb,setLb]=useState(null);
-  const savedDark=useRef(false);
   // Never show mockup seed data — only real uploaded items.
   const realItems=feedLoading?[]:feed.filter(item=>item.type!=="mockup");
   const isFiltered=!!srch.trim();
@@ -1912,8 +2024,6 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
       {!isFiltered&&(
         <div style={{padding:"64px 0 72px",marginBottom:32,textAlign:"center"}}>
           <h1
-            onMouseEnter={()=>{savedDark.current=darkMode;onDarkMode&&onDarkMode(true);}}
-            onMouseLeave={()=>{onDarkMode&&onDarkMode(savedDark.current);}}
             style={{margin:"0 0 20px",fontSize:"clamp(70px, 11.2vw, 140px)",fontWeight:800,lineHeight:1.0,letterSpacing:"-0.03em",color:h1c,fontFamily:FF,cursor:"default",userSelect:"none",transition:"color 0.3s"}}
           >Design the<br/>next chapter.</h1>
           <p style={{margin:"0 auto",fontSize:16,color:subc,fontFamily:FF,fontWeight:400,maxWidth:520,lineHeight:1.6}}>A shared space for explorations, shipped work, and everything worth stashing from the Weedmaps design team.</p>
@@ -2045,8 +2155,8 @@ function Projects({projects,onOpen,onDelete,darkMode,loading=false,currentUser,i
   );
 }
 
-function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onToast,darkMode,authUser,isAdmin,currentUser,canDeleteItem,onRequireAuth,isMobile=false}){
-  const [ap,setAp]=useState(project.pages[0].id);
+function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onSaveToInspo,onPublishToFeed,onToast,darkMode,authUser,isAdmin,currentUser,canDeleteItem,onRequireAuth,isMobile=false}){
+  const [ap,setAp]=useState(project.pages[0]?.id||"p1");
   const [arts,setArts]=useState(project.artifacts||{});
   const [pages,setPages]=useState(project.pages);
   const [showNew,setShowNew]=useState(false);
@@ -2063,6 +2173,37 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onToast,da
   const [dragOver,setDragOver]=useState(null);
   const [showSettings,setShowSettings]=useState(false);
   const [uplStatus,setUplStatus]=useState(null); // null | "uploading" | "done"
+
+  // Remove an artifact from the inspiration strip
+  const removeInspo=useCallback(async(artId)=>{
+    setArts(prev=>({...prev,inspo:(prev["inspo"]||[]).filter(a=>a.id!==artId)}));
+    try{await deleteArtifact(artId);}catch(e){console.error("Remove inspo error",e);}
+  },[]);
+
+  // Feature an artifact as the front card in the project stack
+  const featureArt=useCallback(async(art)=>{
+    // Only image/gif/video have a render-able src; everything else uses the gradient thumb
+    const hasVisualSrc=(art.type==="image"||art.type==="gif"||art.type==="video")&&art.src;
+    const artThumb=hasVisualSrc?art.src:(art.thumb||null);
+    if(!artThumb){onToast&&onToast("No preview for this artifact type");return;}
+    const cur=project.thumbs||[];
+    // Remove this thumb if already present, then place at index 2 (front = last of first 3)
+    const filtered=cur.filter(t=>t!==artThumb);
+    const newThumbs=[...filtered.slice(0,2),artThumb,...filtered.slice(2)].slice(0,4);
+    try{
+      await onUpdateProject(project.id,{thumbs:newThumbs});
+      onToast&&onToast("Featured on project card");
+    }catch(e){console.error("featureArt error",e);}
+  },[project.id,project.thumbs,onUpdateProject,onToast]);
+
+  // Pause background videos in project detail when any modal is open
+  useEffect(()=>{
+    const anyModal=!!(pub||save||lb||editItem||showNew||showSettings);
+    document.querySelectorAll("video").forEach(v=>{
+      if(anyModal)v.pause();
+      else v.play().catch(()=>{});
+    });
+  },[pub,save,lb,editItem,showNew,showSettings]);
 
   useEffect(()=>{
     const isUuid=typeof project.id==="string"&&project.id.includes("-");
@@ -2167,6 +2308,26 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onToast,da
   const dT3=darkMode?"rgba(255,255,255,0.28)":T3;
   const dHov=darkMode?"rgba(255,255,255,0.06)":"#F5F5F5";
 
+  // Grid layout — computed here to avoid IIFE+const TDZ issue in esbuild minification
+  const gridCols=isMobile?1:(5-colSetting);
+  const gridGap=isMobile?16:20;
+  const gridBasis=`calc(${100/gridCols}% - ${gridGap*(gridCols-1)/gridCols}px)`;
+  // Main grid excludes inspo items (they get their own strip)
+  const paGrid=Object.entries(arts).filter(([k])=>k!=="inspo").flatMap(([,v])=>v);
+  // Contributors derived from grid artifacts
+  const contribSeen=new Set();
+  const contributors=paGrid.reduce((acc,a)=>{
+    const uid=String(a.user?.id||a.user_id||"");
+    if(uid&&!contribSeen.has(uid)){
+      contribSeen.add(uid);
+      const isMe=currentUser&&(uid===String(currentUser.id)||a.user?.name===currentUser.name);
+      acc.push(isMe?{...a.user,...currentUser}:(a.user||{id:uid,name:"?",initials:"?"}));
+    }
+    return acc;
+  },[]);
+  const hasDesc=!!project.desc;
+  const hasContribs=contributors.length>0;
+
   return (
     <div style={{height:"100vh",display:"flex",flexDirection:"column",background:dBg,fontFamily:FF,transition:"background 0.3s"}}>
 
@@ -2214,93 +2375,98 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onToast,da
         .proj-carousel::-webkit-scrollbar{display:none}
         .proj-carousel{-ms-overflow-style:none;scrollbar-width:none;}
       `}</style>
-      {(() => {
-        // colSetting 1(left/small)→4cols, 4(right/large)→1col; mobile always 1col
-        const cols = isMobile ? 1 : (5 - colSetting);
-        const gapPx = isMobile ? 16 : 20;
-        const itemBasis = `calc(${100/cols}% - ${gapPx*(cols-1)/cols}px)`;
-        if(pa.length===0) return (
-          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
-              <div style={{fontSize:48,color:BM}}>&#x25FB;</div>
-              <p style={{margin:0,fontSize:15,color:T3,fontFamily:FF}}>No artifacts yet in this project</p>
-              <BBtn onClick={()=>setShowNew(true)}>+ Add First Artifact</BBtn>
-            </div>
+      {paGrid.length===0 && (
+        <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+            <div style={{fontSize:48,color:BM}}>&#x25FB;</div>
+            <p style={{margin:0,fontSize:15,color:T3,fontFamily:FF}}>No artifacts yet in this project</p>
+            <BBtn onClick={()=>setShowNew(true)}>+ Add First Artifact</BBtn>
           </div>
-        );
-        // Build contributors list for in-page block
-        const metaSeen=new Set();
-        const contributors=pa.reduce((acc,a)=>{
-          const uid=String(a.user?.id||a.user_id||"");
-          if(uid&&!metaSeen.has(uid)){
-            metaSeen.add(uid);
-            // Prefer currentUser profile image when IDs match
-            const isMe=currentUser&&(uid===String(currentUser.id)||a.user?.name===currentUser.name);
-            acc.push(isMe?{...a.user,...currentUser}:(a.user||{id:uid,name:"?",initials:"?"}));
-          }
-          return acc;
-        },[]);
-        const hasDesc=!!project.desc;
-        const hasContribs=contributors.length>0;
-        return (
-          <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:isMobile?"16px":"24px 28px"}}>
-            {(hasDesc||hasContribs)&&(
-              <div style={{display:"flex",gap:24,marginBottom:20,flexWrap:"wrap",alignItems:"flex-start"}}>
-                {hasDesc&&(
-                  <div style={{maxWidth:480,minWidth:200}}>
-                    <p style={{margin:"0 0 5px",fontSize:11,fontWeight:700,color:dT3,textTransform:"uppercase",letterSpacing:".06em",fontFamily:FF}}>Description</p>
-                    <p style={{margin:0,fontSize:13,color:dT2,lineHeight:1.6,fontFamily:FF}}>{project.desc}</p>
-                  </div>
-                )}
-                {hasContribs&&(
-                  <div style={{flexShrink:0}}>
-                    <p style={{margin:"0 0 6px",fontSize:11,fontWeight:700,color:dT3,textTransform:"uppercase",letterSpacing:".06em",fontFamily:FF}}>Contributors</p>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {contributors.slice(0,10).map((u,i)=>(
-                        <div key={u.id||i} title={u.name} style={{flexShrink:0}}>
-                          <Av user={u} size={28} src={u.image||u.avatar_url}/>
-                        </div>
-                      ))}
-                      {contributors.length>10&&(<span style={{fontSize:12,color:dT3,fontFamily:FF}}>+{contributors.length-10}</span>)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            <div style={{display:"flex",flexWrap:"wrap",gap:gapPx,alignContent:"flex-start"}}>
-              {pa.map((art,idx)=>(
-                <div key={art.id}
-                  draggable
-                  onDragStart={e=>{e.dataTransfer.effectAllowed="move";setDragFrom(idx);}}
-                  onDragEnd={()=>{setDragFrom(null);setDragOver(null);}}
-                  onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDragOver(idx);}}
-                  onDragLeave={()=>{if(dragOver===idx)setDragOver(null);}}
-                  onDrop={e=>{e.preventDefault();reorder(dragFrom,idx);setDragFrom(null);setDragOver(null);}}
-                  style={{
-                    flexBasis: itemBasis,
-                    flexGrow: 0,
-                    flexShrink: 0,
-                    minWidth: 0,
-                    opacity:dragFrom===idx?0.35:1,
-                    borderRadius:16,
-                    outline:dragOver===idx&&dragFrom!==idx?`2px dashed ${BM}`:"2px solid transparent",
-                    cursor:"grab",
-                    transition:"flex-basis 0.42s cubic-bezier(0.34,1.56,0.64,1), opacity .15s",
-                    animation:`${sizePhase%2===0?"cardBounceA":"cardBounceB"} 0.42s cubic-bezier(0.34,1.56,0.64,1)`,
-                    willChange:"flex-basis, transform",
-                  }}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,paddingLeft:2}}>
-                    <MI name="drag_indicator" size={16} style={{color:dT3,flexShrink:0}}/>
-                    <span style={{fontSize:12,color:dT3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
-                    <Bdg type={art.type}/>
-                  </div>
-                  <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} onEdit={setEditItem} onDelete={async artId=>{const pageId=pages[0]?.id||"p1";setArts(prev=>({...prev,[pageId]:(prev[pageId]||[]).filter(a=>a.id!==artId)}));try{await deleteArtifact(artId);}catch(e){console.error("Remove artifact error:",e);}}} darkMode={darkMode} canDelete={canDeleteItem?canDeleteItem(art):false}/>
+        </div>
+      )}
+      {paGrid.length>0 && (
+        <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:isMobile?"16px":"24px 28px"}}>
+          {(hasDesc||hasContribs)&&(
+            <div style={{display:"flex",gap:24,marginBottom:20,flexWrap:"wrap",alignItems:"flex-start"}}>
+              {hasDesc&&(
+                <div style={{maxWidth:480,minWidth:200}}>
+                  <p style={{margin:"0 0 5px",fontSize:11,fontWeight:700,color:dT3,textTransform:"uppercase",letterSpacing:".06em",fontFamily:FF}}>Description</p>
+                  <p style={{margin:0,fontSize:13,color:dT2,lineHeight:1.6,fontFamily:FF}}>{project.desc}</p>
                 </div>
-              ))}
+              )}
+              {hasContribs&&(
+                <div style={{flexShrink:0}}>
+                  <p style={{margin:"0 0 6px",fontSize:11,fontWeight:700,color:dT3,textTransform:"uppercase",letterSpacing:".06em",fontFamily:FF}}>Contributors</p>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    {contributors.slice(0,10).map((u,i)=>(
+                      <div key={u.id||i} title={u.name} style={{flexShrink:0}}>
+                        <Av user={u} size={28} src={u.image||u.avatar_url}/>
+                      </div>
+                    ))}
+                    {contributors.length>10&&(<span style={{fontSize:12,color:dT3,fontFamily:FF}}>+{contributors.length-10}</span>)}
+                  </div>
+                </div>
+              )}
             </div>
+          )}
+          {/* ── Inspiration strip ── */}
+          {(arts["inspo"]||[]).length>0&&(
+            <div style={{marginBottom:24,paddingBottom:20,borderBottom:`1px solid ${darkMode?"rgba(255,255,255,.08)":BD}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <MI name="star" size={14} style={{color:"#F59E0B"}}/>
+                <span style={{fontSize:11,fontWeight:700,color:dT3,textTransform:"uppercase",letterSpacing:".06em",fontFamily:FF}}>Inspiration</span>
+                <span style={{fontSize:11,color:dT3,fontFamily:FF,background:darkMode?"rgba(255,255,255,.08)":"rgba(0,0,0,.06)",borderRadius:20,padding:"1px 8px"}}>{(arts["inspo"]||[]).length}</span>
+              </div>
+              <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4}}>
+                {(arts["inspo"]||[]).map(inspoArt=>(
+                  <div key={inspoArt.id} style={{flexShrink:0,width:156,position:"relative",cursor:"pointer",borderRadius:12,overflow:"hidden",background:darkMode?"#1A1A22":"#EBEBEB"}}
+                    onClick={()=>setLb(inspoArt)}>
+                    <Thumb art={inspoArt} h={96} bare darkMode={darkMode}/>
+                    <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top,rgba(0,0,0,.72) 0%,transparent 100%)",padding:"16px 8px 6px"}}>
+                      <span style={{fontSize:11,fontWeight:600,color:"#FFF",display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:FF}}>{inspoArt.name}</span>
+                    </div>
+                    <button onClick={e=>{e.stopPropagation();removeInspo(inspoArt.id);}}
+                      style={{position:"absolute",top:5,right:5,background:"rgba(0,0,0,.45)",border:"none",borderRadius:"50%",width:22,height:22,cursor:"pointer",color:"#FFF",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0}}>
+                      &#x2715;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{display:"flex",flexWrap:"wrap",gap:gridGap,alignContent:"flex-start"}}>
+            {paGrid.map((art,idx)=>(
+              <div key={art.id}
+                draggable
+                onDragStart={e=>{e.dataTransfer.effectAllowed="move";setDragFrom(idx);}}
+                onDragEnd={()=>{setDragFrom(null);setDragOver(null);}}
+                onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDragOver(idx);}}
+                onDragLeave={()=>{if(dragOver===idx)setDragOver(null);}}
+                onDrop={e=>{e.preventDefault();reorder(dragFrom,idx);setDragFrom(null);setDragOver(null);}}
+                style={{
+                  flexBasis: gridBasis,
+                  flexGrow: 0,
+                  flexShrink: 0,
+                  minWidth: 0,
+                  opacity:dragFrom===idx?0.35:1,
+                  borderRadius:16,
+                  outline:dragOver===idx&&dragFrom!==idx?`2px dashed ${BM}`:"2px solid transparent",
+                  cursor:"grab",
+                  transition:"flex-basis 0.42s cubic-bezier(0.34,1.56,0.64,1), opacity .15s",
+                  animation:`${sizePhase%2===0?"cardBounceA":"cardBounceB"} 0.42s cubic-bezier(0.34,1.56,0.64,1)`,
+                  willChange:"flex-basis, transform",
+                }}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,paddingLeft:2}}>
+                  <MI name="drag_indicator" size={16} style={{color:dT3,flexShrink:0}}/>
+                  <span style={{fontSize:12,color:dT3,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{art.name}</span>
+                  <Bdg type={art.type}/>
+                </div>
+                <ArtTile art={art} onPublish={setPub} onSave={setSave} onOpen={setLb} onEdit={setEditItem} onFeature={featureArt} onDelete={async artId=>{const pageId=pages[0]?.id||"p1";setArts(prev=>({...prev,[pageId]:(prev[pageId]||[]).filter(a=>a.id!==artId)}));try{await deleteArtifact(artId);}catch(e){console.error("Remove artifact error:",e);}}} darkMode={darkMode} canDelete={canDeleteItem?canDeleteItem(art):false}/>
+              </div>
+            ))}
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {/* ── Presentation mode ─────────────────────────────────────────── */}
       {presMode&&!isMobile&&(
@@ -2319,16 +2485,21 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onToast,da
                 <div style={{width:40,height:3,background:"rgba(255,255,255,.12)",borderRadius:2}}/>
                 <h1 style={{margin:0,fontSize:"clamp(28px,4.5vw,54px)",fontWeight:800,color:"#FFF",lineHeight:1.1,letterSpacing:"-0.03em"}}>{project.name}</h1>
                 {project.desc&&(<p style={{margin:0,fontSize:17,color:"rgba(255,255,255,.42)",lineHeight:1.65,maxWidth:460}}>{project.desc}</p>)}
-                {(project.prd||project.prototype)&&(
+                {(project.prd||project.prototype||project.figmaFile)&&(
                   <div style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginTop:4}}>
-                    {project.prd&&(
-                      <a href={ensureHttp(project.prd)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
-                        <MI name="description" size={16} style={{color:"rgba(255,255,255,.7)"}}/> Open PRD
+                    {project.figmaFile&&(
+                      <a href={ensureHttp(project.figmaFile)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
+                        <MI name="diamond" size={16} style={{color:"rgba(255,255,255,.7)"}}/> Figma File
                       </a>
                     )}
                     {project.prototype&&(
                       <a href={ensureHttp(project.prototype)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
-                        <MI name="play_circle" size={16} style={{color:"rgba(255,255,255,.7)"}}/> Open Prototype
+                        <MI name="play_circle" size={16} style={{color:"rgba(255,255,255,.7)"}}/> Prototype
+                      </a>
+                    )}
+                    {project.prd&&(
+                      <a href={ensureHttp(project.prd)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
+                        <MI name="description" size={16} style={{color:"rgba(255,255,255,.7)"}}/> PRD
                       </a>
                     )}
                   </div>
@@ -2364,7 +2535,7 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onToast,da
               const phoneScale=Math.min(2.2,Math.min((pH*0.80)/PHONE_H,(pW*0.52)/PHONE_W));
               const isImg=art.type==="image"||art.type==="gif";
               const isVid=art.type==="video";
-              const isEmbed=art.type==="pdf"||art.type==="figma"||art.type==="website";
+              const isEmbed=art.type==="pdf"||art.type==="figma"||art.type==="website"||art.type==="slides";
               return (
                 <div key={presIdx} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,maxWidth:"90vw",animation:"pdFadeUp .25s ease-out"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -2418,9 +2589,9 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onToast,da
         </div>
       )}
 
-      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode}/>)}
-      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)}/>)}
-      {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)}/>)}
+      {showNew&&(<NewArtMdl onClose={()=>setShowNew(false)} onAdd={addArts} projects={projects} darkMode={darkMode} defaultProject={project} isMobile={isMobile}/>)}
+      {pub&&(<PubMdl art={pub} onClose={()=>setPub(null)} onPublish={onPublishToFeed}/>)}
+      {save&&(<SaveMdl art={save} projects={projects} onClose={()=>setSave(null)} onSave={proj=>{onSaveToInspo&&onSaveToInspo(save,proj,"inspo");setSave(null);}} isMobile={isMobile}/>)}
       {lb&&(<LBox art={lb} onClose={()=>setLb(null)} currentUser={currentUser}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveArtEdit} isMobile={isMobile}/>)}
       {showSettings&&(<ProjSettingsMdl project={project} onClose={()=>setShowSettings(false)} currentUser={currentUser} isMobile={isMobile} canDelete={isAdmin||(authUser&&project.user_id===authUser?.id)} onDelete={(id)=>{onDelete&&onDelete(id);onBack();}} onSave={async(updates)=>{onUpdateProject&&await onUpdateProject(project.id,updates);onToast&&onToast("Settings saved");}}/>)}
@@ -2606,6 +2777,17 @@ export default function App(){
     if(!configured){console.warn("[Stash] Supabase not configured");setFeedLoading(false);setProjectsLoading(false);return;}
     console.log("[Stash] Starting data fetch...");
     const deletedProjIds=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
+    // One-time migration: scrub seed/numeric users from project members in localStorage
+    // and replace with the real authenticated user if available
+    try{
+      Object.keys(localStorage).filter(k=>k.startsWith("members_")).forEach(k=>{
+        const raw=localStorage.getItem(k);
+        if(!raw)return;
+        const arr=JSON.parse(raw);
+        const cleaned=arr.filter(u=>u&&typeof u.id==="string"&&u.id.includes("-"));
+        localStorage.setItem(k,JSON.stringify(cleaned));
+      });
+    }catch(e){}
     const fallback=setTimeout(()=>{ console.warn("[Stash] Fetch timed out after 10s"); setFeedLoading(false); setProjectsLoading(false); },10000);
     fetchProjects()
       .then(projs=>{
@@ -2619,6 +2801,14 @@ export default function App(){
         });
         if(withMeta.length) setProjects(withMeta);
         setProjectsLoading(false);
+        // Startup sync: push any descriptions that live in localStorage but not yet in Supabase.
+        // Runs silently — failures don't affect the UI since localStorage is already applied above.
+        withMeta.forEach(p=>{
+          if(p.desc){
+            const isUuid=typeof p.id==="string"&&p.id.includes("-");
+            if(isUuid) updateProject(p.id,{desc:p.desc}).catch(()=>{});
+          }
+        });
       })
       .catch(e=>{console.warn("Projects load failed:",e);setProjectsLoading(false);});
     fetchFeed()
@@ -2644,6 +2834,15 @@ export default function App(){
       setTimeout(()=>{searchRef.current?.focus({preventScroll:true});},300);
     }
   },[searchExp]);
+
+  // Pause all background video loops when any modal overlay is open
+  useEffect(()=>{
+    const anyModal=!!(saveIt||uplFeed||editItem||newP||newF);
+    document.querySelectorAll("video").forEach(v=>{
+      if(anyModal)v.pause();
+      else v.play().catch(()=>{});
+    });
+  },[saveIt,uplFeed,editItem,newP,newF]);
 
   useEffect(()=>{
     if(searchExp){
@@ -2876,6 +3075,11 @@ export default function App(){
   },[authUser,isAdmin]);
 
   const open=p=>{setProj(p);setView("project");};
+  const publishToExplore=async art=>{
+    const item={...art,user:currentUser};
+    try{const r=await insertFeedItem(item,authUser?.id);setFeed(prev=>[r,...prev]);}
+    catch(e){console.error("Publish failed",e);setFeed(prev=>[{...item,id:"pub"+uid(),user_id:authUser?.id||null},...prev]);}
+  };
   const deleteProj=async projId=>{
     try{
       const deleted=JSON.parse(localStorage.getItem("stash_deleted_projects")||"[]");
@@ -2901,6 +3105,7 @@ export default function App(){
     if(updates.teams) try{localStorage.setItem(`teams_${projId}`,JSON.stringify(updates.teams));}catch(e){}
     if(updates.prd!==undefined) try{localStorage.setItem(`prd_${projId}`,updates.prd);}catch(e){}
     if(updates.prototype!==undefined) try{localStorage.setItem(`prototype_${projId}`,updates.prototype);}catch(e){}
+    if(updates.figmaFile!==undefined) try{localStorage.setItem(`figmaFile_${projId}`,updates.figmaFile);}catch(e){}
     // Persist to Supabase if UUID project
     const isUuid=typeof projId==="string"&&projId.includes("-");
     if(isUuid){
@@ -2914,8 +3119,35 @@ export default function App(){
     }
   };
 
+  // addArtToProject must be defined BEFORE the early return below — esbuild TDZ
+  const addArtToProject=async(art,targetProj,pageId)=>{
+    const isUuid=typeof targetProj.id==="string"&&targetProj.id.includes("-");
+    const isInspo=pageId==="inspo";
+    let saved=art;
+    if(isUuid){
+      try{saved=await insertArtifact(targetProj.id,pageId,art);}
+      catch(e){console.error("insertArtifact failed",e);}
+    }
+    setProjects(prev=>prev.map(p=>{
+      if(p.id!==targetProj.id)return p;
+      const page=p.artifacts||{};
+      if(isInspo){
+        return{...p,artifacts:{...page,[pageId]:[...(page[pageId]||[]),saved]}};
+      }
+      const newCount=(p.artifactCount||0)+1;
+      const embedType=["figma","website","mockup","pdf","file"].includes(saved.type);
+      const newThumb=embedType?(saved.thumb||null):(saved.src||saved.thumb||null);
+      const newThumbs=newThumb?[newThumb,...(p.thumbs||[])].slice(0,4):(p.thumbs||[]);
+      if(isUuid){
+        updateProject(targetProj.id,{artifactCount:newCount,thumbs:newThumbs}).catch(e=>console.error("updateProject failed",e));
+      }
+      return{...p,artifacts:{...page,[pageId]:[...(page[pageId]||[]),saved]},artifactCount:newCount,thumbs:newThumbs};
+    }));
+    toast(`Saved to ${targetProj.name}`);
+  };
+
   if(view==="project"&&proj){
-    return (<><ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} onUpdateProject={updateProjSettings} onToast={toast} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth} isMobile={isMobile}/><Toaster toasts={toasts}/></>);
+    return (<><ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} onUpdateProject={updateProjSettings} onSaveToInspo={addArtToProject} onPublishToFeed={publishToExplore} onToast={toast} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth} isMobile={isMobile}/><Toaster toasts={toasts}/></>);
   }
 
   const toggleDarkMode=()=>{setDarkMode(v=>{const n=!v;try{localStorage.setItem("stash_dark_mode",n);}catch(e){}return n;});};
@@ -3003,29 +3235,6 @@ export default function App(){
     }
     setFeed(prev=>prev.filter(f=>f.id!==artId));
   };
-  const addArtToProject=async(art,proj,pageId)=>{
-    const isUuid=typeof proj.id==="string"&&proj.id.includes("-");
-    let saved=art;
-    if(isUuid){
-      try{saved=await insertArtifact(proj.id,pageId,art);}
-      catch(e){console.error("insertArtifact failed",e);}
-    }
-    setProjects(prev=>prev.map(p=>{
-      if(p.id!==proj.id)return p;
-      const page=p.artifacts||{};
-      const newCount=(p.artifactCount||0)+1;
-      // For embed types whose src is an iframe/page URL, use gradient thumb instead
-      const embedType=["figma","website","mockup","pdf","file"].includes(saved.type);
-      const newThumb=embedType?(saved.thumb||null):(saved.src||saved.thumb||null);
-      const newThumbs=newThumb?[newThumb,...(p.thumbs||[])].slice(0,4):(p.thumbs||[]);
-      if(isUuid){
-        updateProject(proj.id,{artifactCount:newCount,thumbs:newThumbs}).catch(e=>console.error("updateProject failed",e));
-      }
-      return{...p,artifacts:{...page,[pageId]:[...(page[pageId]||[]),saved]},artifactCount:newCount,thumbs:newThumbs};
-    }));
-    toast(`Saved to ${proj.name}`);
-  };
-
   const allTags=Array.from(new Set(projects.flatMap(p=>p.tags||[])));
   const matchingTags=srch.toLowerCase().trim()?allTags.filter(t=>t.includes(srch.toLowerCase())):allTags;
   const filtProj=projects.filter(p=>{
@@ -3114,12 +3323,13 @@ export default function App(){
                 const matchProjs=q?projects.filter(p=>p.name.toLowerCase().includes(q)||(p.tags||[]).some(t=>t.includes(q))):[];
                 // Search across project artifacts (not just the explore feed)
                 const projArtMatches=q?[]:[];
+                const hasRealSrc=item=>item.src&&(item.src.startsWith("http")||item.src.startsWith("data:")||item.src.startsWith("blob:"));
                 if(q){
                   const seen=new Set();
                   projects.forEach(p=>{
                     const allPageArts=Object.values(p.artifacts||{}).flat();
                     allPageArts.forEach(a=>{
-                      if(!seen.has(a.id)&&((a.name||"").toLowerCase().includes(q)||(a.tags||[]).some(t=>t.includes(q)))){
+                      if(!seen.has(a.id)&&hasRealSrc(a)&&((a.name||"").toLowerCase().includes(q)||(a.tags||[]).some(t=>t.includes(q)))){
                         seen.add(a.id);
                         projArtMatches.push({...a,_project:p});
                       }
@@ -3127,7 +3337,6 @@ export default function App(){
                   });
                 }
                 // Also include explore feed items (published artifacts not in projects)
-                const hasRealSrc=item=>item.src&&(item.src.startsWith("http")||item.src.startsWith("data:")||item.src.startsWith("blob:"));
                 const feedMatches=q?feed.filter(item=>hasRealSrc(item)&&!projArtMatches.some(a=>a.id===item.id)&&((item.name||"").toLowerCase().includes(q)||(item.tags||[]).some(t=>t.includes(q)))):[];
                 const matchArts=[...projArtMatches,...feedMatches].slice(0,6);
                 const matchTags=q?allTags.filter(t=>t.includes(q)):allTags;
@@ -3156,7 +3365,7 @@ export default function App(){
                                   <div style={{width:36,height:28,background:"rgba(255,255,255,.85)",borderRadius:4,boxShadow:"0 2px 6px rgba(0,0,0,.18)",transform:"rotate(-3deg)",position:"absolute",top:4,left:6}}/>
                                 )}
                                 <div style={{width:34,height:26,background:"rgba(255,255,255,.95)",borderRadius:4,boxShadow:"0 2px 8px rgba(0,0,0,.2)",position:"relative",zIndex:1,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                                  {thumb&&(thumb.startsWith("http")||thumb.startsWith("data"))&&(<img src={thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
+                                  {thumb&&(thumb.startsWith("http")||thumb.startsWith("data"))&&(/\.(mp4|mov|webm|m4v)(\?|$)/i.test(thumb)?(<video src={thumb} muted playsInline preload="metadata" style={{width:"100%",height:"100%",objectFit:"cover"}}/>):(<img src={thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>))}
                                 </div>
                               </div>
                               <div style={{flex:1,minWidth:0}}>
@@ -3182,7 +3391,7 @@ export default function App(){
                             onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                             <div style={{width:38,height:38,borderRadius:7,flexShrink:0,overflow:"hidden",background:item.thumb||BM}}>
                               {item.src&&(item.type==="image"||item.type==="gif")&&(<img src={item.src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
-                              {(!item.src||(item.type!=="image"&&item.type!=="gif"))&&(<div style={{width:"100%",height:"100%",background:item.thumb||BM}}/>)}
+                              {item.src&&item.type==="video"&&(<video src={item.src} muted playsInline preload="metadata" style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
                             </div>
                             <div style={{flex:1,minWidth:0}}>
                               <p style={{margin:0,fontSize:13,fontWeight:500,color:darkMode?"#FFF":T1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</p>
@@ -3314,7 +3523,7 @@ export default function App(){
           </div>
         </div>
       )}
-      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} onSave={()=>toast("Saved to project")} isMobile={isMobile}/>)}
+      {saveIt&&(<SaveMdl art={saveIt} projects={projects} onClose={()=>setSaveIt(null)} onSave={proj=>{addArtToProject(saveIt,proj,"inspo");setSaveIt(null);}} isMobile={isMobile}/>)}
       {editItem&&(<EditArtMdl art={editItem} onClose={()=>setEditItem(null)} onSave={saveEdit} onDelete={deleteArt} onSaveToProject={addArtToProject} onCreateProject={(p,cb)=>create({...p,_navigate:false}).then(saved=>{cb&&cb(saved);}).catch(()=>{})} projects={projects} isMobile={isMobile}/>)}
       {isMobile&&searchExp&&(
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(8,8,18,0.82)",backdropFilter:"blur(40px) saturate(180%)",WebkitBackdropFilter:"blur(40px) saturate(180%)",zIndex:1000,display:"flex",flexDirection:"column",animation:"slideUp 0.3s ease-out",WebkitUserSelect:"none",userSelect:"none"}}>
@@ -3330,9 +3539,9 @@ export default function App(){
             {(()=>{
               const mq=srch.toLowerCase().trim();
               const mProjs=mq?projects.filter(p=>p.name.toLowerCase().includes(mq)||(p.tags||[]).some(t=>t.includes(mq))):[];
-              const mProjArts=[];
-              if(mq){const seen=new Set();projects.forEach(p=>{Object.values(p.artifacts||{}).flat().forEach(a=>{if(!seen.has(a.id)&&((a.name||"").toLowerCase().includes(mq)||(a.tags||[]).some(t=>t.includes(mq)))){seen.add(a.id);mProjArts.push({...a,_project:p});}});});}
               const hasRealSrc=item=>item.src&&(item.src.startsWith("http")||item.src.startsWith("data:")||item.src.startsWith("blob:"));
+              const mProjArts=[];
+              if(mq){const seen=new Set();projects.forEach(p=>{Object.values(p.artifacts||{}).flat().forEach(a=>{if(!seen.has(a.id)&&hasRealSrc(a)&&((a.name||"").toLowerCase().includes(mq)||(a.tags||[]).some(t=>t.includes(mq)))){seen.add(a.id);mProjArts.push({...a,_project:p});}});});}
               const mFeedArts=mq?feed.filter(item=>hasRealSrc(item)&&!mProjArts.some(a=>a.id===item.id)&&((item.name||"").toLowerCase().includes(mq)||(item.tags||[]).some(t=>t.includes(mq)))):[];
               const mArts=[...mProjArts,...mFeedArts].slice(0,8);
               const mTags=mq?allTags.filter(t=>t.includes(mq)):allTags;
@@ -3384,7 +3593,7 @@ export default function App(){
                         <button key={item.id} onClick={()=>{if(item._project){open(item._project);setSearchExp(false);setSrch("");}else{setSrch(item.name);setSearchExp(false);setView("explore");}}} style={rowStyle}>
                           <div style={{width:38,height:38,borderRadius:8,flexShrink:0,overflow:"hidden",background:item.thumb||BM}}>
                             {item.src&&(item.type==="image"||item.type==="gif")&&(<img src={item.src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
-                            {(!item.src||(item.type!=="image"&&item.type!=="gif"))&&(<div style={{width:"100%",height:"100%",background:item.thumb||BM}}/>)}
+                            {item.src&&item.type==="video"&&(<video src={item.src} muted playsInline preload="metadata" style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
                           </div>
                           <div style={{flex:1,minWidth:0}}>
                             <p style={{margin:0,fontSize:14,fontWeight:500,color:"#FFF",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</p>
