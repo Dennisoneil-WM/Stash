@@ -264,8 +264,7 @@ export async function updateProject(id, updates) {
   if (updates.prototype !== undefined) try{localStorage.setItem(`prototype_${id}`,updates.prototype);}catch(e){}
 
   // Only include columns that actually exist in the DB schema.
-  // members, teams, prd_url, prototype_url, user_id are NOT schema columns —
-  // they caused silent write failures that took `description` down with them.
+  // members, teams, user_id are NOT schema columns — kept in localStorage only.
   const row = {};
   if (updates.thumbs !== undefined) row.thumbs = updates.thumbs;
   if (updates.artifactCount !== undefined) row.artifact_count = updates.artifactCount;
@@ -273,6 +272,10 @@ export async function updateProject(id, updates) {
   if (updates.tags !== undefined) row.tags = updates.tags;
   if (updates.name !== undefined) row.name = updates.name;
   if (updates.desc !== undefined) row.description = updates.desc;
+  if (updates.prd !== undefined) row.prd_url = updates.prd;
+  if (updates.prototype !== undefined) row.prototype_url = updates.prototype;
+  if (updates.figmaFile !== undefined) row.figma_file_url = updates.figmaFile;
+  if (updates.links !== undefined) row.custom_links = updates.links;
 
   if (Object.keys(row).length === 0) return; // nothing to write to DB
 
@@ -299,8 +302,10 @@ function dbToProject(r, membersOverride) {
   try { const s=localStorage.getItem(`prd_${r.id}`); if(s!=null) prd=s; } catch(e) {}
   let prototype = r.prototype_url || "";
   try { const s=localStorage.getItem(`prototype_${r.id}`); if(s!=null) prototype=s; } catch(e) {}
-  let figmaFile = "";
+  let figmaFile = r.figma_file_url || "";
   try { const s=localStorage.getItem(`figmaFile_${r.id}`); if(s!=null) figmaFile=s; } catch(e) {}
+  let links = r.custom_links || [];
+  try { const s=localStorage.getItem(`links_${r.id}`); if(s) links=JSON.parse(s); } catch(e) {}
   let name = r.name || "";
   try { const s=localStorage.getItem(`proj_name_${r.id}`); if(s!=null) name=s; } catch(e) {}
   let desc = r.description || "";
@@ -315,6 +320,7 @@ function dbToProject(r, membersOverride) {
     prd,
     prototype,
     figmaFile,
+    links,
     artifactCount: r.artifact_count,
     thumbs: r.thumbs || [],
     pages: (r.pages && r.pages.length > 0) ? r.pages : [{ id: "p1", label: "1", name: "Page 1" }],

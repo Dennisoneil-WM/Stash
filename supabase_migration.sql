@@ -63,7 +63,20 @@ CREATE POLICY "profiles_user_write"
   ON profiles FOR ALL USING (auth.uid() = id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 4. LINK EXISTING ARTIFACTS TO YOUR ACCOUNT  (run once after first login)
+-- 4. PROJECT LINK COLUMNS
+--    prd_url, prototype_url, figma_file_url, and custom_links were previously
+--    stored only in localStorage (per-device). These columns make them sync
+--    across all devices.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE projects
+  ADD COLUMN IF NOT EXISTS prd_url        TEXT    DEFAULT '',
+  ADD COLUMN IF NOT EXISTS prototype_url  TEXT    DEFAULT '',
+  ADD COLUMN IF NOT EXISTS figma_file_url TEXT    DEFAULT '',
+  ADD COLUMN IF NOT EXISTS custom_links   JSONB   DEFAULT '[]'::jsonb;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 5. LINK EXISTING ARTIFACTS TO YOUR ACCOUNT  (run once after first login)
 --
 --    After signing in with Google, get your UUID:
 --      Supabase Dashboard → Authentication → Users → copy your UUID

@@ -964,6 +964,7 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
   const [prd,setPrd]=useState(project.prd||"");
   const [prototype,setPrototype]=useState(project.prototype||"");
   const [figmaFile,setFigmaFile]=useState(project.figmaFile||"");
+  const [links,setLinks]=useState(project.links||[]);
   const [members,setMembers]=useState(project.members||[]);
   const [teams,setTeams]=useState(project.teams||[]);
   const [teamInput,setTeamInput]=useState("");
@@ -999,7 +1000,7 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
   const save=async()=>{
     if(!nm.trim())return;
     setSaving(true);
-    await onSave({name:nm.trim(),desc:ds,members,teams,prd:prd.trim(),prototype:prototype.trim(),figmaFile:figmaFile.trim()});
+    await onSave({name:nm.trim(),desc:ds,members,teams,prd:prd.trim(),prototype:prototype.trim(),figmaFile:figmaFile.trim(),links:links.filter(l=>l.url.trim())});
     setSaving(false);
     onClose();
   };
@@ -1026,13 +1027,6 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
           <Fld label="Summary">
             <TIn ph="What is this project about? What problem does it solve?" val={ds} set={setDs} multi/>
           </Fld>
-          <Fld label="PRD Link">
-            <div style={{display:"flex",alignItems:"center",gap:8,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"0 12px",transition:"border-color .15s"}} onFocus={()=>{}} onBlur={()=>{}}>
-              <MI name="description" size={16} style={{color:T3,flexShrink:0}}/>
-              <input value={prd} onChange={e=>setPrd(e.target.value)} placeholder="https://notion.so/..." style={{flex:1,background:"none",border:"none",padding:"9px 0",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
-              {prd.trim()&&(<a href={ensureHttp(prd)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{color:T3,display:"flex",alignItems:"center"}} title="Open PRD"><MI name="open_in_new" size={15} style={{color:T3}}/></a>)}
-            </div>
-          </Fld>
           <Fld label="Prototype Link">
             <div style={{display:"flex",alignItems:"center",gap:8,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"0 12px",transition:"border-color .15s"}}>
               <MI name="play_circle" size={16} style={{color:T3,flexShrink:0}}/>
@@ -1047,6 +1041,27 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
               {figmaFile.trim()&&(<a href={ensureHttp(figmaFile)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{color:T3,display:"flex",alignItems:"center"}} title="Open Figma File"><MI name="open_in_new" size={15} style={{color:T3}}/></a>)}
             </div>
           </Fld>
+          <Fld label="PRD Link">
+            <div style={{display:"flex",alignItems:"center",gap:8,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"0 12px",transition:"border-color .15s"}} onFocus={()=>{}} onBlur={()=>{}}>
+              <MI name="description" size={16} style={{color:T3,flexShrink:0}}/>
+              <input value={prd} onChange={e=>setPrd(e.target.value)} placeholder="https://notion.so/..." style={{flex:1,background:"none",border:"none",padding:"9px 0",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
+              {prd.trim()&&(<a href={ensureHttp(prd)} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{color:T3,display:"flex",alignItems:"center"}} title="Open PRD"><MI name="open_in_new" size={15} style={{color:T3}}/></a>)}
+            </div>
+          </Fld>
+          {links.length>0&&(
+            <div style={{display:"flex",flexDirection:"column",gap:8,paddingTop:4}}>
+              {links.map((lnk,i)=>(
+                <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <input value={lnk.name} onChange={e=>{const n=[...links];n[i]={...n[i],name:e.target.value};setLinks(n);}} placeholder="Label" style={{width:110,flexShrink:0,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
+                  <input value={lnk.url} onChange={e=>{const n=[...links];n[i]={...n[i],url:e.target.value};setLinks(n);}} placeholder="https://..." style={{flex:1,background:"#F5F5F5",border:`1px solid ${BD}`,borderRadius:10,padding:"8px 12px",fontSize:13,color:T1,outline:"none",fontFamily:FF}}/>
+                  <button onClick={()=>setLinks(prev=>prev.filter((_,j)=>j!==i))} style={{background:"none",border:"none",cursor:"pointer",padding:4,color:T3,display:"flex",alignItems:"center",flexShrink:0}} title="Remove"><MI name="close" size={16} style={{color:T3}}/></button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button onClick={()=>setLinks(prev=>[...prev,{name:"",url:""}])} style={{alignSelf:"flex-start",background:"none",border:"none",cursor:"pointer",padding:"2px 0",fontSize:12,color:T3,fontFamily:FF,fontWeight:500,display:"flex",alignItems:"center",gap:5,marginTop:links.length?0:4}} onMouseEnter={e=>e.currentTarget.style.color=T2} onMouseLeave={e=>e.currentTarget.style.color=T3}>
+            <MI name="add" size={14} style={{color:"inherit"}}/> Add another link
+          </button>
         </div>
       )}
 
@@ -1278,7 +1293,7 @@ function ArtTile({art,onPublish,onSave,onOpen,onDelete,onEdit,onFeature,darkMode
           <div style={{height:1,background:BD,margin:"4px 0"}}/>
           {onFeature&&(
             <button onClick={()=>{onFeature(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"flex",alignItems:"center",gap:8,width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>
-              <MI name="star" size={15} style={{color:"#F59E0B",flexShrink:0}}/>Feature on card
+              Set as cover
             </button>
           )}
           <button onClick={()=>{onPublish(art);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Publish to Explore</button>
@@ -2327,6 +2342,7 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onSaveToIn
   },[]);
   const hasDesc=!!project.desc;
   const hasContribs=contributors.length>0;
+  const hasLinks=!!(project.figmaFile||project.prototype||project.prd||(project.links||[]).length);
 
   return (
     <div style={{height:"100vh",display:"flex",flexDirection:"column",background:dBg,fontFamily:FF,transition:"background 0.3s"}}>
@@ -2386,7 +2402,7 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onSaveToIn
       )}
       {paGrid.length>0 && (
         <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:isMobile?"16px":"24px 28px"}}>
-          {(hasDesc||hasContribs)&&(
+          {(hasDesc||hasContribs||hasLinks)&&(
             <div style={{display:"flex",gap:24,marginBottom:20,flexWrap:"wrap",alignItems:"flex-start"}}>
               {hasDesc&&(
                 <div style={{maxWidth:480,minWidth:200}}>
@@ -2404,6 +2420,45 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onSaveToIn
                       </div>
                     ))}
                     {contributors.length>10&&(<span style={{fontSize:12,color:dT3,fontFamily:FF}}>+{contributors.length-10}</span>)}
+                  </div>
+                </div>
+              )}
+              {hasLinks&&(
+                <div style={{flexShrink:0}}>
+                  <p style={{margin:"0 0 8px",fontSize:11,fontWeight:700,color:dT3,textTransform:"uppercase",letterSpacing:".06em",fontFamily:FF}}>Links</p>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:isMobile?"nowrap":"wrap",overflowX:isMobile?"auto":"visible",paddingBottom:isMobile?4:0,WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none"}}>
+                    {project.prototype&&(
+                      <a href={ensureHttp(project.prototype)} target="_blank" rel="noopener noreferrer"
+                        style={{display:"inline-flex",alignItems:"center",gap:6,background:darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)",border:`1px solid ${dBdr}`,borderRadius:100,padding:"6px 14px",color:dT1,fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.18)":"rgba(0,0,0,0.12)"}
+                        onMouseLeave={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"}>
+                        <MI name="play_circle" size={15} style={{color:dT2}}/>Prototype
+                      </a>
+                    )}
+                    {project.figmaFile&&(
+                      <a href={ensureHttp(project.figmaFile)} target="_blank" rel="noopener noreferrer"
+                        style={{display:"inline-flex",alignItems:"center",gap:6,background:darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)",border:`1px solid ${dBdr}`,borderRadius:100,padding:"6px 14px",color:dT1,fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.18)":"rgba(0,0,0,0.12)"}
+                        onMouseLeave={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"}>
+                        <MI name="diamond" size={15} style={{color:dT2}}/>Figma File
+                      </a>
+                    )}
+                    {project.prd&&(
+                      <a href={ensureHttp(project.prd)} target="_blank" rel="noopener noreferrer"
+                        style={{display:"inline-flex",alignItems:"center",gap:6,background:darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)",border:`1px solid ${dBdr}`,borderRadius:100,padding:"6px 14px",color:dT1,fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.18)":"rgba(0,0,0,0.12)"}
+                        onMouseLeave={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"}>
+                        <MI name="description" size={15} style={{color:dT2}}/>PRD
+                      </a>
+                    )}
+                    {(project.links||[]).filter(l=>l.url).map((lnk,i)=>(
+                      <a key={i} href={ensureHttp(lnk.url)} target="_blank" rel="noopener noreferrer"
+                        style={{display:"inline-flex",alignItems:"center",gap:6,background:darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)",border:`1px solid ${dBdr}`,borderRadius:100,padding:"6px 14px",color:dT1,fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.18)":"rgba(0,0,0,0.12)"}
+                        onMouseLeave={e=>e.currentTarget.style.background=darkMode?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"}>
+                        <MI name="link" size={15} style={{color:dT2}}/>{lnk.name||lnk.url}
+                      </a>
+                    ))}
                   </div>
                 </div>
               )}
@@ -2485,16 +2540,16 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onSaveToIn
                 <div style={{width:40,height:3,background:"rgba(255,255,255,.12)",borderRadius:2}}/>
                 <h1 style={{margin:0,fontSize:"clamp(28px,4.5vw,54px)",fontWeight:800,color:"#FFF",lineHeight:1.1,letterSpacing:"-0.03em"}}>{project.name}</h1>
                 {project.desc&&(<p style={{margin:0,fontSize:17,color:"rgba(255,255,255,.42)",lineHeight:1.65,maxWidth:460}}>{project.desc}</p>)}
-                {(project.prd||project.prototype||project.figmaFile)&&(
+                {(project.prd||project.prototype||project.figmaFile||(project.links||[]).length>0)&&(
                   <div style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginTop:4}}>
-                    {project.figmaFile&&(
-                      <a href={ensureHttp(project.figmaFile)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
-                        <MI name="diamond" size={16} style={{color:"rgba(255,255,255,.7)"}}/> Figma File
-                      </a>
-                    )}
                     {project.prototype&&(
                       <a href={ensureHttp(project.prototype)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
                         <MI name="play_circle" size={16} style={{color:"rgba(255,255,255,.7)"}}/> Prototype
+                      </a>
+                    )}
+                    {project.figmaFile&&(
+                      <a href={ensureHttp(project.figmaFile)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
+                        <MI name="diamond" size={16} style={{color:"rgba(255,255,255,.7)"}}/> Figma File
                       </a>
                     )}
                     {project.prd&&(
@@ -2502,6 +2557,11 @@ function ProjDetail({project,projects,onBack,onDelete,onUpdateProject,onSaveToIn
                         <MI name="description" size={16} style={{color:"rgba(255,255,255,.7)"}}/> PRD
                       </a>
                     )}
+                    {(project.links||[]).filter(l=>l.url).map((lnk,i)=>(
+                      <a key={i} href={ensureHttp(lnk.url)} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.18)",borderRadius:100,padding:"9px 20px",color:"#FFF",fontSize:13,fontWeight:600,fontFamily:FF,textDecoration:"none",transition:"background .15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.18)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
+                        <MI name="link" size={16} style={{color:"rgba(255,255,255,.7)"}}/> {lnk.name||lnk.url}
+                      </a>
+                    ))}
                   </div>
                 )}
                 {currentUser&&(
@@ -3106,6 +3166,7 @@ export default function App(){
     if(updates.prd!==undefined) try{localStorage.setItem(`prd_${projId}`,updates.prd);}catch(e){}
     if(updates.prototype!==undefined) try{localStorage.setItem(`prototype_${projId}`,updates.prototype);}catch(e){}
     if(updates.figmaFile!==undefined) try{localStorage.setItem(`figmaFile_${projId}`,updates.figmaFile);}catch(e){}
+    if(updates.links!==undefined) try{localStorage.setItem(`links_${projId}`,JSON.stringify(updates.links));}catch(e){}
     // Persist to Supabase if UUID project
     const isUuid=typeof projId==="string"&&projId.includes("-");
     if(isUuid){
@@ -3147,7 +3208,7 @@ export default function App(){
   };
 
   if(view==="project"&&proj){
-    return (<><ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} onUpdateProject={updateProjSettings} onSaveToInspo={addArtToProject} onPublishToFeed={publishToExplore} onToast={toast} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth} isMobile={isMobile}/><Toaster toasts={toasts}/></>);
+    return (<><ProjDetail project={proj} projects={projects} onBack={()=>setView("projects")} onDelete={deleteProj} onUpdateProject={updateProjSettings} onSaveToInspo={addArtToProject} onPublishToFeed={publishToExplore} onToast={toast} darkMode={darkMode} authUser={authUser} isAdmin={isAdmin} currentUser={currentUser} canDeleteItem={canDeleteItem} onRequireAuth={requireAuth} isMobile={isMobile}/><Toaster toasts={toasts}/>{showLogin&&(<LoginModal onClose={()=>setShowLogin(false)}/>)}</>);
   }
 
   const toggleDarkMode=()=>{setDarkMode(v=>{const n=!v;try{localStorage.setItem("stash_dark_mode",n);}catch(e){}return n;});};
