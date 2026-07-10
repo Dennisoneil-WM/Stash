@@ -35,6 +35,15 @@ const fetchWithTimeout = (fetchUrl, options = {}) => {
     .finally(() => clearTimeout(timer));
 };
 
+// 5-minute timeout for file uploads — long enough for large media on a slow
+// connection, but still bounded so a dead connection fails instead of hanging forever.
+const fetchWithUploadTimeout = (fetchUrl, options = {}) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5 * 60 * 1000);
+  return fetch(fetchUrl, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+};
+
 // Authenticated client — used for writes and auth operations.
 // Has session management; data requests queue behind token refresh.
 export const supabase = configured
@@ -56,6 +65,17 @@ export const publicSupabase = configured
   : createClient("https://placeholder.supabase.co", "placeholder", {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "sb-stash-public" },
     });
+
+// Storage client — 5-minute fetch timeout instead of 8s, since uploads
+// legitimately take longer than the budget above (sized for quick REST/auth
+// calls) and the AbortController would otherwise kill the upload mid-transfer
+// (looks like the app "hanging"). Uses the SAME storageKey as `supabase` so
+// it reads the current user's session for the Authorization header (storage
+// RLS needs auth.uid()) — autoRefreshToken is off here so only the main
+// client refreshes.
+export const storageSupabase = configured
+  ? createClient(url, key, { auth: { autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: fetchWithUploadTimeout } })
+  : createClient("https://placeholder.supabase.co", "placeholder");
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -685,8 +705,8 @@ export async function uploadFile(file) {
   }
   const ext = file.name.split(".").pop();
   const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from("artifacts").upload(path, file);
+  const { error } = await storageSupabase.storage.from("artifacts").upload(path, file);
   if (error) throw error;
-  const { data } = supabase.storage.from("artifacts").getPublicUrl(path);
+  const { data } = storageSupabase.storage.from("artifacts").getPublicUrl(path);
   return data.publicUrl;
 }
