@@ -2741,8 +2741,24 @@ function LoginModal({onClose}){
   const [err,setErr]=useState("");
   const handle=async()=>{
     setLoading(true); setErr("");
-    try{ await signInWithGoogle(); }
-    catch(e){ setErr("Sign-in failed — please try again."); setLoading(false); }
+    try{
+      await signInWithGoogle();
+      // Poll for the user closing the popup without finishing sign-in —
+      // otherwise this button is stuck on "Opening Google…" forever.
+      const popup=window.open("","stash_google_auth");
+      const check=setInterval(()=>{
+        if(popup&&popup.closed){
+          clearInterval(check);
+          setLoading(false);
+        }
+      },500);
+    }
+    catch(e){
+      setErr(e&&e.message==="POPUP_BLOCKED"
+        ? "Your browser blocked the sign-in popup. Allow popups for this site and try again."
+        : "Sign-in failed — please try again.");
+      setLoading(false);
+    }
   };
   return (
     <Mdl title="" onClose={onClose} w={380}>

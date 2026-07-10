@@ -99,7 +99,23 @@ export function applyTokensDirectly(accessToken, refreshToken) {
 }
 
 export async function signInWithGoogle() {
-  // Opens Google OAuth in a popup so the main page never redirects away.
+  // Open the popup FIRST, synchronously within the click handler — before any
+  // await. Browsers tie "was this window.open call user-initiated" to the
+  // current task; once we've awaited a promise, that permission is gone and
+  // window.open silently returns null (no error, popup just never appears).
+  // We open a blank popup immediately, then navigate it once we have the URL.
+  const w = 480, h = 600;
+  const left = Math.round((window.screen.width - w) / 2);
+  const top  = Math.round((window.screen.height - h) / 2);
+  const popup = window.open(
+    "",
+    "stash_google_auth",
+    `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+  );
+  if (!popup) {
+    throw new Error("POPUP_BLOCKED");
+  }
+
   // Supabase stores the session, BroadcastChannel fires onAuthStateChange in
   // the main window automatically.
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -109,16 +125,12 @@ export async function signInWithGoogle() {
       redirectTo: window.location.origin + "?auth_callback=1",
     },
   });
-  if (error) throw error;
+  if (error) {
+    popup.close();
+    throw error;
+  }
 
-  const w = 480, h = 600;
-  const left = Math.round((window.screen.width - w) / 2);
-  const top  = Math.round((window.screen.height - h) / 2);
-  window.open(
-    data.url,
-    "stash_google_auth",
-    `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
-  );
+  popup.location.href = data.url;
 }
 
 export async function signOutUser() {
