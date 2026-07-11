@@ -3126,6 +3126,8 @@ export default function App(){
     sessionStorage.removeItem("stash_auth_pending");
     if(pending==="new_project")setTimeout(()=>setNewP(true),200);
     else if(pending==="new_artifact")setTimeout(()=>setUplFeed(true),200);
+    else if(pending==="view_projects")setTimeout(()=>setView("projects"),200);
+    else if(pending==="search")setTimeout(()=>{setDeskSearch(true);setSearchExp(true);},200);
     else if(pending.startsWith("new_artifact_in_project:")){
       const pId=pending.split(":")[1];
       const p=projects.find(x=>String(x.id)===pId);
@@ -3384,13 +3386,13 @@ export default function App(){
           </button>
           <div style={{display:"flex",gap:2,background:darkMode?"#2A2A2A":"#F0F0F0",borderRadius:20,padding:3,transition:"background 0.3s"}}>
             {["Explore","Projects"].map(v=>(
-              <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
+              <button key={v} onClick={()=>{if(v==="Projects")requireAuth(()=>setView("projects"),"view_projects");else setView(v.toLowerCase());}} style={{background:view===v.toLowerCase()?(darkMode?"#333":"#FFF"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"#444":"#E8E8E8"}`:"1px solid transparent",borderRadius:16,padding:"6px 18px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontWeight:view===v.toLowerCase()?600:400,fontSize:14,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
             ))}
           </div>
           {/* Desktop search — collapsed pill or expanded input. flex:1 lives OUTSIDE so actions stay pinned right */}
           {!deskSearch ? (
             <button
-              onClick={()=>{setDeskSearch(true);setTimeout(()=>deskSearchRef.current&&deskSearchRef.current.focus(),60);}}
+              onClick={()=>requireAuth(()=>{setDeskSearch(true);setTimeout(()=>deskSearchRef.current&&deskSearchRef.current.focus(),60);},"search")}
               style={{display:"flex",alignItems:"center",gap:6,background:srch?(darkMode?"#333":"#E8E8E8"):(darkMode?"#2A2A2A":"#F0F0F0"),border:srch?`1px solid ${darkMode?"#666":BM}`:"1px solid transparent",borderRadius:20,padding:"6px 14px",color:srch?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2),fontSize:14,cursor:"pointer",fontFamily:FF,flexShrink:0,transition:"background 0.2s, color 0.2s, border-color 0.2s"}}
               onMouseEnter={e=>{e.currentTarget.style.background=darkMode?"#333":"#E8E8E8";e.currentTarget.style.color=darkMode?"#FFF":T1;}}
               onMouseLeave={e=>{e.currentTarget.style.background=srch?(darkMode?"#333":"#E8E8E8"):(darkMode?"#2A2A2A":"#F0F0F0");e.currentTarget.style.color=srch?(darkMode?"#FFF":T1):(darkMode?"#AAA":T2);}}
@@ -3544,7 +3546,7 @@ export default function App(){
             </button>
             <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",display:"flex",gap:2,background:darkMode?"rgba(24,24,32,0.72)":"rgba(255,255,255,0.72)",backdropFilter:"blur(20px) saturate(180%)",WebkitBackdropFilter:"blur(20px) saturate(180%)",border:darkMode?"1px solid rgba(255,255,255,0.10)":"1px solid rgba(255,255,255,0.85)",boxShadow:darkMode?"0 2px 10px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.07)":"0 2px 8px rgba(0,0,0,0.07),inset 0 1px 0 rgba(255,255,255,0.95)",borderRadius:20,padding:3,flexShrink:0,transition:"background 0.3s,border-color 0.3s"}}>
               {["Explore","Projects"].map(v=>(
-                <button key={v} onClick={()=>setView(v.toLowerCase())} style={{background:view===v.toLowerCase()?(darkMode?"rgba(255,255,255,0.14)":"rgba(255,255,255,0.95)"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.8)"}`:"1px solid transparent",boxShadow:view===v.toLowerCase()?(darkMode?"none":"0 1px 4px rgba(0,0,0,0.08)"):"none",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"rgba(255,255,255,0.5)":T3),fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
+                <button key={v} onClick={()=>{if(v==="Projects")requireAuth(()=>setView("projects"),"view_projects");else setView(v.toLowerCase());}} style={{background:view===v.toLowerCase()?(darkMode?"rgba(255,255,255,0.14)":"rgba(255,255,255,0.95)"):"transparent",border:view===v.toLowerCase()?`1px solid ${darkMode?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.8)"}`:"1px solid transparent",boxShadow:view===v.toLowerCase()?(darkMode?"none":"0 1px 4px rgba(0,0,0,0.08)"):"none",borderRadius:16,padding:"6px 14px",color:view===v.toLowerCase()?(darkMode?"#FFF":T1):(darkMode?"rgba(255,255,255,0.5)":T3),fontWeight:view===v.toLowerCase()?600:400,fontSize:13,cursor:"pointer",fontFamily:FF,transition:"all 0.3s"}}>{v}</button>
               ))}
             </div>
             <div style={{flex:1}}/>
@@ -3589,7 +3591,7 @@ export default function App(){
             </>
           ):(
             <>
-              <button onClick={()=>{setMobileMenu(false);setSearchExp(true);}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
+              <button onClick={()=>{setMobileMenu(false);requireAuth(()=>setSearchExp(true),"search");}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"none",border:"none",padding:"15px 18px",fontSize:15,fontWeight:500,color:darkMode?"#FFF":T1,cursor:"pointer",fontFamily:FF,textAlign:"left"}}>
                 <MI name="search" size={20} style={{color:darkMode?"rgba(255,255,255,0.45)":T3,flexShrink:0}}/>Search
               </button>
               <div style={{height:1,background:darkMode?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",margin:"0 18px"}}/>
