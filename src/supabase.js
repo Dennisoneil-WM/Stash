@@ -150,6 +150,22 @@ export async function signInWithGoogle() {
     throw error;
   }
 
+  // Diagnostic: capture the constructed authorize URL from the OPENER side —
+  // this is unaffected by the popup's own COOP-related isolation/timing, so
+  // it's inspectable immediately regardless of what happens to the popup.
+  // Logs param names + redirect_to only, never a token.
+  try {
+    const u = new URL(data.url);
+    localStorage.setItem("stash_oauth_debug", JSON.stringify({
+      step: "authorize_url_built",
+      host: u.host,
+      pathname: u.pathname,
+      searchKeys: [...u.searchParams.keys()],
+      redirectTo: u.searchParams.get("redirect_to"),
+      ts: Date.now(),
+    }));
+  } catch (e) {}
+
   popup.location.href = data.url;
 }
 
