@@ -2947,7 +2947,7 @@ export default function App(){
   useEffect(()=>{
     if(!isAuthPopup)return;
     let fired=false;
-    const done=(accessToken,refreshToken)=>{
+    const done=(accessToken,refreshToken,via)=>{
       if(fired)return; fired=true;
       try{
         localStorage.setItem("stash_oauth_session",JSON.stringify({
@@ -2955,6 +2955,7 @@ export default function App(){
           refresh_token:refreshToken,
           ts:Date.now(),
         }));
+        localStorage.setItem("stash_oauth_debug",JSON.stringify({step:"done",via,ts:Date.now()}));
       }catch(e){}
       setTimeout(()=>window.close(),300);
     };
@@ -2962,21 +2963,41 @@ export default function App(){
     // Fast path: tokens are right in the URL hash — no async needed.
     const hash=window.location.hash.slice(1);
     const hp=new URLSearchParams(hash);
+    const search=new URLSearchParams(window.location.search);
     const hashAt=hp.get("access_token");
     const hashRt=hp.get("refresh_token");
-    if(hashAt){ done(hashAt,hashRt||""); return; }
+    // Diagnostic snapshot — param NAMES only, never token values, so this is
+    // safe to leave in localStorage and inspect from the main window after
+    // the popup closes (the popup's own console is gone by then).
+    try{
+      localStorage.setItem("stash_oauth_debug",JSON.stringify({
+        step:"landed",
+        pathname:window.location.pathname,
+        hashKeys:[...hp.keys()],
+        searchKeys:[...search.keys()],
+        error:search.get("error")||hp.get("error")||null,
+        errorDescription:search.get("error_description")||hp.get("error_description")||null,
+        ts:Date.now(),
+      }));
+    }catch(e){}
+    if(hashAt){ done(hashAt,hashRt||"","hash"); return; }
 
     // Fallback: wait for Supabase to process the session (PKCE flow / redirect).
     const{data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
       if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&session){
         subscription.unsubscribe();
-        done(session.access_token,session.refresh_token);
+        done(session.access_token,session.refresh_token,"onAuthStateChange:"+event);
       }
     });
     supabase.auth.getSession().then(({data:{session}})=>{
-      if(session) done(session.access_token,session.refresh_token);
+      if(session) done(session.access_token,session.refresh_token,"getSession");
+    }).catch(e=>{
+      try{localStorage.setItem("stash_oauth_debug",JSON.stringify({step:"getSession_error",message:e?.message||String(e),ts:Date.now()}));}catch(_){}
     });
-    const t=setTimeout(()=>window.close(),12000);
+    const t=setTimeout(()=>{
+      try{localStorage.setItem("stash_oauth_debug",JSON.stringify({step:"timeout_12s",ts:Date.now()}));}catch(e){}
+      window.close();
+    },12000);
     return()=>{subscription.unsubscribe();clearTimeout(t);};
   },[isAuthPopup]);
 
