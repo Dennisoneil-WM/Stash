@@ -2014,7 +2014,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
       {menu&&(
         <div style={{position:"absolute",top:46,right:10,zIndex:20,background:"#FFF",border:`1px solid ${BD}`,borderRadius:12,padding:"6px 0",minWidth:190,boxShadow:"0 8px 32px rgba(0,0,0,.10)"}}>
           <button onClick={()=>{onSave(item);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Save as Inspiration</button>
-          {onEdit&&item.type!=="mockup"&&(
+          {onEdit&&item.type!=="mockup"&&currentUser&&item.user_id&&item.user_id===currentUser.id&&(
             <button onClick={()=>{onEdit(item);setMenu(false);}} onMouseEnter={e=>e.currentTarget.style.background="#F5F5F5"} onMouseLeave={e=>e.currentTarget.style.background="none"} style={{display:"block",width:"100%",background:"none",border:"none",padding:"10px 16px",color:T1,fontSize:14,textAlign:"left",cursor:"pointer",fontFamily:FF}}>Edit</button>
           )}
           {onDelete&&currentUser&&item.user_id&&item.user_id===currentUser.id&&(<div style={{height:1,background:BD,margin:"4px 0"}}/>)}
@@ -3133,7 +3133,17 @@ export default function App(){
       const p=projects.find(x=>String(x.id)===pId);
       if(p)setTimeout(()=>{setProj(p);setView("project");},200);
     }
-  },[authUser,loading,projects]);
+    else if(pending.startsWith("save_inspiration:")){
+      const id=pending.split(":")[1];
+      const it=feed.find(x=>String(x.id)===id);
+      if(it)setTimeout(()=>setSaveIt(it),200);
+    }
+    else if(pending.startsWith("edit_artifact:")){
+      const id=pending.split(":")[1];
+      const it=feed.find(x=>String(x.id)===id);
+      if(it&&it.user_id===authUser.id)setTimeout(()=>setEditItem(it),200);
+    }
+  },[authUser,loading,projects,feed]);
 
   // Require auth before executing a write action.
   // actionKey is stored in sessionStorage as a fallback across popup sessions.
@@ -3607,7 +3617,7 @@ export default function App(){
         </div>
       </>)}
       <main style={{maxWidth:1440,margin:"0 auto",padding:"0 28px"}}>
-        {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={setSaveIt} onEdit={setEditItem} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3} feedLoading={feedLoading}/>)}
+        {view==="explore"&&(<Explore feed={filtFeed} srch={srch} projects={projects} onSave={item=>requireAuth(()=>setSaveIt(item),"save_inspiration:"+item.id)} onEdit={item=>requireAuth(()=>setEditItem(item),"edit_artifact:"+item.id)} onDelete={deleteArt} onSearch={t=>setSrch(t)} darkMode={darkMode} onDarkMode={setDarkMode} currentUser={currentUser} cols={winW<=640?1:winW<=1024?2:3} feedLoading={feedLoading}/>)}
         {view==="projects"&&(<Projects projects={filtProj} onOpen={open} onDelete={deleteProj} darkMode={darkMode} loading={projectsLoading} currentUser={currentUser} isMobile={isMobile}/>)}
         {view==="profile"&&(<Profile user={currentUser} feed={feed} darkMode={darkMode} onEdit={setEditItem} onDelete={deleteArt} canDeleteItem={canDeleteItem} onSave={setSaveIt} cols={winW<=640?1:winW<=1024?2:3}/>)}
       </main>
