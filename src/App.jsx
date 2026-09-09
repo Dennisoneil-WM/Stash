@@ -1902,12 +1902,15 @@ function LiveBar({darkMode=false}){
   );
 }
 
-function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
+function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,index=0,cols=3}){
   const [hov,setHov]=useState(false);
   const [menu,setMenu]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const [visible,setVisible]=useState(false);
   const cardRef=useRef(null);
+  // Stagger the fly-in by column so cards that enter the viewport together
+  // don't all animate in lockstep.
+  const flyInDelay=(index%Math.max(cols,1))*0.08;
   useEffect(()=>{
     const el=cardRef.current;
     if(!el) return;
@@ -1937,12 +1940,17 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
   return (
     <div
       ref={cardRef}
-      style={{breakInside:"avoid",marginBottom:24,borderRadius:24,overflow:"hidden",
-              position:"relative",background:darkMode?"#1A1A22":"#EBEBEB",
+      style={{breakInside:"avoid",marginBottom:24,
               opacity:visible?1:0,
-              transform:visible?(hov?"scale(1.03)":"translateY(0)"):"translateY(24px)",
+              transform:visible?"translateY(0) scale(1)":"translateY(100px) scale(0.88)",
+              transition:`opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s`}}
+    >
+    <div
+      style={{borderRadius:24,overflow:"hidden",
+              position:"relative",background:darkMode?"#1A1A22":"#EBEBEB",
+              transform:hov?"scale(1.03)":"scale(1)",
               boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
-              transition:"opacity 0.45s ease, transform 0.45s ease, box-shadow .2s"}}
+              transition:"transform 0.2s ease, box-shadow 0.2s"}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>{setHov(false);setMenu(false);}}
     >
@@ -2024,6 +2032,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser}){
         </div>
       )}
     </div>
+    </div>
   );
 }
 
@@ -2073,8 +2082,8 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
       )}
       {realItems.length>0&&(
         <div style={{columns:cols,gap:24}}>
-          {realItems.map(item=>(
-            <ExploreCard key={item.id} item={item} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode} currentUser={currentUser}/>
+          {realItems.map((item,i)=>(
+            <ExploreCard key={item.id} item={item} index={i} cols={cols} onSave={onSave} onOpen={setLb} onEdit={onEdit} onDelete={onDelete} darkMode={darkMode} currentUser={currentUser}/>
           ))}
         </div>
       )}
