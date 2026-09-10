@@ -1907,6 +1907,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
   const [menu,setMenu]=useState(false);
   const [ifErr,setIfErr]=useState(false);
   const [visible,setVisible]=useState(false);
+  const [settled,setSettled]=useState(false);
   const cardRef=useRef(null);
   // Stagger the fly-in by column so cards that enter the viewport together
   // don't all animate in lockstep.
@@ -1918,6 +1919,13 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
     obs.observe(el);
     return ()=>obs.disconnect();
   },[]);
+  // Once the fly-in finishes, switch to a fast transition for hover — keeps
+  // the 0.6s easeOutExpo scoped to the one-time entrance only.
+  useEffect(()=>{
+    if(!visible)return;
+    const t=setTimeout(()=>setSettled(true),(flyInDelay+0.6)*1000+50);
+    return ()=>clearTimeout(t);
+  },[visible]);
   const isMock=item.type==="mockup"&&item.mock;
   const ds=item.deviceShell||"auto";
   const showMobile=(ds==="mobile")||(ds==="auto"&&item.isMobile===true);
@@ -1937,20 +1945,29 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
   // Resolve avatar: if this item belongs to the signed-in user, use their Google photo
 
 
+  // Direct children of a CSS `columns` (multi-column) container can get
+  // clipped/hidden by the browser's column-fragmentation logic whenever a
+  // `transform` is active on them — this bites columns other than the
+  // first. So the outer (multicol) wrapper below carries ONLY opacity;
+  // every transform (entrance fly-in + hover scale) lives one level deeper,
+  // where it's safe.
+  const entranceTransform=!visible?"translateY(100px) scale(0.88)":"translateY(0) scale(1)";
+  const hoverTransform=hov?"translateY(0) scale(1.03)":"translateY(0) scale(1)";
   return (
     <div
       ref={cardRef}
       style={{breakInside:"avoid",marginBottom:24,
               opacity:visible?1:0,
-              transform:visible?"translateY(0) scale(1)":"translateY(100px) scale(0.88)",
-              transition:`opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s`}}
+              transition:`opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s`}}
     >
     <div
       style={{borderRadius:24,overflow:"hidden",
               position:"relative",background:darkMode?"#1A1A22":"#EBEBEB",
-              transform:hov?"scale(1.03)":"scale(1)",
+              transform:settled?hoverTransform:entranceTransform,
               boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
-              transition:"transform 0.2s ease, box-shadow 0.2s"}}
+              transition:settled
+                ?"transform 0.2s ease, box-shadow 0.2s"
+                :`transform 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s, box-shadow 0.2s`}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>{setHov(false);setMenu(false);}}
     >
