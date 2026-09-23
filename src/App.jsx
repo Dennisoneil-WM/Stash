@@ -2839,7 +2839,7 @@ export default function App(){
   const [mobileMenu,setMobileMenu]=useState(false);
   const [searchExp,setSearchExp]=useState(false);
   const [showTags,setShowTags]=useState(false);
-  const [darkMode,setDarkMode]=useState(()=>{try{const s=localStorage.getItem("stash_dark_mode");return s===null?true:s==="true";}catch(e){return true;}});
+  const [darkMode,setDarkMode]=useState(()=>{try{const s=localStorage.getItem("stash_dark_mode");return s===null?false:s==="true";}catch(e){return false;}});
   const [editItem,setEditItem]=useState(null);
   const [uplError,setUplError]=useState(null);
   const [toasts,setToasts]=useState([]);
