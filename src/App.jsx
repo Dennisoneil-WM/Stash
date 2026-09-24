@@ -2109,7 +2109,7 @@ function Explore({feed,srch="",projects,onSave,onEdit,onDelete,onSearch,darkMode
   );
 }
 
-const PALETTE=["#85D6FF","#4F91DF","#926CC6","#33C27A","#F7BC50","#EE8237","#99EBE5","#E1616F"];
+const PALETTE=["#EBEBEB"];
 
 function ProjCard({project,onOpen,onDelete,darkMode,currentUser,idx=0,isMobile=false}){
   const [hov,setHov]=useState(false);
