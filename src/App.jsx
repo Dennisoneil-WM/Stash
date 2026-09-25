@@ -1948,9 +1948,12 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
   // Direct children of a CSS `columns` (multi-column) container can get
   // clipped/hidden by the browser's column-fragmentation logic whenever a
   // `transform` is active on them — this bites columns other than the
-  // first. So the outer (multicol) wrapper below carries ONLY opacity;
-  // every transform (entrance fly-in + hover scale) lives one level deeper,
-  // where it's safe.
+  // first. So the outer (multicol) wrapper below carries ONLY opacity.
+  // Separately, applying `transform` to the SAME element that also clips
+  // via `border-radius`+`overflow:hidden` is its own Chrome rendering bug —
+  // the rounded-corner clip mask doesn't reliably follow a transformed box,
+  // leaving a visible seam. So transform lives on its own middle layer,
+  // and border-radius/overflow/box-shadow live on a static inner layer.
   const entranceTransform=!visible?"translateY(100px) scale(0.88)":"translateY(0) scale(1)";
   const hoverTransform=hov?"translateY(0) scale(1.03)":"translateY(0) scale(1)";
   return (
@@ -1961,15 +1964,18 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
               transition:`opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s`}}
     >
     <div
-      style={{borderRadius:24,overflow:"hidden",
-              position:"relative",background:darkMode?"#1A1A22":"#EBEBEB",
-              transform:settled?hoverTransform:entranceTransform,
-              boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
+      style={{transform:settled?hoverTransform:entranceTransform,
               transition:settled
-                ?"transform 0.2s ease, box-shadow 0.2s"
-                :`transform 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s, box-shadow 0.2s`}}
+                ?"transform 0.2s ease"
+                :`transform 0.6s cubic-bezier(0.16,1,0.3,1) ${flyInDelay}s`}}
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>{setHov(false);setMenu(false);}}
+    >
+    <div
+      style={{borderRadius:24,overflow:"hidden",
+              position:"relative",background:darkMode?"#1A1A22":"#EBEBEB",
+              boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
+              transition:"box-shadow 0.2s"}}
     >
       {/* ── Media area — click opens lightbox ─────────────────────── */}
       <div style={{position:"relative",cursor:"pointer"}} onClick={()=>onOpen(item)}>
@@ -2048,6 +2054,7 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
           )}
         </div>
       )}
+    </div>
     </div>
     </div>
   );
