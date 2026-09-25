@@ -1975,7 +1975,13 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
       style={{borderRadius:24,overflow:"hidden",
               position:"relative",background:darkMode?"#1A1A22":"#EBEBEB",
               boxShadow:hov?(darkMode?"0 12px 40px rgba(0,0,0,.5)":"0 12px 40px rgba(0,0,0,.08)"):"none",
-              transition:"box-shadow 0.2s"}}
+              transition:"box-shadow 0.2s",
+              // Being nested inside the transformed layer above is otherwise a
+              // Chrome rasterization bug: a border-radius clip under a
+              // transformed ancestor can anti-alias poorly right at the
+              // curved corners (straight edges stay crisp). Promoting this
+              // element to its own compositing layer fixes it.
+              willChange:"transform"}}
     >
       {/* ── Media area — click opens lightbox ─────────────────────── */}
       <div style={{position:"relative",cursor:"pointer"}} onClick={()=>onOpen(item)}>
