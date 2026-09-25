@@ -125,15 +125,37 @@ function TSel({val,set,opts}){
 function Fld({label,children}){
   return (<div>{label&&(<label style={{fontSize:13,color:T2,display:"block",marginBottom:8,fontWeight:500}}>{label}</label>)}{children}</div>);
 }
-function Mdl({title,onClose,children,w=520,isMobile=false}){
+function Mdl({title,onClose,children,footer,overlay,w=520,isMobile=false}){
+  // On mobile, a modal passing `footer` gets a fixed header + independently
+  // scrolling body + footer pinned to the bottom (full height, per the
+  // mobile sheet pattern), instead of the whole thing scrolling as one
+  // block with the buttons just wherever the content flow leaves them.
+  // Modals that don't pass `footer` (the majority) render exactly as
+  // before — this is additive, nothing else changes.
+  const pinned=isMobile&&footer;
+  const titleRow=(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:pinned?0:24}}>
+      <span style={{fontSize:18,fontWeight:700,color:T1,fontFamily:FF}}>{title}</span>
+      <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:22,lineHeight:1,padding:4}}>&#x2715;</button>
+    </div>
+  );
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:isMobile?0:24}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#FFF",borderRadius:isMobile?0:20,width:"100%",maxWidth:isMobile?"100%":w,height:isMobile?"100vh":"auto",padding:isMobile?"16px 16px 24px":"28px 28px 24px",boxShadow:isMobile?"none":"0 20px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"100vh":"92vh",overflowY:"auto",position:"relative"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
-          <span style={{fontSize:18,fontWeight:700,color:T1,fontFamily:FF}}>{title}</span>
-          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:T3,fontSize:22,lineHeight:1,padding:4}}>&#x2715;</button>
-        </div>
-        {children}
+      <div style={{background:"#FFF",borderRadius:isMobile?0:20,width:"100%",maxWidth:isMobile?"100%":w,height:isMobile?"100vh":"auto",padding:pinned?0:(isMobile?"16px 16px 24px":"28px 28px 24px"),boxShadow:isMobile?"none":"0 20px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"100vh":"92vh",overflowY:pinned?"hidden":"auto",position:"relative",display:pinned?"flex":"block",flexDirection:pinned?"column":undefined}}>
+        {pinned?(
+          <>
+            <div style={{flexShrink:0,padding:"16px 16px 12px"}}>{titleRow}</div>
+            <div style={{flex:1,minHeight:0,overflowY:"auto",padding:"0 16px"}}>{children}</div>
+            <div style={{flexShrink:0,padding:"12px 16px 16px",borderTop:`1px solid ${BD}`,background:"#FFF"}}>{footer}</div>
+          </>
+        ):(
+          <>
+            {titleRow}
+            {children}
+            {footer}
+          </>
+        )}
+        {overlay}
       </div>
     </div>
   );
@@ -829,8 +851,20 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,onCreateProject
     );
   }
 
+  const footer=(
+    <div style={{display:"flex",gap:10,justifyContent:"space-between"}}>
+      {onDelete&&(
+        <button onClick={()=>{if(confirm("Delete this artifact?")){onDelete(art.id);onClose();}}} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:100,padding:"8px 18px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete</button>
+      )}
+      <div style={{display:"flex",gap:10,marginLeft:"auto"}}>
+        <GBtn sm onClick={onClose}>Cancel</GBtn>
+        <BBtn sm disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save"}</BBtn>
+      </div>
+    </div>
+  );
+
   return (
-    <Mdl title="Edit Artifact" onClose={onClose} w={560} isMobile={isMobile}>
+    <Mdl title="Edit Artifact" onClose={onClose} footer={footer} w={560} isMobile={isMobile}>
       <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:24}}>
         <Fld label="Name"><TIn val={name} set={setName} ph="Artifact name"/></Fld>
         <Fld label="Description (optional)"><TIn val={desc} set={setDesc} ph="Describe this artifact..." multi/></Fld>
@@ -894,15 +928,6 @@ function EditArtMdl({art,onClose,onSave,onDelete,onSaveToProject,onCreateProject
             )}
           </div>
         )}
-      </div>
-      <div style={{display:"flex",gap:10,justifyContent:"space-between"}}>
-        {onDelete&&(
-          <button onClick={()=>{if(confirm("Delete this artifact?")){onDelete(art.id);onClose();}}} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:100,padding:"8px 18px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete</button>
-        )}
-        <div style={{display:"flex",gap:10,marginLeft:"auto"}}>
-          <GBtn sm onClick={onClose}>Cancel</GBtn>
-          <BBtn sm disabled={!name.trim()||saving} onClick={save}>{saving?"Saving...":"Save"}</BBtn>
-        </div>
       </div>
     </Mdl>
   );
@@ -1013,8 +1038,34 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
     transition:"all .15s",
   });
 
+  const footer=(
+    <div style={{display:"flex",gap:10,alignItems:"center"}}>
+      {onDelete&&(
+        <button onClick={()=>setConfirmDelete(true)} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:100,padding:"8px 18px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete Project</button>
+      )}
+      <div style={{marginLeft:"auto",display:"flex",gap:10}}>
+        <GBtn sm onClick={onClose}>Cancel</GBtn>
+        <BBtn sm disabled={!nm.trim()||saving} onClick={save}>{saving?"Saving...":"Save Changes"}</BBtn>
+      </div>
+    </div>
+  );
+
+  const overlay=confirmDelete&&(
+    <div style={{position:"absolute",inset:0,background:"rgba(255,255,255,.96)",borderRadius:"inherit",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:32,zIndex:10}}>
+      <div style={{width:48,height:48,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:4}}>
+        <MI name="delete_outline" size={26} style={{color:"#DC2626"}}/>
+      </div>
+      <p style={{margin:0,fontSize:17,fontWeight:700,color:T1,fontFamily:FF,textAlign:"center"}}>Delete &#x201C;{project.name}&#x201D;?</p>
+      <p style={{margin:0,fontSize:14,color:T2,fontFamily:FF,lineHeight:1.55,textAlign:"center",maxWidth:340}}>This will permanently delete this project and all its settings. Artifacts already published to the feed won&#x2019;t be removed.</p>
+      <div style={{display:"flex",gap:10,marginTop:8}}>
+        <GBtn sm onClick={()=>setConfirmDelete(false)}>Go Back</GBtn>
+        <button onClick={()=>{onDelete&&onDelete(project.id);onClose();}} style={{background:"#DC2626",border:"none",color:"#FFF",borderRadius:100,padding:"9px 22px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:FF}}>Yes, Delete Project</button>
+      </div>
+    </div>
+  );
+
   return (
-    <Mdl title="Project Settings" onClose={onClose} w={520} isMobile={isMobile}>
+    <Mdl title="Project Settings" onClose={onClose} footer={footer} overlay={overlay} w={520} isMobile={isMobile}>
       {/* Tab bar */}
       <div style={{display:"flex",gap:4,background:"#F5F5F5",borderRadius:100,padding:4,marginBottom:24}}>
         {TABS.map(t=>(<button key={t.id} style={tabBtnStyle(t.id)} onClick={()=>setTab(t.id)}>{t.label}</button>))}
@@ -1106,31 +1157,6 @@ function ProjSettingsMdl({project,onClose,onSave,onDelete,canDelete,currentUser,
               </button>
             );
           })}
-        </div>
-      )}
-
-      <div style={{display:"flex",gap:10,alignItems:"center"}}>
-        {onDelete&&(
-          <button onClick={()=>setConfirmDelete(true)} style={{background:"#FEF2F2",border:`1px solid #FECACA`,borderRadius:100,padding:"8px 18px",color:"#DC2626",cursor:"pointer",fontWeight:600,fontSize:13,fontFamily:FF}}>Delete Project</button>
-        )}
-        <div style={{marginLeft:"auto",display:"flex",gap:10}}>
-          <GBtn sm onClick={onClose}>Cancel</GBtn>
-          <BBtn sm disabled={!nm.trim()||saving} onClick={save}>{saving?"Saving...":"Save Changes"}</BBtn>
-        </div>
-      </div>
-
-      {/* ── Delete confirmation overlay ── */}
-      {confirmDelete&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(255,255,255,.96)",borderRadius:"inherit",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:32,zIndex:10}}>
-          <div style={{width:48,height:48,borderRadius:"50%",background:"#FEF2F2",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:4}}>
-            <MI name="delete_outline" size={26} style={{color:"#DC2626"}}/>
-          </div>
-          <p style={{margin:0,fontSize:17,fontWeight:700,color:T1,fontFamily:FF,textAlign:"center"}}>Delete &#x201C;{project.name}&#x201D;?</p>
-          <p style={{margin:0,fontSize:14,color:T2,fontFamily:FF,lineHeight:1.55,textAlign:"center",maxWidth:340}}>This will permanently delete this project and all its settings. Artifacts already published to the feed won&#x2019;t be removed.</p>
-          <div style={{display:"flex",gap:10,marginTop:8}}>
-            <GBtn sm onClick={()=>setConfirmDelete(false)}>Go Back</GBtn>
-            <button onClick={()=>{onDelete&&onDelete(project.id);onClose();}} style={{background:"#DC2626",border:"none",color:"#FFF",borderRadius:100,padding:"9px 22px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:FF}}>Yes, Delete Project</button>
-          </div>
         </div>
       )}
     </Mdl>
