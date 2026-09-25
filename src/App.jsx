@@ -1258,12 +1258,12 @@ function ArtTile({art,onPublish,onSave,onOpen,onDelete,onEdit,onFeature,darkMode
           <>
             {(art.type==="image"||art.type==="gif")&&(
               <div style={{width:"100%",overflow:"hidden",...(art.crop?{aspectRatio:`${(art.crop.r-art.crop.l)/(art.crop.b-art.crop.t)}`,clipPath:`polygon(${art.crop.l}% ${art.crop.t}%,${art.crop.r}% ${art.crop.t}%,${art.crop.r}% ${art.crop.b}%,${art.crop.l}% ${art.crop.b}%)`}:{})}}>
-                <img src={art.src} alt={art.name} style={{width:"100%",display:"block",objectFit:art.crop?"fill":"cover"}}/>
+                <img src={art.src} alt={art.name} style={{width:"100%",display:"block",objectFit:art.crop?"fill":"cover",borderRadius:16}}/>
               </div>
             )}
             {art.type==="video"&&!hasCrop&&(
               <div style={{width:"100%",overflow:"hidden",background:"#000"}}>
-                <video src={art.src} style={{width:"100%",display:"block"}} muted loop playsInline autoPlay/>
+                <video src={art.src} style={{width:"100%",display:"block",borderRadius:16}} muted loop playsInline autoPlay/>
               </div>
             )}
           </>
@@ -2028,12 +2028,17 @@ function ExploreCard({item,onSave,onOpen,onEdit,onDelete,darkMode,currentUser,in
           <>
             {(item.type==="image"||item.type==="gif") && (
               <div style={{width:"100%",aspectRatio:item.crop?`${(item.crop.r-item.crop.l)/(item.crop.b-item.crop.t)}`:"auto",overflow:"hidden",background:"#F0F0F0",...(item.crop?{clipPath:`polygon(${item.crop.l}% ${item.crop.t}%,${item.crop.r}% ${item.crop.t}%,${item.crop.r}% ${item.crop.b}%,${item.crop.l}% ${item.crop.b}%)`}:{})}}>
-                <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",objectPosition:!item.crop&&item.align==="left"?"left center":"center",display:"block"}}/>
+                {/* borderRadius here too, belt-and-suspenders against the parent's
+                    rounded clip: a sub-pixel gap between this element's box and the
+                    parent's clip boundary is only visible at curved corners (straight
+                    edges hide a <1px mismatch fine), showing the card's background
+                    as a sliver "border" right at the corner. */}
+                <img src={item.src} alt={item.name} style={{width:"100%",height:"100%",objectFit:item.crop?"fill":"cover",objectPosition:!item.crop&&item.align==="left"?"left center":"center",display:"block",borderRadius:24}}/>
               </div>
             )}
             {item.type==="video" && !hasCrop && (
               <div style={{width:"100%",overflow:"hidden",background:"#000"}}>
-                <video src={item.src} style={{width:"100%",display:"block"}} muted loop playsInline autoPlay/>
+                <video src={item.src} style={{width:"100%",display:"block",borderRadius:24}} muted loop playsInline autoPlay/>
               </div>
             )}
           </>
